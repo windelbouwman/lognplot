@@ -1,0 +1,14 @@
+
+[package]
+name = "quartz"
+version = "0.0.0"
+edition = "2018"
+description = "Immediate mode GUI toolkit"
+license = "GPL"
+
+[dependencies]
+glfw = "0.32.0"
+log = "0.4.8"
+simple_logger = "1.3.0"
+sdl2 = "0.32.2"
+gl = "0.13.0"
