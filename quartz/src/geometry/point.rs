@@ -1,4 +1,3 @@
-
 /// 2D point.
 #[derive(Copy, Clone, Debug)]
 pub struct Point {

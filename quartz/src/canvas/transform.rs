@@ -41,10 +41,10 @@ impl Transform for SimpleTransform {
         let ca = angle.cos();
         let sa = angle.sin();
         let mut m = Matrix::identity(3);
-        m[(0,0)] = ca;
-        m[(0,1)] = sa;
-        m[(1,1)] = ca;
-        m[(1,0)] = -sa;
+        m[(0, 0)] = ca;
+        m[(0, 1)] = sa;
+        m[(1, 1)] = ca;
+        m[(1, 0)] = -sa;
         // update matrix:
     }
 }

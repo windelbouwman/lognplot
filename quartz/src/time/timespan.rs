@@ -1,4 +1,3 @@
-
 use super::TimeStamp;
 
 /// A timespan is a period between two moments in time.
@@ -11,8 +10,6 @@ pub struct TimeSpan {
 
 impl TimeSpan {
     pub fn new(start: TimeStamp, end: TimeStamp) -> Self {
-        TimeSpan {
-            start, end
-        }
+        TimeSpan { start, end }
     }
 }

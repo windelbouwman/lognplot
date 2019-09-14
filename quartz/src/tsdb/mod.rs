@@ -1,13 +1,11 @@
+use crate::time::{Resolution, TimeSpan, TimeStamp};
 /// Time series database
-
 use std::collections::HashMap;
-use crate::time::{TimeStamp, TimeSpan, Resolution};
 
 pub struct HermesDb {
     path: String,
     data: HashMap<String, Vec<Sample>>,
 }
-
 
 /// Database for time series.
 impl HermesDb {
@@ -18,8 +16,7 @@ impl HermesDb {
     }
 
     /// Add a batch of values
-    pub fn add_values(&self) {
-    }
+    pub fn add_values(&self) {}
 
     pub fn new_trace(&mut self, name: &str) {
         self.data.insert(name.to_string(), vec![]);
@@ -47,7 +44,6 @@ pub trait Connection {
     fn open(&self);
     fn close(&self);
 }
-
 
 #[derive(Clone)]
 pub struct Sample {
@@ -84,7 +80,10 @@ mod tests {
         db.new_trace("foo");
         db.add_value("foo", sample.clone());
         // db.add_values();
-        let timespan = TimeSpan::new(sample.timestamp.add_millis(-1), sample.timestamp.add_millis(1));
+        let timespan = TimeSpan::new(
+            sample.timestamp.add_millis(-1),
+            sample.timestamp.add_millis(1),
+        );
         let values = db.get_values(&timespan, &Resolution::NanoSeconds);
         assert_eq!(1, values.len());
         db.close();

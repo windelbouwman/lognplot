@@ -7,8 +7,8 @@ mod chart;
 mod curve;
 
 use crate::canvas::Canvas;
-use curve::{Curve};
-use chart::{Chart};
+use chart::Chart;
+use curve::Curve;
 
 /// Entry function to plot a series of x values versus a series of y values!
 pub fn plot(canvas: &mut dyn Canvas, x: Vec<f64>, y: Vec<f64>) {

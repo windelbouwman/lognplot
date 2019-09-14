@@ -1,13 +1,12 @@
-
+use crate::canvas::{Color, Stroke};
 use crate::geometry::Point;
-use crate::canvas::{Color};
 use std::str::FromStr;
 
 /// A single curve with some color.
 #[derive(Debug)]
 pub struct Curve {
     pub points: Vec<Point>,
-    color: Color,
+    stroke: Stroke,
     legend: Option<String>,
 }
 
@@ -18,17 +17,17 @@ impl Curve {
             .zip(y.iter())
             .map(|p| Point::new(*p.0, *p.1))
             .collect();
-        let color = Color::from_str("blue").unwrap();
+        let stroke = Stroke::from_str("blue").unwrap();
 
         Self {
             points,
-            color,
+            stroke,
             legend: None,
         }
     }
 
     pub fn color(&self) -> Color {
-        self.color.clone()
+        self.stroke.color.clone()
     }
 
     // TODO: create point pairs!

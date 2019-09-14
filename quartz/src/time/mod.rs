@@ -1,10 +1,9 @@
-
+mod duration;
 mod timespan;
 mod timestamp;
-mod duration;
 
-pub use timestamp::TimeStamp;
 pub use timespan::TimeSpan;
+pub use timestamp::TimeStamp;
 
 pub enum Resolution {
     NanoSeconds,

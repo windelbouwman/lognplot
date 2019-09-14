@@ -1,7 +1,7 @@
 /// Demonstration of the plot usage!
 use std::fs::File;
 
-use quartz::{plot, canvas};
+use quartz::{canvas, plot};
 
 fn main() {
     simple_logger::init().unwrap();

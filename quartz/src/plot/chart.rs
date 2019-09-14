@@ -1,16 +1,22 @@
 //! Chart functionality!
 
 use super::axis::{calc_tiks, Axis};
+use super::curve::Curve;
 use crate::canvas::{Canvas, Color};
 use crate::geometry::Point;
-use super::curve::Curve;
 
 /// A single 2D-chart
 pub struct Chart {
+    /// An optional title for the plot
     title: Option<String>,
+
     x_axis: Axis,
     y_axis: Axis,
+
+    /// To show grid or not.
     grid: bool,
+
+    /// The curves in the plot
     curves: Vec<Curve>,
 }
 
@@ -148,4 +154,3 @@ impl Chart {
         }
     }
 }
-

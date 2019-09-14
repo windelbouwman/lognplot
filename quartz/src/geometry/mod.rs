@@ -1,7 +1,6 @@
-
 mod point;
-mod rectangle;
 mod range;
+mod rectangle;
 
 // A nice line!
 // struct Line {}

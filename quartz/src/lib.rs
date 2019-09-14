@@ -3,19 +3,20 @@ extern crate log;
 
 pub mod canvas;
 mod geometry;
-pub mod plot;
-// mod gui;
-mod time;
+pub mod gloo;
+mod gui;
+mod layout;
 mod linalg;
+pub mod plot;
+mod time;
 mod tsdb;
-pub mod render_gl;
+mod widgets;
 
 #[derive(Debug, Default)]
 pub struct Context {
     hot: usize,
     active: usize,
 }
-
 
 pub fn begin() {}
 

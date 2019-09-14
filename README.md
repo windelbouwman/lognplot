@@ -22,3 +22,11 @@ Plan:
 ## About the name
 
 Quartz is a crystal used to create precise timing devices. See here: https://en.wikipedia.org/wiki/Quartz_clock
+
+
+# Idea list
+
+- use vulkano-rs instead of openGL
+- use cassowary to layout parts of the GUI
+- render pretty lines using shaders
+
