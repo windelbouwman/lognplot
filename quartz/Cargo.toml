@@ -7,6 +7,14 @@ description = "Immediate mode GUI toolkit"
 license = "GPL"
 default-run = "quartz"
 
+[lib]
+name = "quartz"
+path = "src/lib.rs"
+
+[[bin]]
+name = "quartz"
+path = "src/bin/quartz.rs"
+
 [dependencies]
 glfw = "0.32.0"
 log = "0.4.8"
@@ -16,3 +24,7 @@ gl = "0.13.0"
 cassowary = "0.3.0"
 glium = "0.25"
 vulkano = "0.14.0"
+vulkano-shaders = "0.14.0"
+winit = "0.19.3"
+vulkano-win = "0.14.0"
+chrono = "0.4.9"

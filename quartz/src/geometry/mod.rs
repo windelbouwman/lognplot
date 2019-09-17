@@ -7,3 +7,4 @@ mod rectangle;
 
 pub use point::Point;
 pub use range::Range;
+pub use rectangle::Rect;

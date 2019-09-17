@@ -2,6 +2,8 @@ use crate::time::{Resolution, TimeSpan, TimeStamp};
 /// Time series database
 use std::collections::HashMap;
 
+pub mod server;
+
 pub struct HermesDb {
     path: String,
     data: HashMap<String, Vec<Sample>>,
@@ -71,6 +73,7 @@ impl Query for HermesDb {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::time::TimeModifiers;
 
     #[test]
     fn it_works() {

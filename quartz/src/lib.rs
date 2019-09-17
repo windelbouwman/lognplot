@@ -2,14 +2,14 @@
 extern crate log;
 
 pub mod canvas;
-mod geometry;
+pub mod geometry;
 pub mod gloo;
-mod gui;
+pub mod gui;
 mod layout;
-mod linalg;
+pub mod linalg;
 pub mod plot;
 mod time;
-mod tsdb;
+pub mod tsdb;
 mod widgets;
 
 #[derive(Debug, Default)]

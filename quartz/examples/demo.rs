@@ -11,8 +11,8 @@ fn main() {
     window.set_key_polling(true);
     window.make_current();
 
-    let mut ctx = imgui::Context::default();
-    let x = imgui::Rect::new(0.0, 0.0, 1.0, 1.0);
+    let mut ctx = quartz::Context::default();
+    let x = quartz::geometry::Rect::new(0.0, 0.0, 1.0, 1.0);
 
     println!("FOOOOO {:?}", x);
 
@@ -23,15 +23,15 @@ fn main() {
         }
 
         // Start of frame
-        imgui::begin();
-        imgui::text("Bla bla");
+        quartz::begin();
+        quartz::text("Bla bla");
 
-        if (imgui::button(&mut ctx, "Click me!")) {
+        if (quartz::button(&mut ctx, "Click me!")) {
             println!("Click!");
         }
 
-        imgui::text("Bla bla");
-        imgui::end();
+        quartz::text("Bla bla");
+        quartz::end();
         // Render frame!
     }
 }
