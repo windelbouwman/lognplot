@@ -18,6 +18,8 @@ Plan:
 - grafana (https://grafana.com/)
 - KST plot (https://kst-plot.kde.org/)
 - tracy profiler (https://bitbucket.org/wolfpld/tracy)
+- trace compass: https://www.eclipse.org/tracecompass/
+- speedscope: https://www.speedscope.app/
 
 ## About the name
 

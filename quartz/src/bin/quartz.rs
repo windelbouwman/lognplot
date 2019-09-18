@@ -4,6 +4,7 @@
 extern crate log;
 
 use quartz::gui::run_gui;
+use std::thread;
 
 use quartz::tsdb::server::run_server;
 
@@ -15,6 +16,11 @@ fn main() {
 
     // Start server
 
-    run_server().unwrap();
+    let t = thread::spawn(move || {
+        run_server().unwrap();
+    });
+
     run_gui();
+
+    // t.join();
 }
