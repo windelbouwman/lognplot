@@ -1,27 +1,14 @@
 use vulkano::buffer::{BufferUsage, CpuAccessibleBuffer};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, DynamicState};
 use vulkano::descriptor::PipelineLayoutAbstract;
-use vulkano::device::{Device, DeviceExtensions};
-use vulkano::framebuffer::{
-    Framebuffer, FramebufferAbstract, RenderPass, RenderPassAbstract, RenderPassDesc, Subpass,
-};
-use vulkano::image::SwapchainImage;
-use vulkano::instance::{Instance, PhysicalDevice};
-use vulkano::pipeline::vertex::{SingleBufferDefinition, VertexSource};
-use vulkano::pipeline::viewport::Viewport;
-use vulkano::pipeline::{GraphicsPipeline, GraphicsPipelineAbstract};
-use vulkano::swapchain;
-use vulkano::swapchain::{
-    AcquireError, PresentMode, SurfaceTransform, Swapchain, SwapchainCreationError,
-};
-use vulkano::sync;
-use vulkano::sync::{FlushError, GpuFuture};
-
-use vulkano_win::VkSurfaceBuild;
-
-use winit::{Event, EventsLoop, Window, WindowBuilder, WindowEvent};
+use vulkano::device::Device;
+use vulkano::framebuffer::{RenderPass, RenderPassDesc, Subpass};
+use vulkano::pipeline::vertex::SingleBufferDefinition;
+use vulkano::pipeline::GraphicsPipeline;
 
 use std::sync::Arc;
+
+use super::vertex::Vertex;
 
 type MyPipeline<D> = Arc<
     GraphicsPipeline<
@@ -31,33 +18,23 @@ type MyPipeline<D> = Arc<
     >,
 >;
 
-pub struct MyVisual<D>
-// where
-// Layout: GraphicsPipelineAbstract + Send,
-// RenderP: Send
-{
+pub struct MyVisual<D> {
     vertex_buffer: Arc<CpuAccessibleBuffer<[Vertex]>>,
     pipeline: MyPipeline<D>,
 }
 
 impl<D> MyVisual<D>
-// where
 where
     D: RenderPassDesc + Send + Sync + 'static, // Layout: PipelineLayoutAbstract + Send + Sync ,
 {
-    pub fn new(
-        device: Arc<Device>,
-        // rpass: Subpass<Arc<dyn RenderPassAbstract+Sync+Send>>
-        rpass: Subpass<Arc<RenderPass<D>>>,
-    ) -> Self
-// RenderP: RenderPassDesc + Send + Sync
-    {
+    pub fn new(device: Arc<Device>, rpass: Subpass<Arc<RenderPass<D>>>, amp: f32) -> Self {
         // We now create a buffer that will store the shape of our triangle.
         let vertex_buffer = {
             let mut points: Vec<Vertex> = vec![];
             for t in -10000..10000 {
                 let x = (t as f32) * 0.0001; // to seconds
-                let y = (x * 3.14159 * 2.0 * 1.0).sin() + 0.03 * (x * 3.14159 * 2.0 * 200.0).sin();
+                let y = amp * (x * 3.14159 * 2.0 * 1.0).sin()
+                    + 0.03 * (x * 3.14159 * 2.0 * 200.0).sin();
                 points.push(Vertex { position: [x, y] });
             }
 
@@ -121,21 +98,7 @@ where
             .unwrap();
         in_progress_renderer
     }
-
-    // pub fn mk_pipelines<L, Gp, V>(device: Arc<Device>, rpass: Subpass<L>) -> Vec<Arc<GraphicsPipeline>>
-    // where L: RenderPassAbstract,
-    // Gp: GraphicsPipelineAbstract + VertexSource<V> + Send + Sync + 'static + Clone
-    // {
-
-    // }
 }
-
-/// Vertex type!
-#[derive(Default, Debug, Clone)]
-struct Vertex {
-    position: [f32; 2],
-}
-vulkano::impl_vertex!(Vertex, position);
 
 mod vs {
     vulkano_shaders::shader! {

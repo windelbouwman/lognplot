@@ -3,7 +3,6 @@ extern crate log;
 
 pub mod canvas;
 pub mod geometry;
-pub mod gloo;
 pub mod gui;
 mod layout;
 pub mod linalg;

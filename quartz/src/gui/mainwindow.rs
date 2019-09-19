@@ -1,11 +1,9 @@
-use vulkano::buffer::{BufferUsage, CpuAccessibleBuffer};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, DynamicState};
 use vulkano::device::{Device, DeviceExtensions};
 use vulkano::framebuffer::{Framebuffer, FramebufferAbstract, RenderPassAbstract, Subpass};
 use vulkano::image::SwapchainImage;
 use vulkano::instance::{Instance, PhysicalDevice};
 use vulkano::pipeline::viewport::Viewport;
-use vulkano::pipeline::GraphicsPipeline;
 use vulkano::swapchain;
 use vulkano::swapchain::{
     AcquireError, PresentMode, SurfaceTransform, Swapchain, SwapchainCreationError,
@@ -21,25 +19,15 @@ use std::sync::Arc;
 
 use super::visual1::MyVisual;
 
-/// Run a gui?
 pub fn run_gui() {
     info!("Starting gui!!");
 
-    // The first step of any Vulkan program is to create an instance.
     let instance = {
-        // When we create an instance, we have to pass a list of extensions that we want to enable.
-        //
-        // All the window-drawing functionalities are part of non-core extensions that we need
-        // to enable manually. To do so, we ask the `vulkano_win` crate for the list of extensions
-        // required to draw to a window.
         let extensions = vulkano_win::required_extensions();
-
-        // Now creating the instance.
         Instance::new(None, &extensions, None).unwrap()
     };
 
     let physical = PhysicalDevice::enumerate(&instance).next().unwrap();
-    // Some little debug infos.
     info!(
         "Using device: {} (type: {:?})",
         physical.name(),
@@ -159,10 +147,9 @@ pub fn run_gui() {
     );
 
     let sub_pass0 = Subpass::from(render_pass.clone(), 0).unwrap();
-    // let sub_pass1 = Subpass::from(render_pass.clone(), 1).unwrap();
 
-    let my_visual = MyVisual::new(device.clone(), sub_pass0.clone());
-    let my_visual1 = MyVisual::new(device.clone(), sub_pass0);
+    let my_visual = MyVisual::new(device.clone(), sub_pass0.clone(), 0.7_f32);
+    let my_visual1 = MyVisual::new(device.clone(), sub_pass0.clone(), 0.3_f32);
 
     let mut dynamic_state = DynamicState {
         line_width: None,
@@ -222,7 +209,7 @@ pub fn run_gui() {
         // Specify the color to clear the framebuffer with i.e. blue
         let clear_values = vec![[0.0, 0.0, 1.0, 1.0].into()];
 
-        let started_renderer =
+        let mut started_renderer =
             AutoCommandBufferBuilder::primary_one_time_submit(device.clone(), queue.family())
                 .unwrap()
                 // Before we can draw, we have to *enter a render pass*. There are two methods to do
@@ -240,10 +227,10 @@ pub fn run_gui() {
         // The last two parameters contain the list of resources to pass to the shaders.
         // Since we used an `EmptyPipeline` object, the objects have to be `()`.
 
-        let in_progress_renderer = my_visual.draw(started_renderer, &mut dynamic_state);
-        let in_progress_renderer = my_visual1.draw(in_progress_renderer, &mut dynamic_state);
+        started_renderer = my_visual.draw(started_renderer, &mut dynamic_state);
+        started_renderer = my_visual1.draw(started_renderer, &mut dynamic_state);
 
-        let command_buffer = in_progress_renderer
+        let command_buffer = started_renderer
             // We leave the render pass by calling `draw_end`. Note that if we had multiple
             // subpasses we could have called `next_inline` (or `next_secondary`) to jump to the
             // next subpass.
@@ -285,7 +272,10 @@ pub fn run_gui() {
             Event::WindowEvent {
                 event: WindowEvent::CloseRequested,
                 ..
-            } => done = true,
+            } => {
+                info!("Close request!!");
+                done = true;
+            }
             Event::WindowEvent {
                 event: WindowEvent::Resized(_),
                 ..

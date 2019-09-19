@@ -4,6 +4,7 @@
 extern crate log;
 
 use quartz::gui::run_gui;
+use quartz::tsdb::TsDb;
 use std::thread;
 
 use quartz::tsdb::server::run_server;
@@ -13,6 +14,7 @@ fn main() {
     info!("BOOTING QUARTZ TOOL");
 
     // Create datastore?
+    let db = TsDb::new();
 
     // Start server
 
@@ -22,5 +24,5 @@ fn main() {
 
     run_gui();
 
-    // t.join();
+    t.join().unwrap();
 }
