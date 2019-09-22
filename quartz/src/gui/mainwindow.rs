@@ -1,8 +1,15 @@
+/// This file will construct the main application onto a window.
+/// Use this to actually run the mainapp instance.
+/// This file will:
+/// - Create a vulkan instance
+/// - Create a vulkan surface
+/// - Display a window
+/// - Run the event / draw loop
 use vulkano::command_buffer::{AutoCommandBufferBuilder, DynamicState};
 use vulkano::device::{Device, DeviceExtensions};
 use vulkano::framebuffer::{Framebuffer, FramebufferAbstract, RenderPassAbstract, Subpass};
 use vulkano::image::SwapchainImage;
-use vulkano::instance::{Instance, PhysicalDevice};
+use vulkano::instance::{self, Instance, PhysicalDevice};
 use vulkano::pipeline::viewport::Viewport;
 use vulkano::swapchain;
 use vulkano::swapchain::{
@@ -11,21 +18,63 @@ use vulkano::swapchain::{
 use vulkano::sync;
 use vulkano::sync::{FlushError, GpuFuture};
 
+use vulkano::instance::debug::{DebugCallback, MessageTypes};
 use vulkano_win::VkSurfaceBuild;
 
 use winit::{Event, EventsLoop, Window, WindowBuilder, WindowEvent};
 
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 
-use super::visual1::MyVisual;
+use crate::tsdb::TsDbHandle;
 
-pub fn run_gui() {
+use super::mainapp::MainApp;
+
+pub fn run_gui(db: TsDbHandle) {
     info!("Starting gui!!");
 
+    println!("List of Vulkan debugging layers available to use:");
+    let mut layers = instance::layers_list().unwrap();
+    while let Some(l) = layers.next() {
+        println!("\t{}", l.name());
+    }
+
+    // Select the validation layers we want to use:
+    let layer = "VK_LAYER_LUNARG_standard_validation";
+    let layers = vec![layer];
+
     let instance = {
-        let extensions = vulkano_win::required_extensions();
-        Instance::new(None, &extensions, None).unwrap()
+        let mut extensions = vulkano_win::required_extensions();
+        extensions.ext_debug_report = true;
+        Instance::new(None, &extensions, layers).unwrap()
     };
+
+    // Install debug message handler:
+    let all = MessageTypes {
+        error: true,
+        warning: true,
+        performance_warning: true,
+        information: true,
+        debug: true,
+    };
+
+    let _debug_callback = DebugCallback::new(&instance, all, |msg| {
+        let ty = if msg.ty.error {
+            "error"
+        } else if msg.ty.warning {
+            "warning"
+        } else if msg.ty.performance_warning {
+            "performance_warning"
+        } else if msg.ty.information {
+            "information"
+        } else if msg.ty.debug {
+            "debug"
+        } else {
+            panic!("no-impl");
+        };
+        println!("{} {}: {}", msg.layer_prefix, ty, msg.description);
+    })
+    .ok();
 
     let physical = PhysicalDevice::enumerate(&instance).next().unwrap();
     info!(
@@ -146,10 +195,7 @@ pub fn run_gui() {
         .unwrap(),
     );
 
-    let sub_pass0 = Subpass::from(render_pass.clone(), 0).unwrap();
-
-    let my_visual = MyVisual::new(device.clone(), sub_pass0.clone(), 0.7_f32);
-    let my_visual1 = MyVisual::new(device.clone(), sub_pass0.clone(), 0.3_f32);
+    let mut app = MainApp::new(device.clone(), render_pass.clone());
 
     let mut dynamic_state = DynamicState {
         line_width: None,
@@ -166,8 +212,13 @@ pub fn run_gui() {
 
     let mut previous_frame_end = Box::new(sync::now(device.clone())) as Box<dyn GpuFuture>;
 
+    let mut t1 = Instant::now();
+
     loop {
         previous_frame_end.cleanup_finished();
+
+        // Proceed one tick:
+        app.tick();
 
         if recreate_swapchain {
             // Get the new dimensions of the window.
@@ -223,12 +274,7 @@ pub fn run_gui() {
                 .unwrap();
 
         // We are now inside the first subpass of the render pass. We add a draw command.
-        //
-        // The last two parameters contain the list of resources to pass to the shaders.
-        // Since we used an `EmptyPipeline` object, the objects have to be `()`.
-
-        started_renderer = my_visual.draw(started_renderer, &mut dynamic_state);
-        started_renderer = my_visual1.draw(started_renderer, &mut dynamic_state);
+        started_renderer = app.draw(started_renderer, &mut dynamic_state);
 
         let command_buffer = started_renderer
             // We leave the render pass by calling `draw_end`. Note that if we had multiple
@@ -269,21 +315,41 @@ pub fn run_gui() {
 
         let mut done = false;
         events_loop.poll_events(|ev| match ev {
-            Event::WindowEvent {
-                event: WindowEvent::CloseRequested,
-                ..
-            } => {
-                info!("Close request!!");
-                done = true;
+            Event::WindowEvent { event, .. } => {
+                match event {
+                    WindowEvent::CloseRequested => {
+                        info!("Close request!!");
+                        done = true;
+                    }
+                    WindowEvent::Resized(_) => recreate_swapchain = true,
+                    _ => {}
+                }
+
+                // Let app handle some events:
+                app.handle_event(event);
+
+                // Check for quit:
+                if app.quit {
+                    done = true;
+                }
             }
-            Event::WindowEvent {
-                event: WindowEvent::Resized(_),
-                ..
-            } => recreate_swapchain = true,
             _ => (),
         });
         if done {
             return;
+        }
+
+        if (false) {
+            let t2 = Instant::now();
+            let duration = t2 - t1;
+            let fps = 1.0 / (duration.as_micros() as f64 * 1.0e-6);
+            println!(
+                "Duration of render loop: {:?} fps={} db={}",
+                duration,
+                fps,
+                db.lock().unwrap()
+            );
+            t1 = t2;
         }
     }
 }

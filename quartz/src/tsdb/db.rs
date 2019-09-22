@@ -3,6 +3,9 @@
 use super::sample::Sample;
 use super::trace::Trace;
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
+
+pub type TsDbHandle = Arc<Mutex<TsDb>>;
 
 pub struct TsDb {
     path: String,
@@ -23,8 +26,17 @@ impl TsDb {
         Self { path, data }
     }
 
+    pub fn into_handle(self) -> TsDbHandle {
+        Arc::new(Mutex::new(self))
+    }
+
     /// Add a batch of values
-    pub fn add_values(&mut self) {}
+    pub fn add_values(&mut self, name: &str, samples: Vec<Sample>) {
+        let trace = self.data.get_mut(name).unwrap();
+        for sample in samples {
+            trace.push(sample);
+        }
+    }
 
     pub fn new_trace(&mut self, name: &str) {
         self.data.insert(name.to_string(), Default::default());
@@ -32,6 +44,5 @@ impl TsDb {
 
     pub fn add_value(&mut self, name: &str, sample: Sample) {
         self.data.get_mut(name).unwrap().push(sample);
-        // trace.push(sample);
     }
 }

@@ -14,15 +14,23 @@ fn main() {
     info!("BOOTING QUARTZ TOOL");
 
     // Create datastore?
-    let db = TsDb::new();
+    let db = TsDb::new().into_handle();
 
     // Start server
 
-    let t = thread::spawn(move || {
-        run_server().unwrap();
-    });
+    let mut threads = vec![];
+    let start_server = false;
+    if start_server {
+        let server_db_handle = db.clone();
+        let t = thread::spawn(move || {
+            run_server(server_db_handle).unwrap();
+        });
+        threads.push(t);
+    }
 
-    run_gui();
+    run_gui(db);
 
-    t.join().unwrap();
+    for t in threads {
+        t.join().unwrap();
+    }
 }

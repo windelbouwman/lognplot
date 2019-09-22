@@ -1,4 +1,8 @@
 
+[![Build Status](https://travis-ci.org/windelbouwman/quartz.svg?branch=master)](https://travis-ci.org/windelbouwman/quartz)
+
+[![dependency status](https://deps.rs/repo/github/windelbouwman/quartz/status.svg)](https://deps.rs/repo/github/windelbouwman/quartz)
+
 # Quartz
 
 Petabyte timeseries database on your laptop!

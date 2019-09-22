@@ -2,10 +2,8 @@
 /// This means that we can be artists now!
 mod canvas;
 mod color;
-mod softgl;
 mod stroke;
 mod svg_output;
-mod transform;
 
 pub use canvas::Canvas;
 pub use color::Color;

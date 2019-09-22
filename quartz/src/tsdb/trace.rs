@@ -9,15 +9,21 @@ use super::sample::Sample;
 
 pub struct Trace {
     chunk: Chunk,
+    num_points: usize,
 }
 
 impl Trace {
     pub fn push(&mut self, value: Sample) {
         self.chunk.push(value);
+        self.num_points += 1;
     }
 
     pub fn to_vec(&self) -> Vec<Sample> {
         self.chunk.to_vec()
+    }
+
+    pub fn len(&self) -> usize {
+        self.num_points
     }
 }
 
@@ -25,6 +31,9 @@ impl Default for Trace {
     fn default() -> Self {
         let chunk = Default::default();
 
-        Self { chunk }
+        Self {
+            chunk,
+            num_points: 0,
+        }
     }
 }

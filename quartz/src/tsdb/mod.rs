@@ -9,7 +9,7 @@ mod sample;
 pub mod server;
 mod trace;
 
-pub use db::TsDb;
+pub use db::{TsDb, TsDbHandle};
 pub use sample::Sample;
 
 #[cfg(test)]

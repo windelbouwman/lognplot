@@ -5,7 +5,6 @@ pub mod canvas;
 pub mod geometry;
 pub mod gui;
 mod layout;
-pub mod linalg;
 pub mod plot;
 mod time;
 pub mod tsdb;
