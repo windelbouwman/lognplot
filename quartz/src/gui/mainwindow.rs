@@ -1,14 +1,18 @@
-/// This file will construct the main application onto a window.
-/// Use this to actually run the mainapp instance.
-/// This file will:
-/// - Create a vulkan instance
-/// - Create a vulkan surface
-/// - Display a window
-/// - Run the event / draw loop
+//! This file will construct the main application onto a window.
+//! Use this to actually run the mainapp instance.
+//! This file will:
+//! - Create a vulkan instance
+//! - Create a vulkan surface
+//! - Display a window
+//! - Run the event / draw loop
+
+use std::sync::Arc;
+use std::time::Instant;
 use vulkano::command_buffer::{AutoCommandBufferBuilder, DynamicState};
 use vulkano::device::{Device, DeviceExtensions};
-use vulkano::framebuffer::{Framebuffer, FramebufferAbstract, RenderPassAbstract, Subpass};
+use vulkano::framebuffer::{Framebuffer, FramebufferAbstract, RenderPassAbstract};
 use vulkano::image::SwapchainImage;
+use vulkano::instance::debug::{DebugCallback, MessageTypes};
 use vulkano::instance::{self, Instance, PhysicalDevice};
 use vulkano::pipeline::viewport::Viewport;
 use vulkano::swapchain;
@@ -17,18 +21,11 @@ use vulkano::swapchain::{
 };
 use vulkano::sync;
 use vulkano::sync::{FlushError, GpuFuture};
-
-use vulkano::instance::debug::{DebugCallback, MessageTypes};
 use vulkano_win::VkSurfaceBuild;
-
 use winit::{Event, EventsLoop, Window, WindowBuilder, WindowEvent};
 
-use std::sync::Arc;
-use std::time::{Duration, Instant};
-
-use crate::tsdb::TsDbHandle;
-
 use super::mainapp::MainApp;
+use crate::tsdb::TsDbHandle;
 
 pub fn run_gui(db: TsDbHandle) {
     info!("Starting gui!!");
@@ -260,31 +257,23 @@ pub fn run_gui(db: TsDbHandle) {
         // Specify the color to clear the framebuffer with i.e. blue
         let clear_values = vec![[0.0, 0.0, 1.0, 1.0].into()];
 
-        let mut started_renderer =
-            AutoCommandBufferBuilder::primary_one_time_submit(device.clone(), queue.family())
-                .unwrap()
-                // Before we can draw, we have to *enter a render pass*. There are two methods to do
-                // this: `draw_inline` and `draw_secondary`. The latter is a bit more advanced and is
-                // not covered here.
-                //
-                // The third parameter builds the list of values to clear the attachments with. The API
-                // is similar to the list of attachments when building the framebuffers, except that
-                // only the attachments that use `load: Clear` appear in the list.
-                .begin_render_pass(framebuffers[image_num].clone(), false, clear_values)
+        let mut command_buffer =
+            AutoCommandBufferBuilder::primary_one_time_submit(device.clone(), queue_family)
                 .unwrap();
+
+        // Command buffer elements before rendering:
+        command_buffer = app.prepare_commands(command_buffer, queue_family);
+
+        let mut started_renderer = command_buffer
+            .begin_render_pass(framebuffers[image_num].clone(), false, clear_values)
+            .unwrap();
 
         // We are now inside the first subpass of the render pass. We add a draw command.
         started_renderer = app.draw(started_renderer, &mut dynamic_state);
 
-        let command_buffer = started_renderer
-            // We leave the render pass by calling `draw_end`. Note that if we had multiple
-            // subpasses we could have called `next_inline` (or `next_secondary`) to jump to the
-            // next subpass.
-            .end_render_pass()
-            .unwrap()
-            // Finish building the command buffer by calling `build`.
-            .build()
-            .unwrap();
+        // started_renderer.();
+
+        let command_buffer = started_renderer.end_render_pass().unwrap().build().unwrap();
 
         let future = previous_frame_end
             .join(acquire_future)
@@ -339,7 +328,8 @@ pub fn run_gui(db: TsDbHandle) {
             return;
         }
 
-        if (false) {
+        let print_timing = false;
+        if print_timing {
             let t2 = Instant::now();
             let duration = t2 - t1;
             let fps = 1.0 / (duration.as_micros() as f64 * 1.0e-6);

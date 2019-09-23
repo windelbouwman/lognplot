@@ -1,15 +1,17 @@
-use vulkano::command_buffer::{AutoCommandBufferBuilder, DynamicState};
-
 use std::sync::Arc;
+use vulkano::command_buffer::{AutoCommandBufferBuilder, DynamicState};
 use vulkano::device::Device;
 use vulkano::framebuffer::RenderPassAbstract;
+use vulkano::instance::QueueFamily;
 
+use super::text::TextEngine;
 use super::visual1::MyVisual;
 
 /// Application structure.
 pub struct MainApp {
     device: Arc<Device>,
     visuals: Vec<MyVisual>,
+    text_engine: TextEngine,
     zoom_in: bool,
     zoom_out: bool,
     pub quit: bool,
@@ -26,9 +28,12 @@ impl MainApp {
         // array with visuals:
         let visuals = vec![my_visual, my_visual1];
 
+        let text_engine = TextEngine::new(device.clone(), render_pass.clone());
+
         MainApp {
             device,
             visuals,
+            text_engine,
             zoom_in: false,
             zoom_out: false,
             quit: false,
@@ -43,6 +48,19 @@ impl MainApp {
         if self.zoom_out {
             self.visuals[0].zoom *= 0.95_f32;
         }
+
+        self.text_engine.queue_text(0.0, 0.0, "hoi");
+
+        self.text_engine.queue_text(0.1, 130.0, "boe ba beloeba!");
+    }
+
+    pub fn prepare_commands(
+        &self,
+        command_buffer: AutoCommandBufferBuilder,
+        queue_family: QueueFamily,
+    ) -> AutoCommandBufferBuilder {
+        self.text_engine
+            .prepare_buffers(command_buffer, queue_family)
     }
 
     pub fn draw(
@@ -53,6 +71,11 @@ impl MainApp {
         for visual in self.visuals.iter() {
             started_renderer = visual.draw(started_renderer, dynamic_state);
         }
+
+        started_renderer = self
+            .text_engine
+            .emit_draw_calls(started_renderer, dynamic_state);
+
         started_renderer
     }
 

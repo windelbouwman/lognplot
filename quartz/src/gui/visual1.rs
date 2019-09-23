@@ -1,9 +1,8 @@
 use vulkano::buffer::{BufferUsage, CpuAccessibleBuffer, CpuBufferPool};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, DynamicState};
 use vulkano::descriptor::descriptor_set::PersistentDescriptorSet;
-use vulkano::descriptor::PipelineLayoutAbstract;
 use vulkano::device::Device;
-use vulkano::framebuffer::{RenderPassAbstract, RenderPassDesc, Subpass};
+use vulkano::framebuffer::{RenderPassAbstract, Subpass};
 use vulkano::pipeline::vertex::SingleBufferDefinition;
 use vulkano::pipeline::{GraphicsPipeline, GraphicsPipelineAbstract};
 
@@ -20,7 +19,7 @@ pub struct MyVisual {
     vertex_buffer: Arc<CpuAccessibleBuffer<[Vertex]>>,
     pipeline: MyPipeline,
     pub zoom: f32, // How much to zoom this line?
-    trace: f32,
+                   // trace: f32,
 }
 
 impl MyVisual {
@@ -85,7 +84,7 @@ impl MyVisual {
             vertex_buffer,
             pipeline,
             zoom: 1.0_f32,
-            trace: 3.14_f32,
+            // trace: 3.14_f32,
         }
     }
 

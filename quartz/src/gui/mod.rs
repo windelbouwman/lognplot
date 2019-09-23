@@ -1,6 +1,7 @@
 mod mainwindow;
 
 mod mainapp;
+mod text;
 mod vertex;
 mod visual1;
 mod visuals;
