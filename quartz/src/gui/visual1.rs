@@ -19,7 +19,8 @@ pub struct MyVisual {
     vertex_buffer: Arc<CpuAccessibleBuffer<[Vertex]>>,
     pipeline: MyPipeline,
     pub zoom: f32, // How much to zoom this line?
-                   // trace: f32,
+    // trace: f32,
+    pub pan: f32, // How much to pan left-right
 }
 
 impl MyVisual {
@@ -85,6 +86,7 @@ impl MyVisual {
             pipeline,
             zoom: 1.0_f32,
             // trace: 3.14_f32,
+            pan: 0.0_f32,
         }
     }
 
@@ -101,6 +103,7 @@ impl MyVisual {
             // let scaling = Matrix2::new(self.zoom, 0.0_f32, 0.0_f32, 0.9_f32);
             let mut scaling = Matrix4::from_scale(1.0);
             scaling[0][0] = self.zoom;
+            scaling[3][0] = self.pan;
             // println!("Scaling matrix: {:?}", scaling);
 
             let uniform_data = vs::ty::Ubo1 {

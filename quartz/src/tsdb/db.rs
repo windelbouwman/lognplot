@@ -38,6 +38,10 @@ impl TsDb {
         }
     }
 
+    pub fn get_trace(&self, name: &str) -> Option<&Trace> {
+        self.data.get(name)
+    }
+
     pub fn new_trace(&mut self, name: &str) {
         self.data.insert(name.to_string(), Default::default());
     }

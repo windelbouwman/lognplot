@@ -31,7 +31,7 @@ const CACHE_WIDTH: usize = 1024;
 const CACHE_HEIGHT: usize = 1024;
 
 // struct MyGlyph {
-    // texture_buffer: Arc<Buffer>,
+// texture_buffer: Arc<Buffer>,
 // }
 
 /// Text engine, holding cached glyphs as textures.
@@ -226,6 +226,7 @@ impl TextEngine {
         self.cache
             .borrow_mut()
             .cache_queued(|rect, src_data| {
+                self.update_required.replace(true);
                 // println!("cached!");
                 // Copy rectangle into the
                 let width = (rect.max.x - rect.min.x) as usize;
@@ -256,7 +257,6 @@ impl TextEngine {
 
     /// Generate vertices for a positioned glyph
     fn get_glyph_vertices(&self, glyph: &PositionedGlyph) -> Vec<Vertex> {
-
         if let Ok(Some((uv_rect, screen_rect))) = self.cache.borrow().rect_for(0, glyph) {
             let gl_rect = Rect {
                 min: point(
@@ -351,8 +351,9 @@ layout(location = 0) out vec4 f_color;
 layout(set = 0, binding = 0) uniform sampler2D tex;
 
 void main() {
-    vec4 v_color = vec4(1.0, 0.0, 0.0, 1.0);
-    f_color = v_color * texture(tex, v_tex_position)[0];
+    float intensity = texture(tex, v_tex_position)[0];
+    vec4 v_color = vec4(1.0, 1.0, 0.0, 1.0);
+    f_color = v_color * intensity;
 }
 
 "

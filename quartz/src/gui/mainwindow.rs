@@ -27,6 +27,37 @@ use winit::{Event, EventsLoop, Window, WindowBuilder, WindowEvent};
 use super::mainapp::MainApp;
 use crate::tsdb::TsDbHandle;
 
+/// Install debug message handler:
+fn enable_logging(instance: &Arc<Instance>) {
+    let all = MessageTypes {
+        error: true,
+        warning: true,
+        performance_warning: true,
+        information: true,
+        debug: true,
+    };
+
+    let _debug_callback = DebugCallback::new(instance, all, |msg| {
+        use log::Level;
+        let level = if msg.ty.error {
+            Level::Error
+        } else if msg.ty.warning {
+            Level::Warn
+        } else if msg.ty.performance_warning {
+            Level::Warn
+        } else if msg.ty.information {
+            Level::Info
+        } else if msg.ty.debug {
+            Level::Debug
+        } else {
+            panic!("no-impl");
+        };
+
+        log!(level, "{}: {}", msg.layer_prefix, msg.description);
+    })
+    .ok();
+}
+
 pub fn run_gui(db: TsDbHandle) {
     info!("Starting gui!!");
 
@@ -46,32 +77,7 @@ pub fn run_gui(db: TsDbHandle) {
         Instance::new(None, &extensions, layers).unwrap()
     };
 
-    // Install debug message handler:
-    let all = MessageTypes {
-        error: true,
-        warning: true,
-        performance_warning: true,
-        information: true,
-        debug: true,
-    };
-
-    let _debug_callback = DebugCallback::new(&instance, all, |msg| {
-        let ty = if msg.ty.error {
-            "error"
-        } else if msg.ty.warning {
-            "warning"
-        } else if msg.ty.performance_warning {
-            "performance_warning"
-        } else if msg.ty.information {
-            "information"
-        } else if msg.ty.debug {
-            "debug"
-        } else {
-            panic!("no-impl");
-        };
-        println!("{} {}: {}", msg.layer_prefix, ty, msg.description);
-    })
-    .ok();
+    enable_logging(&instance);
 
     let physical = PhysicalDevice::enumerate(&instance).next().unwrap();
     info!(
@@ -82,6 +88,7 @@ pub fn run_gui(db: TsDbHandle) {
 
     let mut events_loop = EventsLoop::new();
     let surface = WindowBuilder::new()
+        .with_title("Quartz petabyte tracer")
         .build_vk_surface(&events_loop, instance.clone())
         .unwrap();
     let window = surface.window();
@@ -192,7 +199,7 @@ pub fn run_gui(db: TsDbHandle) {
         .unwrap(),
     );
 
-    let mut app = MainApp::new(device.clone(), render_pass.clone());
+    let mut app = MainApp::new(device.clone(), render_pass.clone(), db);
 
     let mut dynamic_state = DynamicState {
         line_width: None,
@@ -325,6 +332,7 @@ pub fn run_gui(db: TsDbHandle) {
             _ => (),
         });
         if done {
+            info!("Leaving the GUI main loop");
             return;
         }
 
@@ -333,12 +341,7 @@ pub fn run_gui(db: TsDbHandle) {
             let t2 = Instant::now();
             let duration = t2 - t1;
             let fps = 1.0 / (duration.as_micros() as f64 * 1.0e-6);
-            println!(
-                "Duration of render loop: {:?} fps={} db={}",
-                duration,
-                fps,
-                db.lock().unwrap()
-            );
+            println!("Duration of render loop: {:?} fps={}", duration, fps);
             t1 = t2;
         }
     }

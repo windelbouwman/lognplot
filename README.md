@@ -18,6 +18,7 @@ Plan:
 
 ## Similar projects
 
+- plot juggler https://github.com/facontidavide/PlotJuggler
 - grafana (https://grafana.com/)
 - KST plot (https://kst-plot.kde.org/)
 - tracy profiler (https://bitbucket.org/wolfpld/tracy)

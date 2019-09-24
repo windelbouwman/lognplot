@@ -4,6 +4,7 @@ mod chunk;
 mod connection;
 mod db;
 mod metrics;
+mod peer;
 mod query;
 mod sample;
 pub mod server;

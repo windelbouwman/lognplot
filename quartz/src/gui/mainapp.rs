@@ -3,9 +3,11 @@ use vulkano::command_buffer::{AutoCommandBufferBuilder, DynamicState};
 use vulkano::device::Device;
 use vulkano::framebuffer::RenderPassAbstract;
 use vulkano::instance::QueueFamily;
+use winit::VirtualKeyCode;
 
 use super::text::TextEngine;
 use super::visual1::MyVisual;
+use crate::tsdb::TsDbHandle;
 
 /// Application structure.
 pub struct MainApp {
@@ -14,13 +16,16 @@ pub struct MainApp {
     text_engine: TextEngine,
     zoom_in: bool,
     zoom_out: bool,
+    horizontal_scroll: i32,
     pub quit: bool,
+    db: TsDbHandle,
 }
 
 impl MainApp {
     pub fn new(
         device: Arc<Device>,
         render_pass: Arc<dyn RenderPassAbstract + Send + Sync>,
+        db: TsDbHandle,
     ) -> Self {
         let my_visual = MyVisual::new(device.clone(), render_pass.clone(), 0.7_f32);
         let my_visual1 = MyVisual::new(device.clone(), render_pass.clone(), 0.3_f32);
@@ -36,10 +41,13 @@ impl MainApp {
             text_engine,
             zoom_in: false,
             zoom_out: false,
+            horizontal_scroll: 0,
             quit: false,
+            db,
         }
     }
 
+    /// Update loop of the application
     pub fn tick(&mut self) {
         if self.zoom_in {
             self.visuals[0].zoom *= 1.05_f32;
@@ -49,9 +57,30 @@ impl MainApp {
             self.visuals[0].zoom *= 0.95_f32;
         }
 
-        self.text_engine.queue_text(0.0, 0.0, "hoi");
+        self.visuals[0].pan += (self.horizontal_scroll as f32) * 0.05;
+
+        self.text_engine.queue_text(
+            0.0,
+            0.0,
+            &format!(
+                "hoi: zoom={} pan ={}",
+                self.visuals[0].zoom, self.visuals[0].pan
+            ),
+        );
+
+        self.text_engine.queue_text(
+            0.0,
+            -150.0,
+            &format!("Horizontal pan={}", self.horizontal_scroll),
+        );
 
         self.text_engine.queue_text(0.1, 130.0, "boe ba beloeba!");
+
+        if let Some(trc) = self.db.lock().unwrap().get_trace("Client0") {
+            let ln = trc.len();
+            self.text_engine
+                .queue_text(-80.0, -100.0, &format!("Trace {}!", ln));
+        }
     }
 
     pub fn prepare_commands(
@@ -97,17 +126,23 @@ impl MainApp {
         }
     }
 
-    fn handle_key_press(&mut self, virtual_keycode: winit::VirtualKeyCode) {
+    fn handle_key_press(&mut self, virtual_keycode: VirtualKeyCode) {
         match virtual_keycode {
-            winit::VirtualKeyCode::D => {
+            VirtualKeyCode::D => {
                 // info!("Zoom out pressed");
                 self.zoom_out = true;
             }
-            winit::VirtualKeyCode::S => {
+            VirtualKeyCode::S => {
                 // info!("Zoom in");
                 self.zoom_in = true;
             }
-            winit::VirtualKeyCode::Q => {
+            VirtualKeyCode::Left => {
+                self.horizontal_scroll = -1;
+            }
+            VirtualKeyCode::Right => {
+                self.horizontal_scroll = 1;
+            }
+            VirtualKeyCode::Q | VirtualKeyCode::Escape => {
                 self.quit = true;
             }
             keycode => {
@@ -116,15 +151,21 @@ impl MainApp {
         }
     }
 
-    fn handle_key_release(&mut self, virtual_keycode: winit::VirtualKeyCode) {
+    fn handle_key_release(&mut self, virtual_keycode: VirtualKeyCode) {
         match virtual_keycode {
-            winit::VirtualKeyCode::D => {
+            VirtualKeyCode::D => {
                 // info!("Zoom out");
                 self.zoom_out = false;
             }
-            winit::VirtualKeyCode::S => {
+            VirtualKeyCode::S => {
                 // info!("Zoom in released");
                 self.zoom_in = false;
+            }
+            VirtualKeyCode::Left => {
+                self.horizontal_scroll = 0;
+            }
+            VirtualKeyCode::Right => {
+                self.horizontal_scroll = 0;
             }
             _ => {}
         }
