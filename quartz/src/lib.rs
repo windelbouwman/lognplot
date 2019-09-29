@@ -6,6 +6,7 @@ pub mod geometry;
 pub mod gui;
 mod layout;
 pub mod plot;
+mod style;
 mod time;
 pub mod tsdb;
 mod widgets;

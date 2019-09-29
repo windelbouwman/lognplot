@@ -1,6 +1,7 @@
 use super::sample::Sample;
 
 /// Metrics collected about a certain trace
+#[derive(Debug)]
 pub struct SampleMetrics {
     min: f64,
     max: f64,

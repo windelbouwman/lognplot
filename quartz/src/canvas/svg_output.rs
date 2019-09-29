@@ -1,6 +1,6 @@
 use super::canvas::Canvas;
-use super::color::Color;
 use crate::geometry::Point;
+use crate::style::Color;
 
 use std::io::Write;
 

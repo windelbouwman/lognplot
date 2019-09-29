@@ -27,6 +27,7 @@ futures = "0.1.29"
 log = "0.4.8"
 num-traits = "0.2.8"
 rusttype = { version = "0.8.0", features = ["gpu_cache"] }
+serde = { version = "1.0.101", features = ["derive"] }
 serde_cbor = "0.10.1"
 simple_logger = "1.3.0"
 tokio = "0.1.22"

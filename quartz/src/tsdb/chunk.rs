@@ -3,6 +3,7 @@ use super::sample::Sample;
 
 const CHUNK_SIZE: usize = 256;
 
+#[derive(Debug)]
 pub enum Chunk {
     SubChunk {
         chunks: Vec<Chunk>,

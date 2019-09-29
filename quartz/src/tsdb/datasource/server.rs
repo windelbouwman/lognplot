@@ -6,9 +6,11 @@ use std::thread;
 use tokio::net::TcpListener;
 use tokio::prelude::*;
 
-use super::db::TsDbHandle;
+use super::super::db::TsDbHandle;
 use super::peer::{process_client, PeerHandle};
 
+/// This is a handle to a started TCP server.
+/// You can use this handle to stop the server.
 pub struct ServerHandle {
     // This is the thread in which the server will block
     thread: thread::JoinHandle<()>,
@@ -34,11 +36,7 @@ impl ServerHandle {
 
 pub fn run_server(db: TsDbHandle) -> ServerHandle {
     let port = 12345;
-    info!(
-        "Starting up server at port {} with db {}!",
-        port,
-        db.lock().unwrap()
-    );
+    info!("Starting up server at port {} with db {}!", port, db);
 
     let addr = format!("127.0.0.1:{}", port);
     let addr = addr.parse().unwrap();

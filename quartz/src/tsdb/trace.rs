@@ -4,26 +4,35 @@
 //! or leave chunks, with real data.
 //! Also: keep track of certain metrics, such as min, max and sum.
 
+// use std::cell::RefCell;
 use super::chunk::Chunk;
 use super::sample::Sample;
+use std::sync::Mutex;
 
+#[derive(Debug)]
 pub struct Trace {
-    chunk: Chunk,
-    num_points: usize,
+    chunk: Mutex<Chunk>,
+    num_points: Mutex<usize>,
 }
 
 impl Trace {
-    pub fn push(&mut self, value: Sample) {
-        self.chunk.push(value);
-        self.num_points += 1;
+    pub fn add_values(&self, samples: Vec<Sample>) {
+        for sample in samples {
+            self.push(sample);
+        }
+    }
+
+    pub fn push(&self, value: Sample) {
+        self.chunk.lock().unwrap().push(value);
+        *self.num_points.lock().unwrap() += 1;
     }
 
     pub fn to_vec(&self) -> Vec<Sample> {
-        self.chunk.to_vec()
+        self.chunk.lock().unwrap().to_vec()
     }
 
     pub fn len(&self) -> usize {
-        self.num_points
+        *self.num_points.lock().unwrap()
     }
 }
 
@@ -33,7 +42,7 @@ impl Default for Trace {
 
         Self {
             chunk,
-            num_points: 0,
+            num_points: Mutex::new(0),
         }
     }
 }

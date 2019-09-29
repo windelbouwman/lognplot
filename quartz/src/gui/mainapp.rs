@@ -7,6 +7,8 @@ use winit::VirtualKeyCode;
 
 use super::text::TextEngine;
 use super::visual1::MyVisual;
+use super::visuals::ChartRenderer;
+use crate::plot::{Chart, Curve, CurveData};
 use crate::tsdb::TsDbHandle;
 
 /// Application structure.
@@ -14,11 +16,13 @@ pub struct MainApp {
     device: Arc<Device>,
     visuals: Vec<MyVisual>,
     text_engine: TextEngine,
+    chart_engine: ChartRenderer,
     zoom_in: bool,
     zoom_out: bool,
     horizontal_scroll: i32,
     pub quit: bool,
     db: TsDbHandle,
+    chart: Chart,
 }
 
 impl MainApp {
@@ -34,16 +38,25 @@ impl MainApp {
         let visuals = vec![my_visual, my_visual1];
 
         let text_engine = TextEngine::new(device.clone(), render_pass.clone());
+        let chart_engine = ChartRenderer::new(device.clone(), render_pass.clone());
+
+        let trace = db.get_trace("Trace0");
+        let curve1 = Curve::new(CurveData::Trace(trace));
+        let mut chart = Chart::default();
+        chart.set_title("Plot1");
+        chart.add_curve(curve1);
 
         MainApp {
             device,
             visuals,
             text_engine,
+            chart_engine,
             zoom_in: false,
             zoom_out: false,
             horizontal_scroll: 0,
             quit: false,
             db,
+            chart,
         }
     }
 
@@ -76,11 +89,10 @@ impl MainApp {
 
         self.text_engine.queue_text(0.1, 130.0, "boe ba beloeba!");
 
-        if let Some(trc) = self.db.lock().unwrap().get_trace("Client0") {
-            let ln = trc.len();
-            self.text_engine
-                .queue_text(-80.0, -100.0, &format!("Trace {}!", ln));
-        }
+        let trc = self.db.get_trace("Trace0");
+        let ln = trc.len();
+        self.text_engine
+            .queue_text(-80.0, -100.0, &format!("Trace {}!", ln));
     }
 
     pub fn prepare_commands(
@@ -100,6 +112,11 @@ impl MainApp {
         for visual in self.visuals.iter() {
             started_renderer = visual.draw(started_renderer, dynamic_state);
         }
+
+        // Invoke the charting engine on the different charts!
+        started_renderer = self
+            .chart_engine
+            .draw(started_renderer, dynamic_state, &self.chart);
 
         started_renderer = self
             .text_engine

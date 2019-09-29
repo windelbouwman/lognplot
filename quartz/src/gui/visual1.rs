@@ -41,7 +41,7 @@ impl MyVisual {
 
             CpuAccessibleBuffer::from_iter(
                 device.clone(),
-                BufferUsage::all(),
+                BufferUsage::vertex_buffer(),
                 points.iter().cloned(),
             )
             .unwrap()

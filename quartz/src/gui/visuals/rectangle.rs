@@ -1,4 +1,4 @@
-use crate::canvas::Color;
+use crate::style::Color;
 
 pub struct Rectangle {}
 

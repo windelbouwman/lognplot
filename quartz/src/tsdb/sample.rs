@@ -7,8 +7,7 @@ pub struct Sample {
 }
 
 impl Sample {
-    pub fn new(value: f64) -> Self {
-        let timestamp = TimeStamp::default();
+    pub fn new(timestamp: TimeStamp, value: f64) -> Self {
         Sample { timestamp, value }
     }
 }

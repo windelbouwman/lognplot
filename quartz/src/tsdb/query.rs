@@ -3,11 +3,16 @@ use super::sample::Sample;
 use crate::time::{Resolution, TimeSpan};
 
 pub trait Query {
-    fn get_values(&self, interval: &TimeSpan, resolution: &Resolution) -> Vec<Sample>;
+    fn get_values(&self, name: &str, interval: &TimeSpan, resolution: &Resolution) -> Vec<Sample>;
 }
 
 impl Query for TsDb {
-    fn get_values(&self, interval: &TimeSpan, resolution: &Resolution) -> Vec<Sample> {
-        self.data.get("foo").unwrap().to_vec()
+    fn get_values(
+        &self,
+        name: &str,
+        _interval: &TimeSpan,
+        _resolution: &Resolution,
+    ) -> Vec<Sample> {
+        self.data.lock().unwrap().get(name).unwrap().to_vec()
     }
 }

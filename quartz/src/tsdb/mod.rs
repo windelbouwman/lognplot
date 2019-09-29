@@ -2,16 +2,16 @@
 
 mod chunk;
 mod connection;
+pub mod datasource;
 mod db;
 mod metrics;
-mod peer;
 mod query;
 mod sample;
-pub mod server;
 mod trace;
 
 pub use db::{TsDb, TsDbHandle};
 pub use sample::Sample;
+pub use trace::Trace;
 
 #[cfg(test)]
 mod tests {
@@ -25,7 +25,7 @@ mod tests {
 
     #[test]
     fn it_works() {
-        let mut db = TsDb::new();
+        let db = TsDb::new();
         db.open();
         let sample = Sample::new(3.1415926);
         db.new_trace("foo");

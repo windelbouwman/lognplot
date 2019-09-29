@@ -19,10 +19,12 @@ def main():
     B = 5.0  # Sine wave offset
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.connect(('127.0.0.1', 12345))
-    dt = 0.0001  # 10 kHz
-    n_samples = 2000
+
+    dt = 0.01  # 10 kHz
+    n_samples = 20
     while True:
         samples = []
+        t0 = t
         # Generate samples:
         for _ in range(n_samples):
             omega = 2 * math.pi * F
@@ -31,17 +33,21 @@ def main():
             samples.append(sample)
 
             # Increment time:
-            t += 0.0001
+            t += dt
         
         print(f'Sending {len(samples)} samples')
-        send_samples(sock, samples)
+        send_samples(sock, t0, dt, samples)
 
         time.sleep(n_samples * dt)
 
 
-def send_samples(sock, samples):
+def send_samples(sock, t0, dt, samples):
     data = bytearray()
-    data2 = cbor.dumps(samples)
+    data2 = cbor.dumps({
+        't0': t0,
+        'dt': dt,
+        'data': samples
+    })
     data.extend(struct.pack('>I', len(data2)))
     data.extend(data2)
     # for sample in samples:

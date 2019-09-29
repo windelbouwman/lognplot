@@ -16,7 +16,7 @@ impl Axis {
     /// Given the current axis, calculate sensible
     /// tick values. This means, a minimum tick, but also
     /// the inter tick distance!
-    pub fn calc_ticks(&self) -> (f64, f64) {
+    fn calc_tick_start_and_spacing(&self) -> (f64, f64) {
         // let axis_width: f64 = 1000.0;
         let n_ticks = 7; // Always nice to have 7 ticks!
         let width: f64 = self.range.end() - self.range.begin();
@@ -43,6 +43,29 @@ impl Axis {
 
         (start_tick, tick_width)
     }
+
+    /// Calculate the proper major tick and minor ticks for
+    /// a given range.
+    pub fn calc_tiks(&self) -> Vec<(f64, String)> {
+        trace!("Calculating ticks!");
+        let mut x: f64 = self.range.begin();
+        let mut z: f64 = 0.0;
+        let (_, tickz) = self.calc_tick_start_and_spacing();
+        trace!("tickz {:?}", tickz);
+        let mut res = vec![];
+
+        while x < self.range.end() {
+            let label = z.to_string();
+            res.push((x, label));
+            x += 50.0;
+            z += tickz;
+        }
+
+        trace!("Ticks: {:?}", res);
+        res
+
+        // vec![(30.0, "1".to_string()), (60.0, "2".to_string()), (160.0, "3".to_string()), (260.0, "4".to_string())]
+    }
 }
 
 /// Axis options
@@ -62,27 +85,4 @@ impl Default for AxisOptions {
             minor_ticks: false,
         }
     }
-}
-
-/// Calculate the proper major tick and minor ticks for
-/// a given range.
-pub fn calc_tiks(axis: &Axis) -> Vec<(f64, String)> {
-    trace!("Calculating ticks!");
-    let mut x: f64 = axis.range.begin();
-    let mut z: f64 = 0.0;
-    let (_, tickz) = axis.calc_ticks();
-    trace!("tickz {:?}", tickz);
-    let mut res = vec![];
-
-    while x < axis.range.end() {
-        let label = z.to_string();
-        res.push((x, label));
-        x += 50.0;
-        z += tickz;
-    }
-
-    trace!("Ticks: {:?}", res);
-    res
-
-    // vec![(30.0, "1".to_string()), (60.0, "2".to_string()), (160.0, "3".to_string()), (260.0, "4".to_string())]
 }
