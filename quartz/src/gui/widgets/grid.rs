@@ -1,5 +1,3 @@
-// use cassowary::
-
 struct Grid {}
 
 impl Grid {

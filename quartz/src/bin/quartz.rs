@@ -4,6 +4,7 @@
 extern crate log;
 
 use quartz::gui::run_gui;
+use quartz::gui::MainApp;
 use quartz::tsdb::TsDb;
 
 use quartz::tsdb::datasource::server::run_server;
@@ -17,7 +18,10 @@ fn main() {
     db.new_trace("Trace0");
 
     // Start server
-    let server = run_server(db.clone());
-    run_gui(db);
-    server.stop();
+    // let server = run_server(db.clone());
+
+    // Create main app:
+    let app = MainApp::new(db);
+    run_gui(app);
+    // server.stop();
 }

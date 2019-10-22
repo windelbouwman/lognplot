@@ -75,7 +75,7 @@ fn draw_axis(chart: &Chart, canvas: &mut dyn Canvas) {
 }
 
 /// Draw chart box
-fn draw_box(chart: &Chart, canvas: &mut dyn Canvas) {
+fn draw_box(_chart: &Chart, canvas: &mut dyn Canvas) {
     let top_left = Point::new(20.0, 20.0);
     let bottom_left = Point::new(20.0, 980.0);
     let top_right = Point::new(980.0, 20.0);

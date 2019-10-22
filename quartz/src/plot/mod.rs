@@ -3,6 +3,7 @@
 //!
 
 mod axis;
+mod axis_options;
 mod chart;
 mod curve;
 

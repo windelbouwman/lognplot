@@ -4,6 +4,7 @@ use super::axis::Axis;
 use super::curve::Curve;
 
 /// A single 2D-chart
+#[derive(Clone)]
 pub struct Chart {
     /// An optional title for the plot
     pub title: Option<String>,

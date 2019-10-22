@@ -3,7 +3,7 @@ use crate::style::Color;
 pub struct Rectangle {}
 
 impl Rectangle {
-    pub fn new(color: Color) -> Self {
+    pub fn new(_color: Color) -> Self {
         Rectangle {}
     }
 }

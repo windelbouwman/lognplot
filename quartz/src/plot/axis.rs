@@ -1,6 +1,7 @@
+use super::axis_options::AxisOptions;
 use crate::geometry::Range;
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct Axis {
     pub options: AxisOptions,
     pub label: Option<String>,
@@ -65,24 +66,5 @@ impl Axis {
         res
 
         // vec![(30.0, "1".to_string()), (60.0, "2".to_string()), (160.0, "3".to_string()), (260.0, "4".to_string())]
-    }
-}
-
-/// Axis options
-pub struct AxisOptions {
-    /// Draw major tick markers
-    pub major_ticks: bool,
-
-    /// Draw minor tick markers
-    pub minor_ticks: bool,
-}
-
-/// Implement sensible default axis options.
-impl Default for AxisOptions {
-    fn default() -> Self {
-        AxisOptions {
-            major_ticks: true,
-            minor_ticks: false,
-        }
     }
 }

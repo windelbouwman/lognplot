@@ -2,7 +2,7 @@ use super::color::Color;
 use std::str::FromStr;
 
 /// A stroking style, with color and width
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Stroke {
     pub color: Color,
     pub width: f64,

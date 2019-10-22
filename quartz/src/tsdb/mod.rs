@@ -19,7 +19,6 @@ mod tests {
     use super::query::Query;
     use super::Sample;
     use super::TsDb;
-    use super::*;
     use crate::time::TimeModifiers;
     use crate::time::{Resolution, TimeSpan, TimeStamp};
 
@@ -27,7 +26,8 @@ mod tests {
     fn it_works() {
         let db = TsDb::new();
         db.open();
-        let sample = Sample::new(3.1415926);
+        let ts = TimeStamp::new(0.0);
+        let sample = Sample::new(ts, 3.1415926);
         db.new_trace("foo");
         db.add_value("foo", sample.clone());
         // db.add_values();
@@ -35,7 +35,7 @@ mod tests {
             sample.timestamp.add_millis(-1),
             sample.timestamp.add_millis(1),
         );
-        let values = db.get_values(&timespan, &Resolution::NanoSeconds);
+        let values = db.get_values("foo", &timespan, &Resolution::NanoSeconds);
         assert_eq!(1, values.len());
         db.close();
     }

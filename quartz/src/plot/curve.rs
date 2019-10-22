@@ -5,7 +5,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 /// A single curve with some stroke styling.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Curve {
     pub data: CurveData,
     stroke: Stroke,
@@ -13,7 +13,7 @@ pub struct Curve {
 }
 
 /// A dataset. Can be either a trace, or a vector of points!
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum CurveData {
     Trace(Arc<Trace>),
     Points(Vec<Point>),

@@ -1,10 +1,9 @@
 mod mainwindow;
 
+mod backends;
+pub mod im;
 mod mainapp;
-mod text;
-mod vertex;
-mod visual1;
-mod visuals;
-mod world;
+mod widgets;
 
+pub use mainapp::MainApp;
 pub use mainwindow::run_gui;

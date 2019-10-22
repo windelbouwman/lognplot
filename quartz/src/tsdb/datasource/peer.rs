@@ -56,7 +56,7 @@ impl SampleBatch {
 }
 
 /// Handle a single client
-pub fn process_client(counter: usize, socket: TcpStream, db: TsDbHandle) -> PeerHandle {
+pub fn process_client(_counter: usize, socket: TcpStream, db: TsDbHandle) -> PeerHandle {
     info!("Got incoming socket! {:?}", socket);
 
     // let trace_name = format!("Client{}", counter);

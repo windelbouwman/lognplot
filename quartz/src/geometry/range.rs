@@ -1,5 +1,5 @@
 //// A certain range with a begining and an end.
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct Range<T>
 where
     T: Copy,
