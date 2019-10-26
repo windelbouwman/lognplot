@@ -16,8 +16,8 @@ pub fn create_vulkan_instance() -> Arc<Instance> {
     }
 
     // Select the validation layers we want to use:
-    let layer = "VK_LAYER_LUNARG_standard_validation";
-    let layers = vec![layer];
+    // let layer = "VK_LAYER_LUNARG_standard_validation";
+    let layers = vec![];
 
     let instance = {
         let mut extensions = vulkano_win::required_extensions();

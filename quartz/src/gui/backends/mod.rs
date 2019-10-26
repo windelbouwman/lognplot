@@ -5,4 +5,7 @@
 //! backend.
 
 mod gl;
+mod paintable;
 pub mod vulkan;
+
+pub use paintable::Paintable;

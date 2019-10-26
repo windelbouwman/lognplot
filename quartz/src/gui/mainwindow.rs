@@ -6,7 +6,6 @@
 //! - Display a window
 //! - Run the event / draw loop
 
-use std::time::Instant;
 use vulkano_win::VkSurfaceBuild;
 use winit::{Event, EventsLoop, WindowBuilder, WindowEvent};
 
@@ -28,8 +27,6 @@ pub fn run_gui(mut app: MainApp) {
     let _window = surface.window();
 
     let mut vulkan_engine = VulkanEngine::new(instance, surface);
-
-    let mut t1 = Instant::now();
 
     loop {
         // Proceed one tick:
@@ -64,15 +61,6 @@ pub fn run_gui(mut app: MainApp) {
         if done {
             info!("Leaving the GUI main loop");
             return;
-        }
-
-        let print_timing = false;
-        if print_timing {
-            let t2 = Instant::now();
-            let duration = t2 - t1;
-            let fps = 1.0 / (duration.as_micros() as f64 * 1.0e-6);
-            println!("Duration of render loop: {:?} fps={}", duration, fps);
-            t1 = t2;
         }
     }
 }

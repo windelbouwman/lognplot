@@ -1,8 +1,11 @@
 use winit::VirtualKeyCode;
 // TODO: turn into interface?
 use super::backends::vulkan::VulkanEngine;
+use super::backends::Paintable;
 
 use super::widgets::{Button, Container, GraphControl};
+use crate::canvas::Canvas;
+use crate::plot::plot;
 use crate::plot::{Chart, Curve, CurveData};
 use crate::tsdb::TsDbHandle;
 
@@ -16,6 +19,40 @@ pub struct MainApp {
     db: TsDbHandle,
     chart: Chart,
     root_container: Container,
+}
+
+fn test1(canvas: &mut dyn Canvas) {
+    let x = vec![1.0, 2.0, 3.0, 4.0, 5.0, 8.0];
+    let y = vec![9.0, 2.2, 5.5, 2.2, 1.2, 1.7];
+
+    plot(canvas, x, y);
+}
+
+impl Paintable for MainApp {
+    /// Paint the application onto some rendering surface!
+    fn paint(&self, engine: &mut VulkanEngine) {
+        engine.draw_text(100.0, -350.0, &format!("FPS={:.2}", engine.fps()));
+
+        engine.draw_text(
+            0.0,
+            0.0,
+            &format!("hoi: zoom={} pan ={}", self.zoom, self.horizontal_scroll),
+        );
+
+        engine.draw_text(
+            0.0,
+            -150.0,
+            &format!("Horizontal pan={}", self.horizontal_scroll),
+        );
+
+        engine.draw_text(0.1, 130.0, "boe ba beloeba!");
+
+        let trc = self.db.get_trace("Trace0");
+        let ln = trc.len();
+        engine.draw_text(-80.0, -100.0, &format!("Trace {}!", ln));
+
+        test1(engine);
+    }
 }
 
 impl MainApp {
@@ -55,27 +92,6 @@ impl MainApp {
         if self.zoom_out {
             self.zoom *= 0.95_f32;
         }
-    }
-
-    /// Paint the application onto some rendering surface!
-    pub fn paint(&self, engine: &mut VulkanEngine) {
-        engine.draw_text(
-            0.0,
-            0.0,
-            &format!("hoi: zoom={} pan ={}", self.zoom, self.horizontal_scroll),
-        );
-
-        engine.draw_text(
-            0.0,
-            -150.0,
-            &format!("Horizontal pan={}", self.horizontal_scroll),
-        );
-
-        engine.draw_text(0.1, 130.0, "boe ba beloeba!");
-
-        let trc = self.db.get_trace("Trace0");
-        let ln = trc.len();
-        engine.draw_text(-80.0, -100.0, &format!("Trace {}!", ln));
     }
 
     pub fn handle_event(&mut self, event: winit::WindowEvent) {

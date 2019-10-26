@@ -1,5 +1,6 @@
 //! Vulkan backend for the gui using vulkano.
 
+mod canvas;
 mod debugging;
 mod engine;
 mod instance;

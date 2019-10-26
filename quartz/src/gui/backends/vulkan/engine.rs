@@ -2,27 +2,32 @@
 
 use super::text::TextEngine;
 use std::cell::RefCell;
+use std::time::Instant;
 // use super::visuals::ChartRenderer;
 use std::sync::Arc;
-use vulkano::command_buffer::{AutoCommandBufferBuilder, DynamicState};
+use vulkano::command_buffer::{AutoCommandBuffer, AutoCommandBufferBuilder, DynamicState};
 use vulkano::device::{Device, Queue};
 use vulkano::framebuffer::RenderPassAbstract;
 use vulkano::framebuffer::{Framebuffer, FramebufferAbstract};
 use vulkano::image::SwapchainImage;
 use vulkano::instance::Instance;
 use vulkano::pipeline::viewport::Viewport;
-use vulkano::swapchain::{self, AcquireError, PresentMode, SurfaceTransform, Swapchain};
+use vulkano::swapchain::{
+    self, AcquireError, PresentMode, SurfaceTransform, Swapchain, SwapchainCreationError,
+};
 // use vulkano::
 use vulkano::swapchain::Surface;
 use vulkano::sync;
 use vulkano::sync::{FlushError, GpuFuture};
 use winit::Window;
 
-use super::super::super::MainApp;
+use super::super::Paintable;
 use super::instance::{create_device_and_queue, create_render_pass};
+use super::visuals::LyonEngine;
 
 pub struct VulkanEngine {
     pub text_engine: TextEngine,
+    lyon_engine: LyonEngine,
     // chart_engine: ChartRenderer,
     draw_queue: Vec<DrawThing>,
 
@@ -40,6 +45,8 @@ pub struct VulkanEngine {
     pub recreate_swapchain: bool,
 
     previous_frame_end: RefCell<Option<Box<dyn GpuFuture>>>,
+    prev_frame_end_instant: Instant,
+    fps: f64,
 }
 
 enum DrawThing {
@@ -66,12 +73,16 @@ impl VulkanEngine {
             window_size_dependent_setup(&images, render_pass.clone(), &mut dynamic_state);
 
         let text_engine = TextEngine::new(device.clone(), render_pass.clone());
+        let lyon_engine = LyonEngine::new(device.clone(), render_pass.clone());
         let previous_frame_end = RefCell::new(Some(
             Box::new(sync::now(device.clone())) as Box<dyn GpuFuture>
         ));
 
+        let prev_frame_end_instant = Instant::now();
+
         Self {
             text_engine,
+            lyon_engine,
             draw_queue: vec![],
 
             // Vulkano internals:
@@ -85,10 +96,12 @@ impl VulkanEngine {
             framebuffers,
             recreate_swapchain: false,
             previous_frame_end,
+            prev_frame_end_instant,
+            fps: 0.0,
         }
     }
 
-    pub fn begin_draw(&mut self) {
+    fn begin_draw(&mut self) {
         self.draw_queue.clear();
     }
 
@@ -108,20 +121,31 @@ impl VulkanEngine {
     // - apply scaling
 
     // Rendering api:
-    pub fn render(&mut self, app: &MainApp) {
+    pub fn render(&mut self, app: &dyn Paintable) {
         // Start rendering:
         self.begin_draw();
 
         // Draw the app in the vulkan engine:
         app.paint(self);
 
-        self.inner_render();
+        self.lyon_engine.make_line();
+
+        self.inner_render2();
+
+        // Record FPS (frames per second)
+        let t2 = Instant::now();
+        let duration = t2 - self.prev_frame_end_instant;
+        self.fps = 1.0 / (duration.as_micros() as f64 * 1.0e-6);
+        // println!("Duration of render loop: {:?} fps={}", duration, fps);
+        self.prev_frame_end_instant = t2;
     }
 
-    fn inner_render(&mut self) {
-        let mut prev_frame = self.previous_frame_end.replace(None).unwrap();
-        prev_frame.cleanup_finished();
+    /// Retrieve the current FPS value!
+    pub fn fps(&self) -> f64 {
+        self.fps
+    }
 
+    fn inner_render2(&mut self) {
         if self.recreate_swapchain {
             // Get the new dimensions of the window.
             let dimensions = if let Some(dimensions) = self.surface.window().get_inner_size() {
@@ -130,25 +154,78 @@ impl VulkanEngine {
                     .into();
                 [dimensions.0, dimensions.1]
             } else {
-                return;
+                unimplemented!("Close window not handled.");
             };
 
-            self.recreate_swap_chain(dimensions);
-            self.recreate_swapchain = false;
+            if self.recreate_swap_chain(dimensions) {
+                self.recreate_swapchain = false;
+            } else {
+                return;
+            }
         }
+
+        let mut prev_frame = self.previous_frame_end.replace(None).unwrap();
+        prev_frame = match self.inner_render(prev_frame) {
+            Ok(f) => f,
+            Err(true) => {
+                self.recreate_swapchain = true;
+                Box::new(sync::now(self.device.clone()))
+            }
+            Err(false) => {
+                unimplemented!("Close window not handled.");
+            }
+        };
+
+        self.previous_frame_end.replace(Some(prev_frame));
+    }
+
+    fn inner_render(
+        &mut self,
+        mut prev_frame: Box<dyn GpuFuture>,
+    ) -> Result<Box<dyn GpuFuture>, bool> {
+        prev_frame.cleanup_finished();
 
         let (image_num, acquire_future) =
             match swapchain::acquire_next_image(self.swapchain.clone(), None) {
                 Ok(r) => r,
                 Err(AcquireError::OutOfDate) => {
-                    self.previous_frame_end
-                        .replace(Some(Box::new(sync::now(self.device.clone()))));
-                    self.recreate_swapchain = true;
-                    return;
+                    return Err(true);
                 }
                 Err(err) => panic!("{:?}", err),
             };
 
+        let command_buffer = self.create_command_buffer(image_num);
+
+        let future = prev_frame
+            .join(acquire_future)
+            .then_execute(self.queue.clone(), command_buffer)
+            .unwrap()
+            // The color output is now expected to contain our triangle. But in order to show it on
+            // the screen, we have to *present* the image by calling `present`.
+            //
+            // This function does not actually present the image immediately. Instead it submits a
+            // present command at the end of the queue. This means that it will only be presented once
+            // the GPU has finished executing the command buffer that draws the triangle.
+            .then_swapchain_present(self.queue.clone(), self.swapchain.clone(), image_num)
+            .then_signal_fence_and_flush();
+
+        let new_fut = match future {
+            Ok(future) => Box::new(future) as Box<dyn GpuFuture>,
+            Err(FlushError::OutOfDate) => {
+                return Err(true);
+            }
+            Err(e) => {
+                unimplemented!("Woot, this error is new: {:?}", e);
+                // println!("{:?}", e);
+                // Box::new(sync::now(self.device.clone()))
+            }
+        };
+        Ok(new_fut)
+    }
+
+    /// Create funky command queue which will emit all we want to do in one shot
+    /// to the GPU.
+    fn create_command_buffer(&mut self, image_num: usize) -> AutoCommandBuffer {
         let queue_family = self.queue.family();
         let mut command_buffer =
             AutoCommandBufferBuilder::primary_one_time_submit(self.device.clone(), queue_family)
@@ -169,42 +246,15 @@ impl VulkanEngine {
         // We are now inside the first subpass of the render pass. We add a draw command.
         started_renderer = self.draw(started_renderer);
 
-        let command_buffer = started_renderer.end_render_pass().unwrap().build().unwrap();
-
-        let future = prev_frame
-            .join(acquire_future)
-            .then_execute(self.queue.clone(), command_buffer)
-            .unwrap()
-            // The color output is now expected to contain our triangle. But in order to show it on
-            // the screen, we have to *present* the image by calling `present`.
-            //
-            // This function does not actually present the image immediately. Instead it submits a
-            // present command at the end of the queue. This means that it will only be presented once
-            // the GPU has finished executing the command buffer that draws the triangle.
-            .then_swapchain_present(self.queue.clone(), self.swapchain.clone(), image_num)
-            .then_signal_fence_and_flush();
-
-        let new_fut = match future {
-            Ok(future) => Box::new(future) as Box<dyn GpuFuture>,
-            Err(FlushError::OutOfDate) => {
-                self.recreate_swapchain = true;
-                Box::new(sync::now(self.device.clone()))
-            }
-            Err(e) => {
-                println!("{:?}", e);
-                Box::new(sync::now(self.device.clone()))
-            }
-        };
-
-        self.previous_frame_end.replace(Some(new_fut));
+        started_renderer.end_render_pass().unwrap().build().unwrap()
     }
 
-    pub fn recreate_swap_chain(&mut self, dimensions: [u32; 2]) {
+    pub fn recreate_swap_chain(&mut self, dimensions: [u32; 2]) -> bool {
         let (new_swapchain, new_images) = match self.swapchain.recreate_with_dimension(dimensions) {
             Ok(r) => r,
             // This error tends to happen when the user is manually resizing the window.
             // Simply restarting the loop is the easiest way to fix this issue.
-            // Err(SwapchainCreationError::UnsupportedDimensions) => continue,
+            Err(SwapchainCreationError::UnsupportedDimensions) => return false,
             Err(err) => panic!("swapchain recreation error: {:?}", err),
         };
 
@@ -216,6 +266,7 @@ impl VulkanEngine {
             self.render_pass.clone(),
             &mut self.dynamic_state,
         );
+        true
     }
 
     // Emit draw commands
@@ -223,6 +274,10 @@ impl VulkanEngine {
         started_renderer = self
             .text_engine
             .emit_draw_calls(started_renderer, &mut self.dynamic_state);
+
+        started_renderer = self
+            .lyon_engine
+            .draw(started_renderer, &mut self.dynamic_state);
         started_renderer
     }
 }
