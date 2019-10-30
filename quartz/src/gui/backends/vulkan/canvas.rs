@@ -1,7 +1,7 @@
 use super::VulkanEngine;
-use crate::canvas::Canvas;
-use crate::geometry::Point;
-use crate::style::Color;
+use quartzcanvas::geometry::Point;
+use quartzcanvas::style::Color;
+use quartzcanvas::Canvas;
 
 /// Canvas implementation onto the vulkan engine!
 impl Canvas for VulkanEngine {

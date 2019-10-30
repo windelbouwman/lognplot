@@ -25,6 +25,14 @@ Plan:
 - trace compass: https://www.eclipse.org/tracecompass/
 - speedscope: https://www.speedscope.app/
 
+## Project structure
+
+The project is divided into several crates.
+
+- A time series database ala sqlite to store time series and query them.
+- A vulkan based canvas thingy
+- A cairo based drawing
+
 ## About the name
 
 Quartz is a crystal used to create precise timing devices. See here: https://en.wikipedia.org/wiki/Quartz_clock

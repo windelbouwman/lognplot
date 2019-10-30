@@ -7,9 +7,9 @@ mod axis_options;
 mod chart;
 mod curve;
 
-use crate::canvas::{Canvas, CanvasDrawAble};
 pub use chart::Chart;
 pub use curve::{Curve, CurveData};
+use quartzcanvas::{Canvas, CanvasDrawAble};
 
 /// Entry function to plot a series of x values versus a series of y values!
 pub fn plot(canvas: &mut dyn Canvas, x: Vec<f64>, y: Vec<f64>) {

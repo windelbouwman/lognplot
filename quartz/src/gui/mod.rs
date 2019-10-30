@@ -1,9 +1,9 @@
 mod mainwindow;
 
 mod backends;
-pub mod im;
+mod graph;
 mod mainapp;
-mod widgets;
 
+pub use graph::GraphControl;
 pub use mainapp::MainApp;
 pub use mainwindow::run_gui;

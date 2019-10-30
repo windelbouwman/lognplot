@@ -1,6 +1,6 @@
 // use glfw::{Action, Context, Key};
 // // use imgui::*;
-use quartz::gui::im;
+use quartzgui::im;
 
 fn main() {
     //     let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();

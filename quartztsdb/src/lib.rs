@@ -1,5 +1,8 @@
 //! Time series database
 
+#[macro_use]
+extern crate log;
+
 mod chunk;
 mod connection;
 pub mod datasource;
@@ -7,6 +10,7 @@ mod db;
 mod metrics;
 mod query;
 mod sample;
+mod time;
 mod trace;
 
 pub use db::{TsDb, TsDbHandle};

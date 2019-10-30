@@ -1,3 +1,8 @@
 
 [workspace]
-members = ["quartz"]
+members = [
+    "quartz",
+    "quartzgui",
+    "quartzcanvas",
+    "quartztsdb"
+]

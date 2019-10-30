@@ -1,5 +1,5 @@
 use super::axis_options::AxisOptions;
-use crate::geometry::Range;
+use quartzcanvas::geometry::Range;
 
 #[derive(Default, Clone)]
 pub struct Axis {

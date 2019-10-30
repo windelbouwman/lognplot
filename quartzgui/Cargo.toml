@@ -1,0 +1,11 @@
+[package]
+name = "quartzgui"
+version = "0.1.0"
+authors = ["Windel Bouwman <windel@windel.nl>"]
+description = "Initial idea for a GUI framework."
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+cassowary = "0.3.0"

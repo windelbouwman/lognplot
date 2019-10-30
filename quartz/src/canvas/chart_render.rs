@@ -1,9 +1,9 @@
 //! Functionality to emit a plot to a canvas.
 
-use super::canvas::{Canvas, CanvasDrawAble};
-use crate::geometry::Point;
 use crate::plot::Chart;
-use crate::style::Color;
+use quartzcanvas::geometry::Point;
+use quartzcanvas::style::Color;
+use quartzcanvas::{Canvas, CanvasDrawAble};
 
 impl CanvasDrawAble for Chart {
     /// Draw the whole chart

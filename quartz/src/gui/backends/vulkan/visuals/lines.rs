@@ -24,7 +24,7 @@ use lyon::tessellation::{
 };
 
 use super::super::vertex::Vertex;
-use crate::geometry::Point;
+use quartzcanvas::geometry::Point;
 
 pub struct LyonEngine {
     // cache: todo

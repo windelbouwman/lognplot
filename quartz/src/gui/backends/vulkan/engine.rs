@@ -22,7 +22,7 @@ use winit::Window;
 use super::super::Paintable;
 use super::instance::{create_device_and_queue, create_render_pass};
 use super::visuals::LyonEngine;
-use crate::geometry::Point;
+use quartzcanvas::geometry::Point;
 
 pub struct VulkanEngine {
     pub text_engine: TextEngine,

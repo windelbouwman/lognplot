@@ -5,9 +5,9 @@ extern crate log;
 
 use quartz::gui::run_gui;
 use quartz::gui::MainApp;
-use quartz::tsdb::TsDb;
+use quartztsdb::TsDb;
 
-use quartz::tsdb::datasource::server::run_server;
+use quartztsdb::datasource::server::run_server;
 
 fn main() {
     simple_logger::init().unwrap();

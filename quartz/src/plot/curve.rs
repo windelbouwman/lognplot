@@ -1,6 +1,6 @@
-use crate::geometry::Point;
-use crate::style::{Color, Stroke};
-use crate::tsdb::Trace;
+use quartzcanvas::geometry::Point;
+use quartzcanvas::style::{Color, Stroke};
+use quartztsdb::Trace;
 use std::str::FromStr;
 use std::sync::Arc;
 

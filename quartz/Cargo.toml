@@ -20,11 +20,9 @@ path = "src/bin/quartz.rs"
 
 [dependencies]
 bytes = "0.4.12"
-cassowary = "0.3.0"
 cairo-rs = "0.7.1"
 cgmath = "0.17.0"
 chrono = "0.4.9"
-futures = "0.1.29"
 log = "0.4.8"
 lyon = "0.14.1"
 num-traits = "0.2.8"
@@ -33,8 +31,10 @@ serde = { version = "1.0.101", features = ["derive"] }
 serde_cbor = "0.10.1"
 simple_logger = "1.3.0"
 sdl2 = "0.32"
-tokio = "0.1.22"
 vulkano = "0.14.0"
 vulkano-shaders = "0.14.0"
 winit = "0.19.3"
 vulkano-win = "0.14.0"
+quartztsdb = {version = "0.1.0", path = "../quartztsdb" }
+quartzgui = { path = "../quartzgui" }
+quartzcanvas = { path = "../quartzcanvas" }

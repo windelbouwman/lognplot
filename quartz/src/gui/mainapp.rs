@@ -3,11 +3,12 @@ use winit::VirtualKeyCode;
 use super::backends::vulkan::VulkanEngine;
 use super::backends::Paintable;
 
-use super::widgets::{Button, Container, GraphControl};
-use crate::canvas::Canvas;
+use super::GraphControl;
 use crate::plot::plot;
 use crate::plot::{Chart, Curve, CurveData};
-use crate::tsdb::TsDbHandle;
+use quartzcanvas::Canvas;
+use quartzgui::widgets::{Button, Container};
+use quartztsdb::TsDbHandle;
 
 /// Application structure.
 pub struct MainApp {
