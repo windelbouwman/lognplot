@@ -11,5 +11,7 @@ impl Canvas for VulkanEngine {
         self.draw_text(p.x() as f32, p.y() as f32, text);
     }
 
-    fn draw_line(&mut self, p1: &Point, p2: &Point) {}
+    fn draw_line(&mut self, p1: &Point, p2: &Point) {
+        // self.draw_line_inner(p1, p2);
+    }
 }

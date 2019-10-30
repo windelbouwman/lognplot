@@ -2,9 +2,8 @@
 
 use super::text::TextEngine;
 use std::cell::RefCell;
-use std::time::Instant;
-// use super::visuals::ChartRenderer;
 use std::sync::Arc;
+use std::time::Instant;
 use vulkano::command_buffer::{AutoCommandBuffer, AutoCommandBufferBuilder, DynamicState};
 use vulkano::device::{Device, Queue};
 use vulkano::framebuffer::RenderPassAbstract;
@@ -12,11 +11,10 @@ use vulkano::framebuffer::{Framebuffer, FramebufferAbstract};
 use vulkano::image::SwapchainImage;
 use vulkano::instance::Instance;
 use vulkano::pipeline::viewport::Viewport;
+use vulkano::swapchain::Surface;
 use vulkano::swapchain::{
     self, AcquireError, PresentMode, SurfaceTransform, Swapchain, SwapchainCreationError,
 };
-// use vulkano::
-use vulkano::swapchain::Surface;
 use vulkano::sync;
 use vulkano::sync::{FlushError, GpuFuture};
 use winit::Window;
@@ -24,6 +22,7 @@ use winit::Window;
 use super::super::Paintable;
 use super::instance::{create_device_and_queue, create_render_pass};
 use super::visuals::LyonEngine;
+use crate::geometry::Point;
 
 pub struct VulkanEngine {
     pub text_engine: TextEngine,
@@ -115,6 +114,10 @@ impl VulkanEngine {
         // });
     }
 
+    pub fn draw_line_inner(&mut self, p1: &Point, p2: &Point) {
+        self.lyon_engine.make_line(p1, p2);
+    }
+
     // TODO:
     // - draw line
     // - draw rectangle
@@ -128,8 +131,7 @@ impl VulkanEngine {
         // Draw the app in the vulkan engine:
         app.paint(self);
 
-        self.lyon_engine.make_line();
-
+        // Try to emit render onto vulkan:
         self.inner_render2();
 
         // Record FPS (frames per second)

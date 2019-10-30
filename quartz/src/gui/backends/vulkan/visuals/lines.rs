@@ -24,13 +24,25 @@ use lyon::tessellation::{
 };
 
 use super::super::vertex::Vertex;
+use crate::geometry::Point;
 
 pub struct LyonEngine {
     // cache: todo
-    vertex_buffer: Arc<CpuAccessibleBuffer<[Vertex]>>,
-    index_buffer: Arc<CpuAccessibleBuffer<[u16]>>,
+    device: Arc<Device>,
     uniform_buffer: CpuBufferPool<vs::ty::Ubo1>,
     pipeline: Arc<dyn GraphicsPipelineAbstract + Send + Sync>,
+
+    // Some sort of shape cache??????????
+    shapes: Vec<Arc<Mesh>>,
+}
+
+/// A drawable mesh
+/// This could be a cached thingy to prevent re-upload of the mesh?
+struct Mesh {
+    // vertices: f32,
+    // inidices: f32,
+    vertex_buffer: Arc<CpuAccessibleBuffer<[Vertex]>>,
+    index_buffer: Arc<CpuAccessibleBuffer<[u16]>>,
 }
 
 impl LyonEngine {
@@ -38,66 +50,7 @@ impl LyonEngine {
         device: Arc<Device>,
         render_pass: Arc<dyn RenderPassAbstract + Send + Sync>,
     ) -> Self {
-        ////// DEMO PURPOSE!
-        // Create a simple path.
-        let mut path_builder = Path::builder();
-        path_builder.move_to(point(0.0, 0.0));
-        path_builder.line_to(point(100.0, 200.0));
-        path_builder.line_to(point(200.0, 0.0));
-        path_builder.line_to(point(100.0, 100.0));
-        // path_builder.close();
-        let path = path_builder.build();
-
-        let mut buffers: VertexBuffers<StrokeVertex, u16> = VertexBuffers::new();
-        {
-            // Create the destination vertex and index buffers.
-            let mut vertex_builder = simple_builder(&mut buffers);
-
-            // Create the tessellator.
-            let mut tessellator = StrokeTessellator::new();
-
-            let stroke_options = StrokeOptions::default().with_line_width(7.0);
-            // Compute the tessellation.
-            tessellator
-                .tessellate_path(&path, &stroke_options, &mut vertex_builder)
-                .unwrap();
-        }
-
-        // println!("The generated vertices are: {:?}.", &buffers.vertices[..]);
-        // println!("The generated indices are: {:?}.", &buffers.indices[..]);
-        // self.queue.push(buffers.vertices[..], buffers.indices[..]);
-
-        let scale = 0.005;
-        let vertex_buffer = {
-            let mut points: Vec<Vertex> = vec![];
-            for l_v in &buffers.vertices {
-                points.push(Vertex {
-                    position: [l_v.position.x * scale, l_v.position.y * scale],
-                });
-            }
-
-            CpuAccessibleBuffer::from_iter(
-                device.clone(),
-                BufferUsage::vertex_buffer(),
-                points.iter().cloned(),
-            )
-            .unwrap()
-        };
-
-        let index_buffer = {
-            let mut indices: Vec<u16> = vec![];
-            for l_i in &buffers.indices {
-                indices.push(*l_i);
-            }
-
-            CpuAccessibleBuffer::from_iter(
-                device.clone(),
-                BufferUsage::index_buffer(),
-                indices.iter().cloned(),
-            )
-            .unwrap()
-        };
-
+        // let x = CpuBufferPool::<[Vertex]>::vertex_buffer(device.clone());
         let uniform_buffer = CpuBufferPool::<vs::ty::Ubo1>::uniform_buffer(device.clone());
 
         // Load proper shaders:
@@ -118,29 +71,30 @@ impl LyonEngine {
         );
 
         LyonEngine {
-            index_buffer,
-            vertex_buffer,
+            device,
             uniform_buffer,
             pipeline,
+            shapes: vec![],
         }
     }
 
     /// Call this function to draw a line thingy!
-    pub fn make_line(&mut self) {
+    pub fn make_line(&mut self, p1: &Point, p2: &Point) {
         // Create a simple path.
         let mut path_builder = Path::builder();
         path_builder.move_to(point(0.0, 0.0));
         path_builder.line_to(point(100.0, 200.0));
-        path_builder.line_to(point(200.0, 0.0));
-        path_builder.line_to(point(100.0, 100.0));
-        path_builder.close();
+        // path_builder.line_to(point(200.0, 0.0));
+        // path_builder.line_to(point(100.0, 100.0));
+        // path_builder.close();
         let path = path_builder.build();
 
-        self.stroke_path(path);
+        let mesh = Arc::new(self.stroke_path(path));
+        self.shapes.push(mesh);
     }
 
     /// Call this function to stroke a given path.
-    pub fn stroke_path(&mut self, path: Path) {
+    fn stroke_path(&mut self, path: Path) -> Mesh {
         // Create the destination vertex and index buffers.
         let mut buffers: VertexBuffers<StrokeVertex, u16> = VertexBuffers::new();
         {
@@ -159,11 +113,52 @@ impl LyonEngine {
         // println!("The generated vertices are: {:?}.", &buffers.vertices[..]);
         // println!("The generated indices are: {:?}.", &buffers.indices[..]);
         // self.queue.push(buffers.vertices[..], buffers.indices[..]);
+        self.builder_to_mesh(buffers)
+    }
+
+    /// Construct a mesh from a vertex buffers
+    fn builder_to_mesh(&self, buffers: VertexBuffers<StrokeVertex, u16>) -> Mesh {
+        let scale = 0.001;
+        let vertex_buffer = {
+            let mut points: Vec<Vertex> = vec![];
+            for l_v in &buffers.vertices {
+                points.push(Vertex {
+                    position: [l_v.position.x * scale, l_v.position.y * scale],
+                });
+            }
+
+            CpuAccessibleBuffer::from_iter(
+                self.device.clone(),
+                BufferUsage::vertex_buffer(),
+                points.iter().cloned(),
+            )
+            .unwrap()
+        };
+
+        let index_buffer = {
+            let mut indices: Vec<u16> = vec![];
+            for l_i in &buffers.indices {
+                indices.push(*l_i);
+            }
+
+            CpuAccessibleBuffer::from_iter(
+                self.device.clone(),
+                BufferUsage::index_buffer(),
+                indices.iter().cloned(),
+            )
+            .unwrap()
+        };
+        // println!("DRAWAWWWWA");
+
+        Mesh {
+            vertex_buffer,
+            index_buffer,
+        }
     }
 
     pub fn draw(
         &self,
-        command_buffer_builder: AutoCommandBufferBuilder,
+        mut command_buffer_builder: AutoCommandBufferBuilder,
         dynamic_state: &mut DynamicState,
     ) -> AutoCommandBufferBuilder {
         let uniform_buffer_subbuffer = {
@@ -191,16 +186,29 @@ impl LyonEngine {
                 .unwrap(),
         );
 
+        for m in &self.shapes {
+            command_buffer_builder = command_buffer_builder
+                .draw_indexed(
+                    self.pipeline.clone(),
+                    dynamic_state,
+                    vec![m.vertex_buffer.clone()],
+                    m.index_buffer.clone(),
+                    set.clone(),
+                    (),
+                )
+                .unwrap();
+        }
+
         command_buffer_builder
-            .draw_indexed(
-                self.pipeline.clone(),
-                dynamic_state,
-                vec![self.vertex_buffer.clone()],
-                self.index_buffer.clone(),
-                set,
-                (),
-            )
-            .unwrap()
+        // .draw_indexed(
+        //     self.pipeline.clone(),
+        //     dynamic_state,
+        //     vec![self.vertex_buffer.clone()],
+        //     self.index_buffer.clone(),
+        //     set,
+        //     (),
+        // )
+        // .unwrap()
     }
 }
 
