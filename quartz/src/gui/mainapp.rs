@@ -4,10 +4,10 @@ use super::backends::vulkan::VulkanEngine;
 use super::backends::Paintable;
 
 use super::GraphControl;
-use crate::plot::plot;
-use crate::plot::{Chart, Curve, CurveData};
 use quartzcanvas::Canvas;
 use quartzgui::widgets::{Button, Container};
+use quartzplot::plot;
+use quartzplot::{Chart, Curve, CurveData};
 use quartztsdb::TsDbHandle;
 
 /// Application structure.

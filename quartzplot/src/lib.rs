@@ -2,10 +2,14 @@
 //! Plot library.
 //!
 
+#[macro_use]
+extern crate log;
+
 mod axis;
 mod axis_options;
 mod chart;
 mod curve;
+mod render;
 
 pub use chart::Chart;
 pub use curve::{Curve, CurveData};

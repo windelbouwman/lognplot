@@ -1,7 +1,8 @@
 /// Demonstration of the plot usage!
 use std::fs::File;
 
-use quartz::{canvas, plot};
+use quartzcanvas::SvgOutput;
+use quartzplot::plot;
 
 fn main() {
     simple_logger::init().unwrap();
@@ -10,7 +11,7 @@ fn main() {
     let y = vec![9.0, 2.2, 5.5, 2.2, 1.2, 1.7];
 
     let mut buffer = File::create("plot.svg").unwrap();
-    let mut canvas = canvas::SvgOutput::new(&mut buffer);
+    let mut canvas = SvgOutput::new(&mut buffer);
 
-    plot::plot(&mut canvas, x, y);
+    plot(&mut canvas, x, y);
 }

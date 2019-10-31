@@ -1,6 +1,6 @@
-use quartzcanvas::geometry::Point;
-use quartzcanvas::style::Color;
-use quartzcanvas::Canvas;
+use super::geometry::Point;
+use super::style::Color;
+use super::Canvas;
 
 use std::io::Write;
 

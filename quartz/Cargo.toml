@@ -20,7 +20,6 @@ path = "src/bin/quartz.rs"
 
 [dependencies]
 bytes = "0.4.12"
-cairo-rs = "0.7.1"
 cgmath = "0.17.0"
 chrono = "0.4.9"
 log = "0.4.8"
@@ -38,3 +37,4 @@ vulkano-win = "0.14.0"
 quartztsdb = {version = "0.1.0", path = "../quartztsdb" }
 quartzgui = { path = "../quartzgui" }
 quartzcanvas = { path = "../quartzcanvas" }
+quartzplot = { path = "../quartzplot" }

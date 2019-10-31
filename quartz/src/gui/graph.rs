@@ -1,5 +1,5 @@
-use crate::plot::Chart;
 use quartzgui::widgets::{Element, Widget};
+use quartzplot::Chart;
 
 /// A graph visualization control!
 pub struct GraphControl {

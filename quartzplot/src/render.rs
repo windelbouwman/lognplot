@@ -1,6 +1,6 @@
 //! Functionality to emit a plot to a canvas.
 
-use crate::plot::Chart;
+use super::Chart;
 use quartzcanvas::geometry::Point;
 use quartzcanvas::style::Color;
 use quartzcanvas::{Canvas, CanvasDrawAble};
@@ -8,16 +8,21 @@ use quartzcanvas::{Canvas, CanvasDrawAble};
 impl CanvasDrawAble for Chart {
     /// Draw the whole chart
     fn draw(&self, canvas: &mut dyn Canvas) {
-        draw_box(self, canvas);
-        draw_axis(self, canvas);
-        draw_lines(self, canvas);
+        draw_chart(self, canvas);
+    }
+}
 
-        // Print title of chart:
-        canvas.set_pen(Color::black());
-        let top_center = Point::new(50.0, 0.0);
-        if let Some(title) = &self.title {
-            canvas.print_text(&top_center, title);
-        }
+/// Draw the given chart onto the canvas!
+fn draw_chart(chart: &Chart, canvas: &mut dyn Canvas) {
+    draw_box(chart, canvas);
+    draw_axis(chart, canvas);
+    draw_lines(chart, canvas);
+
+    // Print title of chart:
+    canvas.set_pen(Color::black());
+    let top_center = Point::new(50.0, 0.0);
+    if let Some(title) = &chart.title {
+        canvas.print_text(&top_center, title);
     }
 }
 
