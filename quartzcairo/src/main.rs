@@ -8,7 +8,7 @@ extern crate gtk;
 use quartzcanvas::{geometry::Point, style::Color, Canvas};
 use quartzplot::plot;
 use std::env::args;
-use std::f64::consts::PI;
+use std::time::Instant;
 
 use gio::prelude::*;
 use gtk::prelude::*;
@@ -17,8 +17,13 @@ use gtk::DrawingArea;
 use cairo::{Context, FontSlant, FontWeight};
 
 fn test1(canvas: &mut dyn Canvas) {
-    let x = vec![1.0, 2.0, 3.0, 4.0, 5.0, 8.0];
-    let y = vec![9.0, 2.2, 5.5, 2.2, 1.2, 1.7];
+    let mut x = vec![];
+    let mut y = vec![];
+    for i in 0..900 {
+        let f = (i as f64) * 0.1;
+        x.push(f);
+        y.push(20.0 * f.sin() + f * 2.0);
+    }
 
     plot(canvas, x, y);
 }
@@ -57,86 +62,20 @@ impl<'a> Canvas for CairoCanvas<'a> {
 
 fn build_ui(application: &gtk::Application) {
     drawable(application, 500, 500, |_, cr| {
+        let t1 = Instant::now();
         cr.select_font_face("Sans", FontSlant::Normal, FontWeight::Normal);
-
-        // cr.scale(500f64, 500f64);
 
         cr.set_source_rgb(250.0 / 255.0, 224.0 / 255.0, 55.0 / 255.0);
         cr.paint();
 
-        cr.set_line_width(3.0);
-
-        // border
-        cr.set_source_rgb(0.3, 0.3, 0.3);
-        cr.rectangle(0.0, 0.0, 500.0, 500.0);
-        cr.stroke();
-        cr.set_line_width(0.03);
-
         let mut cc = CairoCanvas::new(cr);
         test1(&mut cc);
-
-        /*
-                // draw circle
-                cr.arc(0.5, 0.5, 0.4, 0.0, PI * 2.);
-                cr.stroke();
-
-                // mouth
-                let mouth_top = 0.68;
-                let mouth_width = 0.38;
-
-                let mouth_dx = 0.10;
-                let mouth_dy = 0.10;
-
-                cr.move_to(0.50 - mouth_width / 2.0, mouth_top);
-                cr.curve_to(
-                    0.50 - mouth_dx,
-                    mouth_top + mouth_dy,
-                    0.50 + mouth_dx,
-                    mouth_top + mouth_dy,
-                    0.50 + mouth_width / 2.0,
-                    mouth_top,
-                );
-
-                println!("Extents: {:?}", cr.fill_extents());
-
-                cr.stroke();
-
-                let eye_y = 0.38;
-                let eye_dx = 0.15;
-                cr.arc(0.5 - eye_dx, eye_y, 0.05, 0.0, PI * 2.);
-                cr.fill();
-
-                cr.arc(0.5 + eye_dx, eye_y, 0.05, 0.0, PI * 2.);
-                cr.fill();
-        */
-        Inhibit(false)
-    });
-    /*
-    drawable(application, 500, 500, |_, cr| {
-        cr.scale(500f64, 500f64);
-
-        cr.select_font_face("Sans", FontSlant::Normal, FontWeight::Normal);
-        cr.set_font_size(0.35);
-
-        cr.move_to(0.04, 0.53);
-        cr.show_text("Hello");
-
-        cr.move_to(0.27, 0.65);
-        cr.text_path("void");
-        cr.set_source_rgb(0.5, 0.5, 1.0);
-        cr.fill_preserve();
-        cr.set_source_rgb(0.0, 0.0, 0.0);
-        cr.set_line_width(0.01);
-        cr.stroke();
-
-        cr.set_source_rgba(1.0, 0.2, 0.2, 0.6);
-        cr.arc(0.04, 0.53, 0.02, 0.0, PI * 2.);
-        cr.arc(0.27, 0.65, 0.02, 0.0, PI * 2.);
-        cr.fill();
+        let t2 = Instant::now();
+        let draw_duration = t2 - t1;
+        info!("Drawing time: {:?}", draw_duration);
 
         Inhibit(false)
     });
-    */
 }
 
 fn main() {

@@ -53,7 +53,7 @@ impl Chart {
     /// Adjust scale ranges so we fit all data in view.
     pub fn autoscale(&mut self) {
         // self.curves
-        self.x_axis.set_limits(0.0, 1000.0);
-        self.y_axis.set_limits(0.0, 1000.0);
+        self.x_axis.set_limits(2.0, 98.0);
+        self.y_axis.set_limits(-70.0, 350.0);
     }
 }

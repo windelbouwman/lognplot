@@ -1,3 +1,6 @@
 
 language: rust
 cache: cargo
+
+before_install:
+  - sudo apt-get -y install libpango
