@@ -5,7 +5,7 @@
 /// Next to that is has 64 bits for the fractional second, reaching pretty precise timestamps, but not infinite precise.
 use super::TimeModifiers;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct TimeStamp {
     pub amount: f64,
 }

@@ -6,9 +6,7 @@ use tokio::codec::{Framed, LengthDelimitedCodec};
 use tokio::net::TcpStream;
 use tokio::prelude::*;
 
-use super::super::db::TsDbHandle;
-use super::super::sample::Sample;
-use crate::time::TimeStamp;
+use crate::{Sample, TimeStamp, TsDbHandle};
 
 /// A handle to a peer connection
 pub struct PeerHandle {
@@ -61,7 +59,7 @@ pub fn process_client(_counter: usize, socket: TcpStream, db: TsDbHandle) -> Pee
 
     // let trace_name = format!("Client{}", counter);
     let trace_name = "Trace0";
-    let trace = db.get_trace(&trace_name);
+    // let trace = db.get_trace(&trace_name);
 
     let (_framed_sink, framed_stream) = Framed::new(socket, LengthDelimitedCodec::new()).split();
     // TODO: use two way communication to give feedback?
@@ -80,7 +78,7 @@ pub fn process_client(_counter: usize, socket: TcpStream, db: TsDbHandle) -> Pee
             // }).collect();
             // TODO: instead of direct database access
             // get access to a queue which is processed elsewhere into the database.
-            trace.add_values(batch.to_samples());
+            db.add_values(trace_name, batch.to_samples());
             Ok(())
         })
         .map_err(|err| println!("Failed: {:?}", err));

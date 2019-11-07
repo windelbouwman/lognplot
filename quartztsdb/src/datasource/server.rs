@@ -6,8 +6,8 @@ use std::thread;
 use tokio::net::TcpListener;
 use tokio::prelude::*;
 
-use super::super::db::TsDbHandle;
 use super::peer::{process_client, PeerHandle};
+use crate::TsDbHandle;
 
 /// This is a handle to a started TCP server.
 /// You can use this handle to stop the server.
@@ -36,7 +36,7 @@ impl ServerHandle {
 
 pub fn run_server(db: TsDbHandle) -> ServerHandle {
     let port = 12345;
-    info!("Starting up server at port {} with db {}!", port, db);
+    info!("Starting up server at port {} with db {:?}!", port, db);
 
     let addr = format!("127.0.0.1:{}", port);
     let addr = addr.parse().unwrap();

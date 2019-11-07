@@ -48,9 +48,9 @@ impl Paintable for MainApp {
 
         engine.draw_text(0.1, 130.0, "boe ba beloeba!");
 
-        let trc = self.db.get_trace("Trace0");
-        let ln = trc.len();
-        engine.draw_text(-80.0, -100.0, &format!("Trace {}!", ln));
+        // let trc = self.db.get_trace("Trace0");
+        // let ln = trc.len();
+        // engine.draw_text(-80.0, -100.0, &format!("Trace {}!", ln));
 
         test1(engine);
     }
@@ -58,11 +58,11 @@ impl Paintable for MainApp {
 
 impl MainApp {
     pub fn new(db: TsDbHandle) -> Self {
-        let trace = db.get_trace("Trace0");
-        let curve1 = Curve::new(CurveData::Trace(trace));
+        // let trace = db.get_trace("Trace0");
+        // let curve1 = Curve::new(CurveData::Trace(trace));
         let mut chart = Chart::default();
         chart.set_title("Plot1");
-        chart.add_curve(curve1);
+        // chart.add_curve(curve1);
 
         let mut root_container = Container::new();
         let b1 = Button::new();

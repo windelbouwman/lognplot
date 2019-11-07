@@ -5,44 +5,53 @@
 //! Also: keep track of certain metrics, such as min, max and sum.
 
 // use std::cell::RefCell;
-use super::chunk::Chunk;
+use super::chunk::Btree;
+use super::query::{Query, QueryResult, SubResult};
 use super::sample::Sample;
-use std::sync::Mutex;
 
+/// A trace is a single signal with a history in time.
 #[derive(Debug)]
 pub struct Trace {
-    chunk: Mutex<Chunk>,
-    num_points: Mutex<usize>,
+    tree: Btree,
 }
 
 impl Trace {
-    pub fn add_values(&self, samples: Vec<Sample>) {
+    /// Add a vector of values to this trace.
+    pub fn add_values(&mut self, samples: Vec<Sample>) {
         for sample in samples {
-            self.push(sample);
+            self.add_sample(sample);
         }
     }
 
-    pub fn push(&self, value: Sample) {
-        self.chunk.lock().unwrap().push(value);
-        *self.num_points.lock().unwrap() += 1;
+    /// Add a single sample.
+    pub fn add_sample(&mut self, value: Sample) {
+        self.tree.insert(value);
+    }
+
+    /// Query this trace for some data.
+    pub fn query(&self, query: Query) -> QueryResult {
+        let samples = self.tree.query_range(&query.interval);
+        let samples2 = SubResult::Single { samples };
+
+        QueryResult {
+            query,
+            samples: vec![samples2],
+        }
     }
 
     pub fn to_vec(&self) -> Vec<Sample> {
-        self.chunk.lock().unwrap().to_vec()
+        self.tree.to_vec()
     }
 
     pub fn len(&self) -> usize {
-        *self.num_points.lock().unwrap()
+        self.tree.len()
     }
 }
 
 impl Default for Trace {
     fn default() -> Self {
-        let chunk = Default::default();
+        let tree = Default::default();
 
-        Self {
-            chunk,
-            num_points: Mutex::new(0),
-        }
+        Self { tree }
     }
 }
