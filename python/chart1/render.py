@@ -2,8 +2,9 @@
 from PyQt5.QtGui import QPainter, QPen, QPolygon, QBrush
 from PyQt5.QtCore import QRect, Qt, QPoint
 from .chart import Chart
-from .series import PointSerie, CompactedSerie
+from .series import PointSerie, CompactedSerie, ZoomSerie
 from .utils import bench_it
+from .btree import BtreeNode
 
 
 def render_chart_on_qpainter(chart: Chart, painter: QPainter, rect: QRect):
@@ -130,16 +131,13 @@ class Renderer:
             self._draw_point_serie(serie)
         elif isinstance(serie, CompactedSerie):
             self._draw_compacted_serie(serie)
+        elif isinstance(serie, ZoomSerie):
+            self._draw_zoomed_serie(serie)
         else:  # pragma: no cover
             raise NotImplementedError(str(serie))
 
     def _draw_point_serie(self, serie):
-        pen = QPen(Qt.red)
-        pen.setWidth(2)
-        self.painter.setPen(pen)
-        points = [QPoint(self._to_x_pixel(x), self._to_y_pixel(y)) for (x, y) in serie]
-        line = QPolygon(points)
-        self.painter.drawPolyline(line)
+        self._draw_samples_as_lines(serie)
 
     def _draw_compacted_serie(self, serie):
         """ Render a series which contain aggregates
@@ -147,9 +145,39 @@ class Renderer:
         This means drawing the min/max values during a specific period.
         Also, mean/stddev/median might be involved here!
         """
+        self._draw_metrics_as_blocks(serie)
+
+    def _draw_zoomed_serie(self, serie):
+        with bench_it("series query"):
+            begin = self.chart.x_axis.minimum
+            end = self.chart.x_axis.maximum
+            min_count = int(self._layout.chart_width / 2)
+            data = serie.query(begin, end, min_count)
+            print("query result", type(data), len(data))
+
+        if data:
+            if isinstance(data[0], BtreeNode):
+                metrics = [n.metrics for n in data]
+                self._draw_metrics_as_blocks(metrics)
+            else:
+                self._draw_samples_as_lines(data)
+
+    def _draw_samples_as_lines(self, samples):
+        """ Draw raw samples as lines! """
+        pen = QPen(Qt.red)
+        pen.setWidth(2)
+        self.painter.setPen(pen)
+        points = [
+            QPoint(self._to_x_pixel(x), self._to_y_pixel(y)) for (x, y) in samples
+        ]
+        line = QPolygon(points)
+        self.painter.drawPolyline(line)
+
+    def _draw_metrics_as_blocks(self, metrics):
+        """ Draw aggregates as gray blocks. """
         brush = QBrush(Qt.lightGray)
         # Draw a series of min/max rectangles.
-        for compaction in serie:
+        for compaction in metrics:
             x1 = self._to_x_pixel(compaction.x1)
             y1 = self._to_y_pixel(compaction.maximum)
             x2 = self._to_x_pixel(compaction.x2)
