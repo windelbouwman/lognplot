@@ -3,6 +3,7 @@
 Idea is to create summary levels on top of chunks of data.
 """
 
+import abc
 from .metrics import Metrics, sample_to_metric, merge_metrics
 
 
@@ -14,7 +15,7 @@ class Btree:
         """ Append a single sample. """
         new_root_sibling = self.root_node.append(sample)
         if new_root_sibling:
-            print("new root!")
+            # print("new root!")
             old_root = self.root_node
             self.root_node = BtreeInternalNode()
             self.root_node.add_child(old_root)
@@ -45,24 +46,29 @@ class Btree:
 
         # Enhance resolution, while not enough samples.
         while nodes and len(nodes) < min_count and isinstance(nodes[0], BtreeNode):
-            # Enhance resolution!
-            assert nodes
-            new_nodes = []
-            if len(nodes) == 1:
-                new_nodes.extend(nodes[0].select_range(selection_span))
-            else:
-                assert len(nodes) > 1
-                new_nodes.extend(nodes[0].select_range(selection_span))
-                for node in nodes[1:-1]:
-                    new_nodes.extend(node.select_all())
-                new_nodes.extend(nodes[-1].select_range(selection_span))
-            nodes = new_nodes
+            nodes = enhance(nodes, selection_span)
 
         # Take metrics from internal nodes:
         if nodes and isinstance(nodes[0], BtreeNode):
             nodes = [n.metrics for n in nodes]
 
         return nodes
+
+
+def enhance(nodes, selection_span):
+    """ Enhance resolution by descending into child nodes in the selected time span.
+    """
+    assert nodes
+    new_nodes = []
+    if len(nodes) == 1:
+        new_nodes.extend(nodes[0].select_range(selection_span))
+    else:
+        assert len(nodes) > 1
+        new_nodes.extend(nodes[0].select_range(selection_span))
+        for node in nodes[1:-1]:
+            new_nodes.extend(node.select_all())
+        new_nodes.extend(nodes[-1].select_range(selection_span))
+    return new_nodes
 
 
 def overlap(span1, span2):
@@ -76,21 +82,35 @@ def overlap(span1, span2):
     return span1[0] <= span2[1] and span2[0] <= span1[1]
 
 
-class BtreeNode:
+class BtreeNode(metaclass=abc.ABCMeta):
+    """ Base class for either internal, or leave nodes of the B-tree.
+
+    This class and it's subclasses are for internal usage in the B-tree.
+    Do not use outside this file.
+    """
+
     def __init__(self):
         pass
 
+    @abc.abstractmethod
     def append(self, sample):
         raise NotImplementedError()
 
+    @abc.abstractmethod
     def select_range(self, selection_span):
         raise NotImplementedError()
 
+    @abc.abstractmethod
     def select_all(self):
         raise NotImplementedError()
 
 
 class BtreeInternalNode(BtreeNode):
+    """ Intermediate level node in the B-tree.
+    
+    Has child nodes of either internal node, or leave type.
+    """
+
     MAX_CHILDREN = 5
 
     def __init__(self):
@@ -131,6 +151,8 @@ class BtreeInternalNode(BtreeNode):
             pass  # We are Ok
 
     def __iter__(self):
+        # TBD: At this moment, we iterate over all samples
+        # recursing into child nodes. This might be counter-intuitive.
         for child in self._children:
             for sample in child:
                 yield sample
@@ -160,6 +182,11 @@ class BtreeInternalNode(BtreeNode):
 
 
 class BtreeLeaveNode(BtreeNode):
+    """ A leave node in the B-tree.
+    
+    This node type actually contains raw observations.
+    """
+
     MAX_SAMPLES = 32
 
     def __init__(self):
@@ -214,4 +241,6 @@ class BtreeLeaveNode(BtreeNode):
         return in_range_samples
 
     def select_all(self):
+        """ Retrieve all samples in this node.
+        """
         return self.samples

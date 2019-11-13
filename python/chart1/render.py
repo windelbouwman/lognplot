@@ -1,10 +1,9 @@
 """ Render a graph on a QPainter. """
-from PyQt5.QtGui import QPainter, QPen, QPolygon, QBrush
+from PyQt5.QtGui import QPainter, QPen, QPolygon, QBrush, QColor
 from PyQt5.QtCore import QRect, Qt, QPoint
 from .chart import Chart
 from .series import PointSerie, CompactedSerie, ZoomSerie
 from .utils import bench_it
-from .btree import BtreeNode
 from .metrics import Metrics
 
 
@@ -42,11 +41,15 @@ class ChartLayout:
 
 
 class Renderer:
+    """ This class can render a chart onto a painter.
+    """
+
     def __init__(self, painter: QPainter, chart: Chart):
         self.painter = painter
         self.chart = chart
 
     def render(self, rect: QRect):
+        """ Main entry point to start rendering a graph. """
         self._layout = ChartLayout(rect.width(), rect.height())
 
         self._draw_bouding_rect()
@@ -67,6 +70,7 @@ class Renderer:
         self._draw_series()
 
     def _draw_bouding_rect(self):
+        """ Draw a bounding box around the plotting area. """
         pen = QPen(Qt.black)
         pen.setWidth(2)
         self.painter.setPen(pen)
@@ -79,6 +83,7 @@ class Renderer:
         )
 
     def _draw_grid(self, x_ticks, y_ticks):
+        """ Render a grid on the given x and y tick markers. """
         pen = QPen(Qt.gray)
         pen.setWidth(1)
         self.painter.setPen(pen)
@@ -96,6 +101,7 @@ class Renderer:
             )
 
     def _draw_x_axis(self, x_ticks):
+        """ Draw the X-axis. """
         pen = QPen(Qt.black)
         pen.setWidth(2)
         self.painter.setPen(pen)
@@ -115,6 +121,7 @@ class Renderer:
             self.painter.drawText(text_x, text_y, label)
 
     def _draw_y_axis(self, y_ticks):
+        """ Draw the Y-axis. """
         pen = QPen(Qt.black)
         pen.setWidth(2)
         self.painter.setPen(pen)
@@ -133,6 +140,7 @@ class Renderer:
             self.painter.drawText(text_x, text_y, label)
 
     def _draw_series(self):
+        """ Draw all data enclosed in the chart. """
         self.painter.setClipRect(
             self._layout.chart_left,
             self._layout.chart_top,
@@ -145,6 +153,7 @@ class Renderer:
                 self._draw_serie(serie)
 
     def _draw_serie(self, serie):
+        """ Draw a single time series. """
         if isinstance(serie, PointSerie):
             self._draw_point_serie(serie)
         elif isinstance(serie, CompactedSerie):
@@ -223,37 +232,81 @@ class Renderer:
 
         This is alternative 2 to draw metrics.
         """
-        brush = QBrush(Qt.lightGray)
         # Draw a series of min/max rectangles.
-        contour = []
+        mean_points = []
+        min_max_points = []
+        stddev_points = []
+
         # Forward sweep:
         for metric in metrics:
             x1 = self._to_x_pixel(metric.x1)
-            y1 = self._to_y_pixel(metric.maximum)
             x2 = self._to_x_pixel(metric.x2)
 
-            contour.append(QPoint(x1, y1))
-            contour.append(QPoint(x2, y1))
+            # min max contour:
+            y_max = self._to_y_pixel(metric.maximum)
+            min_max_points.append(QPoint(x1, y_max))
+            min_max_points.append(QPoint(x2, y_max))
+
+            # Mean line:
+            y_mean = self._to_y_pixel(metric.mean)
+            mean_points.append(QPoint(x1, y_mean))
+            mean_points.append(QPoint(x2, y_mean))
+
+            # stddev contour:
+            y_stddev_up = self._to_y_pixel(metric.mean + metric.stddev)
+            stddev_points.append(QPoint(x1, y_stddev_up))
+            stddev_points.append(QPoint(x2, y_stddev_up))
 
         # Backwards sweep:
         for metric in reversed(metrics):
             x1 = self._to_x_pixel(metric.x1)
             x2 = self._to_x_pixel(metric.x2)
-            y2 = self._to_y_pixel(metric.minimum)
-            contour.append(QPoint(x2, y2))
-            contour.append(QPoint(x1, y2))
 
-        min_max_shape = QPolygon(contour)
+            # min max contour:
+            y_min = self._to_y_pixel(metric.minimum)
+            min_max_points.append(QPoint(x2, y_min))
+            min_max_points.append(QPoint(x1, y_min))
+
+            # stddev contour:
+            y_stddev_down = self._to_y_pixel(metric.mean - metric.stddev)
+            stddev_points.append(QPoint(x2, y_stddev_down))
+            stddev_points.append(QPoint(x1, y_stddev_down))
+
+        self.painter.setPen(Qt.NoPen)
+        color = QColor(Qt.red)
+        stddev_color = color.lighter(140)
+        min_max_color = color.lighter(170)
+
+        # Min/max shape:
+        min_max_shape = QPolygon(min_max_points)
+        brush = QBrush(min_max_color)
         self.painter.setBrush(brush)
         self.painter.drawPolygon(min_max_shape)
 
+        # stddev shape:
+        stddev_shape = QPolygon(stddev_points)
+        brush = QBrush(stddev_color)
+        self.painter.setBrush(brush)
+        self.painter.drawPolygon(stddev_shape)
+
+        # Mean line:
+        pen = QPen(color)
+        pen.setWidth(2)
+        self.painter.setPen(pen)
+        mean_line = QPolygon(mean_points)
+        self.painter.drawPolyline(mean_line)
+
     def _to_x_pixel(self, value):
+        """ Transform the given X value to a pixel position.
+        """
         axis = self.chart.x_axis
         domain = axis.domain
         a = self._layout.chart_width / domain
         return self._layout.chart_left + a * (value - axis.minimum)
 
     def _to_y_pixel(self, value):
+        """ Transform the given Y value to a pixel position.
+        """
         axis = self.chart.y_axis
         domain = axis.domain
         a = self._layout.chart_height / domain

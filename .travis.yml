@@ -2,12 +2,16 @@
 matrix:
   include:
     - language: python
+      cache: pip
+      install:
+        - pip install pytest-cov
       before_script:
         - cd python
       script:
         - export PYTHONPATH=`pwd`
-        - pytest -v
+        - pytest -v --cov=chart1
 
     - language: rust
+      cache: cargo
       script:
         - cargo test -p quartztsdb quartzplot
