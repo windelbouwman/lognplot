@@ -58,6 +58,10 @@ class Btree:
                 new_nodes.extend(nodes[-1].select_range(selection_span))
             nodes = new_nodes
 
+        # Take metrics from internal nodes:
+        if nodes and isinstance(nodes[0], BtreeNode):
+            nodes = [n.metrics for n in nodes]
+
         return nodes
 
 

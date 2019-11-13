@@ -9,30 +9,12 @@ from chart1.utils import bench_it
 
 def main():
     app = QApplication([])
-    w = Wid()
+    w = DemoGraphWidget()
     w.show()
     app.exec()
 
 
-def demo_samples(num_points):
-    """ Create sin wave with superposed cosine wave """
-    # Parameters:
-    F = 1
-    A = 25.0
-    omega = math.pi * 2 * F
-    F2 = 50
-    A2 = 3.14
-    omega2 = math.pi * 2 * F2
-
-    samples = []
-    for t in range(num_points):
-        x = t * 0.001
-        y = A * math.sin(omega * x) + A2 * math.cos(omega2 * x) + x
-        samples.append((x, y))
-    return samples
-
-
-class Wid(QWidget):
+class DemoGraphWidget(QWidget):
     def __init__(self):
         super().__init__()
         self.pan_x_speed = 0
@@ -77,6 +59,7 @@ class Wid(QWidget):
 
     #     # self.update()
 
+    # Panning helpers:
     PAN_FACTOR = 0.05
 
     def pan_left(self):
@@ -91,18 +74,20 @@ class Wid(QWidget):
     def pan_down(self):
         self.vertical_pan(-self.PAN_FACTOR)
 
-    # ZOOM_FACTOR =
+    # Zooming helpers:
+    ZOOM_FACTOR = 0.1
+
     def zoom_in_horizontal(self):
-        self.horizontal_zoom(-0.1)
+        self.horizontal_zoom(-self.ZOOM_FACTOR)
 
     def zoom_out_horizontal(self):
-        self.horizontal_zoom(0.1)
+        self.horizontal_zoom(self.ZOOM_FACTOR)
 
     def zoom_in_vertical(self):
-        self.vertical_zoom(0.1)
+        self.vertical_zoom(self.ZOOM_FACTOR)
 
     def zoom_out_vertical(self):
-        self.vertical_zoom(-0.1)
+        self.vertical_zoom(-self.ZOOM_FACTOR)
 
     def horizontal_zoom(self, amount):
         domain = self.chart.x_axis.domain
@@ -134,33 +119,43 @@ class Wid(QWidget):
 
     def keyPressEvent(self, e):
         super().keyPressEvent(e)
-        if e.key() == Qt.Key_D:
+        key = e.key()
+        if key == Qt.Key_D or key == Qt.Key_Right:
             self.pan_right()
-        elif e.key() == Qt.Key_A:
+        elif key == Qt.Key_A or key == Qt.Key_Left:
             self.pan_left()
-        elif e.key() == Qt.Key_W:
+        elif key == Qt.Key_W or key == Qt.Key_Up:
             self.pan_up()
-        elif e.key() == Qt.Key_S:
+        elif key == Qt.Key_S or key == Qt.Key_Down:
             self.pan_down()
-        elif e.key() == Qt.Key_J:
+        elif key == Qt.Key_J or key == Qt.Key_Plus:
             self.zoom_in_horizontal()
-        elif e.key() == Qt.Key_L:
+        elif key == Qt.Key_L or key == Qt.Key_Minus:
             self.zoom_out_horizontal()
-        elif e.key() == Qt.Key_K:
+        elif key == Qt.Key_K:
             self.zoom_out_vertical()
-        elif e.key() == Qt.Key_I:
+        elif key == Qt.Key_I:
             self.zoom_in_vertical()
         else:
             print("press key", e)
 
-    # def keyReleaseEvent(self, e):
-    #     super().keyReleaseEvent(e)
-    #     if e.key() == Qt.Key_D:
-    #         print('D release!')
-    #     elif e.key() == Qt.Key_A:
-    #         print('A release!')
-    #     else:
-    #         print('release key', e)
+
+def demo_samples(num_points):
+    """ Create sin wave with superposed cosine wave """
+    # Parameters:
+    F = 1
+    A = 25.0
+    omega = math.pi * 2 * F
+    F2 = 50
+    A2 = 3.14
+    omega2 = math.pi * 2 * F2
+
+    samples = []
+    for t in range(num_points):
+        x = t * 0.001
+        y = A * math.sin(omega * x) + A2 * math.cos(omega2 * x) + x
+        samples.append((x, y))
+    return samples
 
 
 if __name__ == "__main__":

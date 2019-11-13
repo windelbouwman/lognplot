@@ -5,9 +5,12 @@ from .chart import Chart
 from .series import PointSerie, CompactedSerie, ZoomSerie
 from .utils import bench_it
 from .btree import BtreeNode
+from .metrics import Metrics
 
 
 def render_chart_on_qpainter(chart: Chart, painter: QPainter, rect: QRect):
+    """ Call this function to paint a chart onto the given painter within the rectangle specified.
+    """
     renderer = Renderer(painter, chart)
     with bench_it("render"):
         renderer.render(rect)
@@ -96,12 +99,20 @@ class Renderer:
         pen = QPen(Qt.black)
         pen.setWidth(2)
         self.painter.setPen(pen)
-        y = self._layout.chart_bottom + 5
+        margin = 5
+        y = self._layout.chart_bottom + margin
         self.painter.drawLine(self._layout.chart_left, y, self._layout.chart_right, y)
         for value, label in x_ticks:
             x = self._to_x_pixel(value)
+
+            # Tick handle:
             self.painter.drawLine(x, y, x, y + 5)
-            self.painter.drawText(x, y + 20, label)
+
+            # Tick label:
+            text_rect = self.painter.fontMetrics().boundingRect(label)
+            text_x = x - text_rect.x() - text_rect.width() / 2
+            text_y = y + 10 - text_rect.y()
+            self.painter.drawText(text_x, text_y, label)
 
     def _draw_y_axis(self, y_ticks):
         pen = QPen(Qt.black)
@@ -111,8 +122,15 @@ class Renderer:
         self.painter.drawLine(x, self._layout.chart_top, x, self._layout.chart_bottom)
         for value, label in y_ticks:
             y = self._to_y_pixel(value)
+
+            # Tick handle:
             self.painter.drawLine(x, y, x + 5, y)
-            self.painter.drawText(x + 10, y, label)
+
+            # Tick label:
+            text_rect = self.painter.fontMetrics().boundingRect(label)
+            text_x = x + 10 - text_rect.x()
+            text_y = y - text_rect.y() - text_rect.height() / 2
+            self.painter.drawText(text_x, text_y, label)
 
     def _draw_series(self):
         self.painter.setClipRect(
@@ -151,14 +169,16 @@ class Renderer:
         with bench_it("series query"):
             begin = self.chart.x_axis.minimum
             end = self.chart.x_axis.maximum
-            min_count = int(self._layout.chart_width / 2)
+            # Determine how many data points we wish to visualize
+            # This greatly determines drawing performance.
+            min_count = int(self._layout.chart_width / 40)
             data = serie.query(begin, end, min_count)
             print("query result", type(data), len(data))
 
         if data:
-            if isinstance(data[0], BtreeNode):
-                metrics = [n.metrics for n in data]
-                self._draw_metrics_as_blocks(metrics)
+            if isinstance(data[0], Metrics):
+                # self._draw_metrics_as_blocks(data)
+                self._draw_metrics_as_shape(data)
             else:
                 self._draw_samples_as_lines(data)
 
@@ -173,8 +193,16 @@ class Renderer:
         line = QPolygon(points)
         self.painter.drawPolyline(line)
 
+        # Draw markers:
+        for point in points:
+            rect = QRect(point.x() - 3, point.y() - 3, 6, 6)
+            self.painter.drawEllipse(rect)
+
     def _draw_metrics_as_blocks(self, metrics):
-        """ Draw aggregates as gray blocks. """
+        """ Draw aggregates as gray blocks.
+
+        This is alternative 1 to draw metrics.
+        """
         brush = QBrush(Qt.lightGray)
         # Draw a series of min/max rectangles.
         for compaction in metrics:
@@ -187,6 +215,37 @@ class Renderer:
             # print(f'{width}x{height}')
             min_max_rect = QRect(x1, y1, width, height)
             self.painter.fillRect(min_max_rect, brush)
+
+    def _draw_metrics_as_shape(self, metrics):
+        """ Draw aggregates as polygon shapes.
+
+        This works by creating a contour around the min / max values.
+
+        This is alternative 2 to draw metrics.
+        """
+        brush = QBrush(Qt.lightGray)
+        # Draw a series of min/max rectangles.
+        contour = []
+        # Forward sweep:
+        for metric in metrics:
+            x1 = self._to_x_pixel(metric.x1)
+            y1 = self._to_y_pixel(metric.maximum)
+            x2 = self._to_x_pixel(metric.x2)
+
+            contour.append(QPoint(x1, y1))
+            contour.append(QPoint(x2, y1))
+
+        # Backwards sweep:
+        for metric in reversed(metrics):
+            x1 = self._to_x_pixel(metric.x1)
+            x2 = self._to_x_pixel(metric.x2)
+            y2 = self._to_y_pixel(metric.minimum)
+            contour.append(QPoint(x2, y2))
+            contour.append(QPoint(x1, y2))
+
+        min_max_shape = QPolygon(contour)
+        self.painter.setBrush(brush)
+        self.painter.drawPolygon(min_max_shape)
 
     def _to_x_pixel(self, value):
         axis = self.chart.x_axis
