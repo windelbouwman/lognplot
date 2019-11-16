@@ -25,8 +25,8 @@ class DemoGraphWidget(QWidget):
         self.chart.x_axis.maximum = 104
         self.chart.x_axis.minimum = -2
 
-        num_points = 1_000_000
-        # num_points = 10_000
+        # num_points = 1_000_000
+        num_points = 10_000
 
         with bench_it(f"create {num_points} demo samples"):
             samples = demo_samples(num_points)
@@ -36,9 +36,12 @@ class DemoGraphWidget(QWidget):
             series1 = ZoomSerie()
             series1.add_samples(samples)
 
+        self.chart.add_serie(series1)
+        series4 = ZoomSerie()
+        series4.add_samples(demo_samples(5000, 50))
+        self.chart.add_serie(series4)
         # serie2 = series1.create_compaction_series(244)
         # self.chart.add_serie(serie2)
-        self.chart.add_serie(series1)
         print(self.chart.info())
 
         self._zoom_timer = QTimer()
@@ -90,6 +93,9 @@ class DemoGraphWidget(QWidget):
         self.vertical_zoom(-self.ZOOM_FACTOR)
 
     def horizontal_zoom(self, amount):
+        # Autoscale Y for a nice effect?
+        self.chart.autoscale_y()
+
         domain = self.chart.x_axis.domain
         step = domain * amount
         self.chart.x_axis.minimum -= step
@@ -104,6 +110,9 @@ class DemoGraphWidget(QWidget):
         self.update()
 
     def horizontal_pan(self, amount):
+        # Autoscale Y for a nice effect?
+        self.chart.autoscale_y()
+
         domain = self.chart.x_axis.domain
         step = domain * amount
         self.chart.x_axis.minimum += step
@@ -115,6 +124,10 @@ class DemoGraphWidget(QWidget):
         step = domain * amount
         self.chart.y_axis.minimum += step
         self.chart.y_axis.maximum += step
+        self.update()
+
+    def zoom_fit(self):
+        self.chart.zoom_fit()
         self.update()
 
     def keyPressEvent(self, e):
@@ -136,11 +149,14 @@ class DemoGraphWidget(QWidget):
             self.zoom_out_vertical()
         elif key == Qt.Key_I:
             self.zoom_in_vertical()
+        elif key == Qt.Key_Space:
+            # Autoscale all in fit!
+            self.zoom_fit()
         else:
             print("press key", e)
 
 
-def demo_samples(num_points):
+def demo_samples(num_points, offset=0):
     """ Create sin wave with superposed cosine wave """
     # Parameters:
     F = 1
@@ -153,7 +169,7 @@ def demo_samples(num_points):
     samples = []
     for t in range(num_points):
         x = t * 0.001
-        y = A * math.sin(omega * x) + A2 * math.cos(omega2 * x) + x
+        y = offset + A * math.sin(omega * x) + A2 * math.cos(omega2 * x)
         samples.append((x, y))
     return samples
 

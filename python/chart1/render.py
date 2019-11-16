@@ -1,4 +1,5 @@
 """ Render a graph on a QPainter. """
+import contextlib
 from PyQt5.QtGui import QPainter, QPen, QPolygon, QBrush, QColor
 from PyQt5.QtCore import QRect, Qt, QPoint
 from .chart import Chart
@@ -16,32 +17,48 @@ def render_chart_on_qpainter(chart: Chart, painter: QPainter, rect: QRect):
 
 
 class ChartLayout:
-    def __init__(self, width, height):
+    def __init__(self, rect: QRect, options):
         # Parameters:
-        self.padding = 10
         self.axis_width = 40
         self.axis_height = 40
 
         # Inputs:
-        self.width = width
-        self.height = height
+        self.options = options
+        print(rect, type(rect))
+        self.rect = rect
 
         # Endless sea of variables :)
-        self.right = self.width
-        self.bottom = self.height
         self.do_layout()
 
     def do_layout(self):
-        self.chart_top = self.padding
-        self.chart_left = self.padding
-        self.chart_bottom = self.height - self.padding - self.axis_height
-        self.chart_right = self.right - self.padding - self.axis_width
+        # self.right = self.rect.right()
+        # self.bottom = self.rect.bottom()
+        self.chart_top = self.rect.top() + self.options.padding
+        self.chart_left = self.rect.left() + self.options.padding
+        if self.options.show_axis:
+            axis_height = self.axis_height
+            axis_width = self.axis_width
+        else:
+            axis_height = 0
+            axis_width = 0
+
+        self.chart_bottom = self.rect.bottom() - self.options.padding - axis_height
+        self.chart_right = self.rect.right() - self.options.padding - axis_width
         self.chart_width = self.chart_right - self.chart_left
         self.chart_height = self.chart_bottom - self.chart_top
 
 
+class ChartOptions:
+    def __init__(self):
+        self.show_axis = True
+        self.show_grid = True
+        self.padding = 10
+
+
 class Renderer:
-    """ This class can render a chart onto a painter.
+    """ Render a chart.
+
+    Optionally include a minimap?
     """
 
     def __init__(self, painter: QPainter, chart: Chart):
@@ -49,8 +66,43 @@ class Renderer:
         self.chart = chart
 
     def render(self, rect: QRect):
+        options1 = ChartOptions()
+        chart_renderer = ChartRenderer(self.painter, rect, self.chart, options1)
+        chart_renderer.render()
+
+        # Create a new chart with the whole thing zoomed
+        minimap_chart = Chart()
+        for serie in self.chart.series:
+            minimap_chart.add_serie(serie)
+        minimap_chart.zoom_fit()
+
+        # Now render minimap in top left corner.
+        minimap_options = ChartOptions()
+        minimap_options.padding = 2
+        minimap_options.show_axis = False
+        minimap_rect = QRect(rect.x() + 40, rect.y() + 40, 120, 80)
+        self.painter.fillRect(minimap_rect, Qt.yellow)
+        minimap_chart_renderer = ChartRenderer(
+            self.painter, minimap_rect, minimap_chart, minimap_options
+        )
+        minimap_chart_renderer.render()
+        region = self.chart.get_region()
+        minimap_chart_renderer.shade_region(region)
+
+
+class ChartRenderer:
+    """ This class can render a chart onto a painter.
+    """
+
+    def __init__(self, painter: QPainter, rect: QRect, chart: Chart, options):
+        self.painter = painter
+        # self._rect = rect
+        self.chart = chart
+        self.options = options
+        self._layout = ChartLayout(rect, self.options)
+
+    def render(self):
         """ Main entry point to start rendering a graph. """
-        self._layout = ChartLayout(rect.width(), rect.height())
 
         self._draw_bouding_rect()
 
@@ -64,16 +116,42 @@ class Renderer:
         # print(f'min x ticks {amount_x_ticks} min y ticks {amount_y_ticks}')
         x_ticks = self.chart.x_axis.get_ticks(amount_x_ticks)
         y_ticks = self.chart.y_axis.get_ticks(amount_y_ticks)
-        self._draw_grid(x_ticks, y_ticks)
-        self._draw_x_axis(x_ticks)
-        self._draw_y_axis(y_ticks)
+
+        if self.options.show_grid:
+            self._draw_grid(x_ticks, y_ticks)
+
+        if self.options.show_axis:
+            self._draw_x_axis(x_ticks)
+            self._draw_y_axis(y_ticks)
+
         self._draw_series()
+
+    def shade_region(self, region):
+        """ Draw a shaded box in some region.
+
+        This is handy for the minimap.
+        """
+        color = QColor(Qt.gray)
+        color.setAlphaF(0.7)
+        # shade_brush = QBrush(color)
+        # self.painter.setBrush(shade_brush)
+        print(region)
+        x1 = self._to_x_pixel(region[0])
+        y1 = self._to_y_pixel(region[1])
+        x2 = self._to_x_pixel(region[2])
+        y2 = self._to_y_pixel(region[3])
+        width = max(x2 - x1, 5)
+        height = max(y1 - y2, 5)
+        print(x1, y1, x2, y2)
+        with self.clip_chart_rect():
+            self.painter.fillRect(x1, y2, width, height, color)
 
     def _draw_bouding_rect(self):
         """ Draw a bounding box around the plotting area. """
         pen = QPen(Qt.black)
         pen.setWidth(2)
         self.painter.setPen(pen)
+        self.painter.setBrush(Qt.NoBrush)
 
         self.painter.drawRect(
             self._layout.chart_left,
@@ -139,18 +217,25 @@ class Renderer:
             text_y = y - text_rect.y() - text_rect.height() / 2
             self.painter.drawText(text_x, text_y, label)
 
-    def _draw_series(self):
-        """ Draw all data enclosed in the chart. """
+    @contextlib.contextmanager
+    def clip_chart_rect(self):
+        self.painter.save()
         self.painter.setClipRect(
             self._layout.chart_left,
             self._layout.chart_top,
             self._layout.chart_width,
             self._layout.chart_height,
         )
+        yield
+        # Remove the clipping rectangle:
+        self.painter.restore()
 
-        for serie in self.chart.series:
-            with bench_it(f"render {serie}"):
-                self._draw_serie(serie)
+    def _draw_series(self):
+        """ Draw all data enclosed in the chart. """
+        with self.clip_chart_rect():
+            for serie in self.chart.series:
+                with bench_it(f"render {serie}"):
+                    self._draw_serie(serie)
 
     def _draw_serie(self, serie):
         """ Draw a single time series. """

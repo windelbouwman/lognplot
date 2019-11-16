@@ -45,3 +45,13 @@ class OverlapTestCase(unittest.TestCase):
 
     def test_overlap3_reversed(self):
         self.assertTrue(overlap((6, 17), (8, 19)))
+
+
+def test_fill_rate(benchmark):
+    benchmark(fill_run)
+
+
+def fill_run():
+    samples = list((t, t) for t in range(10000))
+    tree = Btree()
+    tree.extend(samples)

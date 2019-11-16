@@ -6,6 +6,12 @@ class Axis:
         self.minimum = -30
         self.maximum = 130
 
+    def set_limits(self, minimum, maximum):
+        """ Set the ends of the axis. """
+        assert maximum > minimum
+        self.minimum = minimum
+        self.maximum = maximum
+
     def get_ticks(self, n_ticks):
         domain = self.domain
         scale = math.floor(math.log10(domain))

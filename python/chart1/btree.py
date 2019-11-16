@@ -4,32 +4,46 @@ Idea is to create summary levels on top of chunks of data.
 """
 
 import abc
-from .metrics import Metrics, sample_to_metric, merge_metrics
+from .metrics import Metrics, sample_to_metric, merge_metrics, samples_to_metric
 
 
 class Btree:
     def __init__(self):
-        self.root_node = BtreeLeaveNode()
+        self._leave_max = 32
+        self._internal_node_max = 5
+        self.root_node = BtreeLeaveNode(self._leave_max)
+
+    @property
+    def metrics(self):
+        return self.root_node.metrics
 
     def append(self, sample):
         """ Append a single sample. """
-        new_root_sibling = self.root_node.append(sample)
-        if new_root_sibling:
-            # print("new root!")
-            old_root = self.root_node
-            self.root_node = BtreeInternalNode()
-            self.root_node.add_child(old_root)
-            self.root_node.add_child(new_root_sibling)
+        root_sibling = self.root_node.append(sample)
+        if root_sibling:
+            self._new_root(root_sibling)
 
     def extend(self, samples):
         """ Append a batch of samples. """
         # TODO: this can be improved for efficiency.
-        for sample in samples:
-            self.append(sample)
+        bulk_fill = False
+        if bulk_fill:
+            raise NotImplementedError("bulk load")
+        else:
+            for sample in samples:
+                self.append(sample)
+
+    def _new_root(self, root_sibling):
+        """ Construct a new root from the old root and a sibling. """
+        # print("new root!")
+        old_root = self.root_node
+        self.root_node = BtreeInternalNode(self._internal_node_max)
+        self.root_node.add_child(old_root)
+        self.root_node.add_child(root_sibling)
 
     def __len__(self):
         # Return total number of samples!
-        return self.root_node.metrics.count
+        return self.metrics.count
 
     def __iter__(self):
         for sample in self.root_node:
@@ -53,6 +67,16 @@ class Btree:
             nodes = [n.metrics for n in nodes]
 
         return nodes
+
+    def query_metrics(self, begin, end):
+        """ Retrieve metrics from a given range. """
+        nodes = self.query(begin, end, 500)
+        if nodes:
+            if isinstance(nodes[0], Metrics):
+                metrics = merge_metrics(nodes)
+            else:
+                metrics = samples_to_metric(nodes)
+            return metrics
 
 
 def enhance(nodes, selection_span):
@@ -97,6 +121,10 @@ class BtreeNode(metaclass=abc.ABCMeta):
         raise NotImplementedError()
 
     @abc.abstractmethod
+    def append_leave(self, leave_node):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
     def select_range(self, selection_span):
         raise NotImplementedError()
 
@@ -111,10 +139,9 @@ class BtreeInternalNode(BtreeNode):
     Has child nodes of either internal node, or leave type.
     """
 
-    MAX_CHILDREN = 5
-
-    def __init__(self):
+    def __init__(self, max_children):
         self._children = []
+        self.max_children = max_children
         self._metrics = None
 
     @property
@@ -135,20 +162,31 @@ class BtreeInternalNode(BtreeNode):
         self._children.append(child_node)
 
     def append(self, sample):
+        """ Append a single sample to a descendant of this node.
+        """
         last_child = self._children[-1]
         new_child = last_child.append(sample)
         if new_child:
-            if len(self._children) < self.MAX_CHILDREN:
-                self.add_child(new_child)
-            else:
-                # We are full, calculate metrics!
-                # print('new BtreeInternalNode sibling')
-                self._metrics = self.calculate_metrics_from_children()
-                new_sibling = BtreeInternalNode()
-                new_sibling.add_child(new_child)
-                return new_sibling
+            return self.append_child(new_child)
         else:
             pass  # We are Ok
+
+    def append_leave(self, leave_node):
+        """ Append a leave node. """
+        last_child = self._children[-1]
+        new_child = last_child.append_leave(leave_node)
+        if new_child:
+            return self.append_child(new_child)
+
+    def append_child(self, child_node):
+        if len(self._children) < self.max_children:
+            self.add_child(child_node)
+        else:
+            # We are full, calculate metrics!
+            self._metrics = self.calculate_metrics_from_children()
+            new_sibling = BtreeInternalNode(self.max_children)
+            new_sibling.add_child(child_node)
+            return new_sibling
 
     def __iter__(self):
         # TBD: At this moment, we iterate over all samples
@@ -187,16 +225,19 @@ class BtreeLeaveNode(BtreeNode):
     This node type actually contains raw observations.
     """
 
-    MAX_SAMPLES = 32
-
-    def __init__(self):
+    def __init__(self, max_samples):
         self.samples = []
+        self.max_samples = max_samples
         self._metrics = None
 
     @property
     def metrics(self):
         assert self._metrics is not None
         return self._metrics
+
+    @property
+    def full(self):
+        return len(self.samples) >= self.max_samples
 
     def _add_sample(self, sample):
         self.samples.append(sample)
@@ -209,13 +250,17 @@ class BtreeLeaveNode(BtreeNode):
             self._metrics = metric
 
     def append(self, sample):
-        if len(self.samples) < self.MAX_SAMPLES:
+        if len(self.samples) < self.max_samples:
             self._add_sample(sample)
         else:
             # print('new leave sibling!')
-            new_sibling = BtreeLeaveNode()
+            new_sibling = BtreeLeaveNode(self.max_samples)
             new_sibling._add_sample(sample)
             return new_sibling
+
+    def append_leave(self, leave_node):
+        assert self.full
+        return leave_node
 
     def __iter__(self):
         for sample in self.samples:
