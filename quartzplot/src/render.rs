@@ -22,6 +22,7 @@ fn draw_chart(chart: &Chart, canvas: &mut dyn Canvas) {
 struct ChartRenderer<'a> {
     chart: &'a Chart,
     canvas: &'a mut dyn Canvas,
+
     // Layout:
     width: f64,
     height: f64,
@@ -33,12 +34,26 @@ struct ChartRenderer<'a> {
     plot_height: f64,
 
     // Parameters:
+    options: ChartOptions,
+}
+
+struct ChartOptions {
     tick_size: f64,
     padding: f64,
 }
 
+impl Default for ChartOptions {
+    fn default() -> Self {
+        ChartOptions {
+            tick_size: 7.0,
+            padding: 10.0,
+        }
+    }
+}
+
 impl<'a> ChartRenderer<'a> {
     pub fn new(chart: &'a Chart, canvas: &'a mut dyn Canvas) -> Self {
+        let options = ChartOptions::default();
         ChartRenderer {
             chart,
             canvas,
@@ -54,8 +69,7 @@ impl<'a> ChartRenderer<'a> {
             plot_height: 0.0,
 
             // parameters
-            tick_size: 7.0,
-            padding: 10.0,
+            options,
         }
     }
 
@@ -74,10 +88,10 @@ impl<'a> ChartRenderer<'a> {
     }
 
     fn layout(&mut self) {
-        self.plot_top = self.padding;
+        self.plot_top = self.options.padding;
         self.plot_left = 50.0;
         self.plot_bottom = self.height - 50.0;
-        self.plot_right = self.width - self.padding;
+        self.plot_right = self.width - self.options.padding;
         self.plot_height = self.plot_right - self.plot_left;
         self.plot_width = self.plot_bottom - self.plot_top;
     }
@@ -107,15 +121,21 @@ impl<'a> ChartRenderer<'a> {
         }
 
         self.canvas.draw_line(
-            &Point::new(self.plot_left, self.plot_bottom + self.tick_size),
-            &Point::new(self.plot_right, self.plot_bottom + self.tick_size),
+            &Point::new(self.plot_left, self.plot_bottom + self.options.tick_size),
+            &Point::new(self.plot_right, self.plot_bottom + self.options.tick_size),
         );
 
         for (p, label) in x_ticks.iter() {
             let x = self.x_domain_to_pixel(*p);
-            let p1 = Point::new(x, self.plot_bottom + self.tick_size + self.tick_size + 5.0);
-            let p2 = Point::new(x, self.plot_bottom + self.tick_size);
-            let p3 = Point::new(x, self.plot_bottom + self.tick_size + self.tick_size);
+            let p1 = Point::new(
+                x,
+                self.plot_bottom + self.options.tick_size + self.options.tick_size + 5.0,
+            );
+            let p2 = Point::new(x, self.plot_bottom + self.options.tick_size);
+            let p3 = Point::new(
+                x,
+                self.plot_bottom + self.options.tick_size + self.options.tick_size,
+            );
             self.canvas.print_text(&p1, label);
             self.canvas.draw_line(&p2, &p3);
         }
@@ -131,15 +151,15 @@ impl<'a> ChartRenderer<'a> {
         }
 
         self.canvas.draw_line(
-            &Point::new(self.plot_left - self.tick_size, self.plot_top),
-            &Point::new(self.plot_left - self.tick_size, self.plot_bottom),
+            &Point::new(self.plot_left - self.options.tick_size, self.plot_top),
+            &Point::new(self.plot_left - self.options.tick_size, self.plot_bottom),
         );
 
         for (p, label) in y_ticks.iter() {
             let y = self.y_domain_to_pixel(*p);
-            let p1 = Point::new(self.plot_left - self.tick_size * 2.0 - 30.0, y);
-            let p2 = Point::new(self.plot_left - self.tick_size, y);
-            let p3 = Point::new(self.plot_left - self.tick_size * 2.0, y);
+            let p1 = Point::new(self.plot_left - self.options.tick_size * 2.0 - 30.0, y);
+            let p2 = Point::new(self.plot_left - self.options.tick_size, y);
+            let p3 = Point::new(self.plot_left - self.options.tick_size * 2.0, y);
             self.canvas.print_text(&p1, label);
             self.canvas.draw_line(&p2, &p3);
         }

@@ -1,5 +1,5 @@
 //// A certain range with a begining and an end.
-#[derive(Default, Clone)]
+#[derive(Default, Clone, Debug)]
 pub struct Range<T>
 where
     T: Copy,
@@ -10,6 +10,10 @@ where
 }
 
 impl<T: Default + Copy> Range<T> {
+    pub fn new(begin: T, end: T) -> Self {
+        Range { begin, end }
+    }
+
     pub fn begin(&self) -> T {
         self.begin
     }

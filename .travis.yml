@@ -4,7 +4,7 @@ matrix:
     - language: python
       cache: pip
       install:
-        - pip install pytest-cov
+        - pip install pytest-cov pytest-benchmark
       before_script:
         - cd python
       script:

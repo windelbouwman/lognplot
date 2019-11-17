@@ -3,7 +3,7 @@
 #[macro_use]
 extern crate log;
 
-mod chunk;
+mod btree;
 mod connection;
 pub mod datasource;
 mod db;
@@ -14,6 +14,7 @@ mod sample;
 mod time;
 mod trace;
 
+use btree::Btree;
 pub use db::TsDb;
 pub use handle::TsDbHandle;
 pub use query::{Query, QueryResult, SubResult};
