@@ -4,7 +4,6 @@ from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QPainter
 from chart1 import Chart, PointSerie, ZoomSerie
 
-from chart1.qt.render_log import render_logs_on_qpainter
 from chart1.utils import bench_it
 from chart1.qt.widgets.chartwidget import ChartWidget
 from chart1.logbar import LogBar
@@ -18,33 +17,6 @@ def main():
     # w = CallStackWidget()
     w.show()
     app.exec()
-
-
-class CallStackWidget(QWidget):
-    """ Visualize a program callstack. """
-
-    def __init__(self):
-        super().__init__()
-        self.call_stack = CallStackBar()
-
-    def paintEvent(self, e):
-        super().paintEvent(e)
-
-
-class LogWidget(QWidget):
-    """ Visualize log records in chronological order.
-    """
-
-    def __init__(self):
-        super().__init__()
-        self.logs = LogBar()
-
-    def paintEvent(self, e):
-        super().paintEvent(e)
-
-        # Contrapt graph via QPainter!
-        painter = QPainter(self)
-        render_logs_on_qpainter(self.logs, painter, self.rect())
 
 
 class DemoGraphWidget(QWidget):
