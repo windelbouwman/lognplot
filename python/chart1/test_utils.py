@@ -1,5 +1,5 @@
 import unittest
-from chart1.utils import chunk
+from chart1.utils import chunk, clip
 
 
 class RoundTestCase(unittest.TestCase):
@@ -11,3 +11,10 @@ class RoundTestCase(unittest.TestCase):
 
     def test_chunking_empty_list(self):
         self.assertEqual([], list(chunk([], 3)))
+
+
+class ClipTestCase(unittest.TestCase):
+    def test_clipping(self):
+        self.assertEqual(clip(1, 0, 10), 1)
+        self.assertEqual(clip(1, 2, 10), 2)
+        self.assertEqual(clip(12, 2, 10), 10)

@@ -16,6 +16,18 @@ class Serie(metaclass=abc.ABCMeta):
             self.add_sample(sample)
 
 
+class LogSeries:
+    """ Collection of log messages.
+
+    Each log record has a severity, time and message. Also a log source?
+
+    TODO: maybe merged with ZoomSerie
+    """
+
+    def __init__(self):
+        self._tree = Btree()
+
+
 class ZoomSerie(Serie):
     def __init__(self):
         self._tree = Btree()

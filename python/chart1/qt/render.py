@@ -2,18 +2,18 @@
 import contextlib
 from PyQt5.QtGui import QPainter, QPen, QPolygon, QBrush, QColor
 from PyQt5.QtCore import QRect, Qt, QPoint
-from .chart import Chart
-from .series import PointSerie, CompactedSerie, ZoomSerie
-from .utils import bench_it
-from .metrics import Metrics
+from ..chart import Chart
+from ..series import PointSerie, CompactedSerie, ZoomSerie
+from ..utils import bench_it, clip
+from ..metrics import Metrics
 
 
 def render_chart_on_qpainter(chart: Chart, painter: QPainter, rect: QRect):
     """ Call this function to paint a chart onto the given painter within the rectangle specified.
     """
     renderer = Renderer(painter, chart)
-    with bench_it("render"):
-        renderer.render(rect)
+    # with bench_it("render"):
+    renderer.render(rect)
 
 
 class ChartLayout:
@@ -24,7 +24,7 @@ class ChartLayout:
 
         # Inputs:
         self.options = options
-        print(rect, type(rect))
+        # print(rect, type(rect))
         self.rect = rect
 
         # Endless sea of variables :)
@@ -135,14 +135,14 @@ class ChartRenderer:
         color.setAlphaF(0.7)
         # shade_brush = QBrush(color)
         # self.painter.setBrush(shade_brush)
-        print(region)
+        # print(region)
         x1 = self._to_x_pixel(region[0])
         y1 = self._to_y_pixel(region[1])
         x2 = self._to_x_pixel(region[2])
         y2 = self._to_y_pixel(region[3])
         width = max(x2 - x1, 5)
         height = max(y1 - y2, 5)
-        print(x1, y1, x2, y2)
+        # print(x1, y1, x2, y2)
         with self.clip_chart_rect():
             self.painter.fillRect(x1, y2, width, height, color)
 
@@ -234,8 +234,8 @@ class ChartRenderer:
         """ Draw all data enclosed in the chart. """
         with self.clip_chart_rect():
             for serie in self.chart.series:
-                with bench_it(f"render {serie}"):
-                    self._draw_serie(serie)
+                # with bench_it(f"render {serie}"):
+                self._draw_serie(serie)
 
     def _draw_serie(self, serie):
         """ Draw a single time series. """
@@ -260,14 +260,14 @@ class ChartRenderer:
         self._draw_metrics_as_blocks(serie)
 
     def _draw_zoomed_serie(self, serie):
-        with bench_it("series query"):
-            begin = self.chart.x_axis.minimum
-            end = self.chart.x_axis.maximum
-            # Determine how many data points we wish to visualize
-            # This greatly determines drawing performance.
-            min_count = int(self._layout.chart_width / 40)
-            data = serie.query(begin, end, min_count)
-            print("query result", type(data), len(data))
+        # with bench_it("series query"):
+        begin = self.chart.x_axis.minimum
+        end = self.chart.x_axis.maximum
+        # Determine how many data points we wish to visualize
+        # This greatly determines drawing performance.
+        min_count = int(self._layout.chart_width / 40)
+        data = serie.query(begin, end, min_count)
+        # print("query result", type(data), len(data))
 
         if data:
             if isinstance(data[0], Metrics):
@@ -387,7 +387,8 @@ class ChartRenderer:
         axis = self.chart.x_axis
         domain = axis.domain
         a = self._layout.chart_width / domain
-        return self._layout.chart_left + a * (value - axis.minimum)
+        x = self._layout.chart_left + a * (value - axis.minimum)
+        return clip(x, self._layout.chart_left, self._layout.chart_right)
 
     def _to_y_pixel(self, value):
         """ Transform the given Y value to a pixel position.
@@ -395,4 +396,5 @@ class ChartRenderer:
         axis = self.chart.y_axis
         domain = axis.domain
         a = self._layout.chart_height / domain
-        return self._layout.chart_bottom - a * (value - axis.minimum)
+        y = self._layout.chart_bottom - a * (value - axis.minimum)
+        return clip(y, self._layout.chart_top, self._layout.chart_bottom)

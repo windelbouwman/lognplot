@@ -15,6 +15,17 @@ def chunk(sequence, chunk_size):
         yield c
 
 
+def clip(value, minimum, maximum):
+    """ Clip a value between two other values. """
+    assert minimum <= maximum
+    if value < minimum:
+        return minimum
+    elif value > maximum:
+        return maximum
+    else:
+        return value
+
+
 @contextlib.contextmanager
 def bench_it(name):
     t1 = time.time()

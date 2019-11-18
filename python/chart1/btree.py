@@ -232,7 +232,6 @@ class BtreeLeaveNode(BtreeNode):
 
     @property
     def metrics(self):
-        assert self._metrics is not None
         return self._metrics
 
     @property
@@ -268,7 +267,8 @@ class BtreeLeaveNode(BtreeNode):
 
     def select_range(self, selection_span):
         """ Select a range of samples falling between `begin` and `end` """
-        assert self.samples
+        if not self.samples:
+            return []
 
         in_range_samples = []
         full_span = (self.metrics.x1, self.metrics.x2)

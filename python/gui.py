@@ -1,29 +1,60 @@
 import math
-from PyQt5.QtWidgets import QApplication, QWidget
-from PyQt5.QtGui import QPainter
+from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout
 from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtGui import QPainter
 from chart1 import Chart, PointSerie, ZoomSerie
-from chart1.render import render_chart_on_qpainter
+
+from chart1.qt.render_log import render_logs_on_qpainter
 from chart1.utils import bench_it
+from chart1.qt.widgets.chartwidget import ChartWidget
+from chart1.logbar import LogBar
+from chart1.callstackbar import CallStackBar
 
 
 def main():
     app = QApplication([])
     w = DemoGraphWidget()
+    # w = LogWidget()
+    # w = CallStackWidget()
     w.show()
     app.exec()
+
+
+class CallStackWidget(QWidget):
+    """ Visualize a program callstack. """
+
+    def __init__(self):
+        super().__init__()
+        self.call_stack = CallStackBar()
+
+    def paintEvent(self, e):
+        super().paintEvent(e)
+
+
+class LogWidget(QWidget):
+    """ Visualize log records in chronological order.
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.logs = LogBar()
+
+    def paintEvent(self, e):
+        super().paintEvent(e)
+
+        # Contrapt graph via QPainter!
+        painter = QPainter(self)
+        render_logs_on_qpainter(self.logs, painter, self.rect())
 
 
 class DemoGraphWidget(QWidget):
     def __init__(self):
         super().__init__()
-        self.pan_x_speed = 0
-        self.chart = Chart()
-        self.chart.y_axis.maximum = 80
-        self.chart.y_axis.minimum = -30
-
-        self.chart.x_axis.maximum = 104
-        self.chart.x_axis.minimum = -2
+        self._chart_widget = ChartWidget()
+        l = QVBoxLayout()
+        l.addWidget(self._chart_widget)
+        self.setLayout(l)
+        self.resize(600, 400)
 
         # num_points = 1_000_000
         num_points = 10_000
@@ -36,124 +67,11 @@ class DemoGraphWidget(QWidget):
             series1 = ZoomSerie()
             series1.add_samples(samples)
 
-        self.chart.add_serie(series1)
+        self._chart_widget.chart.add_serie(series1)
         series4 = ZoomSerie()
         series4.add_samples(demo_samples(5000, 50))
-        self.chart.add_serie(series4)
-        # serie2 = series1.create_compaction_series(244)
-        # self.chart.add_serie(serie2)
-        print(self.chart.info())
-
-        self._zoom_timer = QTimer()
-        # self._zoom_timer.timeout.connect(self._on_timeout)
-        # self._zoom_timer.start(100)
-
-    def paintEvent(self, e):
-        super().paintEvent(e)
-
-        # Contrapt graph via QPainter!
-        painter = QPainter(self)
-        # print("Paint!", self.rect())
-        render_chart_on_qpainter(self.chart, painter, self.rect())
-
-    # def _on_timeout(self):
-    #     if self.pan_x_speed:
-    #         print('TO')
-
-    #     # self.update()
-
-    # Panning helpers:
-    PAN_FACTOR = 0.05
-
-    def pan_left(self):
-        self.horizontal_pan(-self.PAN_FACTOR)
-
-    def pan_right(self):
-        self.horizontal_pan(self.PAN_FACTOR)
-
-    def pan_up(self):
-        self.vertical_pan(self.PAN_FACTOR)
-
-    def pan_down(self):
-        self.vertical_pan(-self.PAN_FACTOR)
-
-    # Zooming helpers:
-    ZOOM_FACTOR = 0.1
-
-    def zoom_in_horizontal(self):
-        self.horizontal_zoom(-self.ZOOM_FACTOR)
-
-    def zoom_out_horizontal(self):
-        self.horizontal_zoom(self.ZOOM_FACTOR)
-
-    def zoom_in_vertical(self):
-        self.vertical_zoom(self.ZOOM_FACTOR)
-
-    def zoom_out_vertical(self):
-        self.vertical_zoom(-self.ZOOM_FACTOR)
-
-    def horizontal_zoom(self, amount):
-        # Autoscale Y for a nice effect?
-        self.chart.autoscale_y()
-
-        domain = self.chart.x_axis.domain
-        step = domain * amount
-        self.chart.x_axis.minimum -= step
-        self.chart.x_axis.maximum += step
-        self.update()
-
-    def vertical_zoom(self, amount):
-        domain = self.chart.y_axis.domain
-        step = domain * amount
-        self.chart.y_axis.minimum -= step
-        self.chart.y_axis.maximum += step
-        self.update()
-
-    def horizontal_pan(self, amount):
-        # Autoscale Y for a nice effect?
-        self.chart.autoscale_y()
-
-        domain = self.chart.x_axis.domain
-        step = domain * amount
-        self.chart.x_axis.minimum += step
-        self.chart.x_axis.maximum += step
-        self.update()
-
-    def vertical_pan(self, amount):
-        domain = self.chart.y_axis.domain
-        step = domain * amount
-        self.chart.y_axis.minimum += step
-        self.chart.y_axis.maximum += step
-        self.update()
-
-    def zoom_fit(self):
-        self.chart.zoom_fit()
-        self.update()
-
-    def keyPressEvent(self, e):
-        super().keyPressEvent(e)
-        key = e.key()
-        if key == Qt.Key_D or key == Qt.Key_Right:
-            self.pan_right()
-        elif key == Qt.Key_A or key == Qt.Key_Left:
-            self.pan_left()
-        elif key == Qt.Key_W or key == Qt.Key_Up:
-            self.pan_up()
-        elif key == Qt.Key_S or key == Qt.Key_Down:
-            self.pan_down()
-        elif key == Qt.Key_J or key == Qt.Key_Plus:
-            self.zoom_in_horizontal()
-        elif key == Qt.Key_L or key == Qt.Key_Minus:
-            self.zoom_out_horizontal()
-        elif key == Qt.Key_K:
-            self.zoom_out_vertical()
-        elif key == Qt.Key_I:
-            self.zoom_in_vertical()
-        elif key == Qt.Key_Space:
-            # Autoscale all in fit!
-            self.zoom_fit()
-        else:
-            print("press key", e)
+        self._chart_widget.chart.add_serie(series4)
+        print(self._chart_widget.chart.info())
 
 
 def demo_samples(num_points, offset=0):

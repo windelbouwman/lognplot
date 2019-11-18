@@ -14,6 +14,10 @@ class Axis:
 
     def get_ticks(self, n_ticks):
         domain = self.domain
+
+        # Check for too small domain:
+        assert not math.isclose(domain, 0)
+
         scale = math.floor(math.log10(domain))
         approx = math.pow(10, -scale) * domain / n_ticks
         options = [0.1, 0.2, 0.5, 1.0, 2.0, 5.0]
