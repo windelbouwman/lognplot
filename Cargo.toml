@@ -1,11 +1,6 @@
 
 [workspace]
 members = [
-    "quartz",
-    "quartzcairo",
-    "quartzgui",
-    "quartzgtk",
-    "quartzcanvas",
-    "quartztsdb",
-    "quartzplot"
+    "lognplot",
+    "quartzgtk"
 ]

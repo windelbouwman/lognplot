@@ -1,14 +1,16 @@
+#[macro_use]
+extern crate log;
+
+use std::time::Instant;
 use gio::prelude::*;
 use gtk::prelude::*;
 
 use gtk::Application;
 
-use quartzcanvas::{
-    geometry::{Point, Size},
-    style::Color,
-    Canvas,
-};
-use quartzplot::plot;
+use lognplot::geometry::Size;
+use lognplot::style::Color;
+use lognplot::chart::plot;
+use lognplot::render::{Canvas, CairoCanvas};
 
 fn test1(canvas: &mut dyn Canvas, size: Size) {
     let mut x = vec![];
@@ -22,45 +24,18 @@ fn test1(canvas: &mut dyn Canvas, size: Size) {
     plot(canvas, x, y, size);
 }
 
-struct CairoCanvas<'a> {
-    cr: &'a cairo::Context,
-}
-
-impl<'a> CairoCanvas<'a> {
-    fn new(cr: &'a cairo::Context) -> Self {
-        Self { cr }
-    }
-}
-
-impl<'a> Canvas for CairoCanvas<'a> {
-    fn set_pen(&mut self, color: Color) {
-        self.cr.set_source_rgb(
-            color.r() as f64 / 255.0,
-            color.g() as f64 / 255.0,
-            color.b() as f64 / 255.0,
-        );
-    }
-
-    fn print_text(&mut self, p: &Point, text: &str) {
-        self.cr.move_to(p.x(), p.y());
-        self.cr.show_text(text);
-    }
-
-    fn draw_line(&mut self, p1: &Point, p2: &Point) {
-        self.cr.set_line_width(3.0);
-        self.cr.move_to(p1.x(), p1.y());
-        self.cr.line_to(p2.x(), p2.y());
-        self.cr.stroke();
-    }
-}
-
 fn draw_on_canvas(drawingArea: &gtk::DrawingArea, canvas: &cairo::Context) -> Inhibit {
     let width = drawingArea.get_allocated_width();
     let height = drawingArea.get_allocated_height();
     let size = Size::new(width as f64, height as f64);
     // println!("Draw, width = {:?}, height= {:?}", width, height);
     let mut canvas2 = CairoCanvas::new(&canvas);
+
+    let t1 = Instant::now();    
     test1(&mut canvas2, size);
+    let t2 = Instant::now();
+    let draw_duration = t2 - t1;
+    info!("Drawing time: {:?}", draw_duration);
 
     Inhibit(false)
 }

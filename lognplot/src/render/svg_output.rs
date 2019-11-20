@@ -1,5 +1,5 @@
-use super::geometry::Point;
-use super::style::Color;
+use crate::geometry::Point;
+use crate::style::Color;
 use super::Canvas;
 
 use std::io::Write;

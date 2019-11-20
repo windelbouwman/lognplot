@@ -1,8 +1,9 @@
 /// Demonstration of the plot usage!
 use std::fs::File;
 
-use quartzcanvas::{geometry::Size, SvgOutput};
-use quartzplot::plot;
+use lognplot::geometry::Size;
+use lognplot::chart::plot;
+use lognplot::render::SvgOutput;
 
 fn main() {
     simple_logger::init().unwrap();

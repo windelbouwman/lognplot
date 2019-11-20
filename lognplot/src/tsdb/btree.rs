@@ -5,7 +5,7 @@
 
 use super::metrics::SampleMetrics;
 use super::sample::Sample;
-use super::time::TimeSpan;
+use crate::time::TimeSpan;
 
 use std::cell::RefCell;
 

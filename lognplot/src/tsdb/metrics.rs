@@ -1,5 +1,5 @@
 use super::sample::Sample;
-use super::time::TimeSpan;
+use crate::time::TimeSpan;
 
 /// Metrics collected about a certain trace
 /// This can be used during query.

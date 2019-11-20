@@ -1,0 +1,16 @@
+[package]
+name = "lognplot"
+version = "0.1.0"
+authors = ["Windel Bouwman <windel@windel.nl>"]
+edition = "2018"
+description = "Log and plot data"
+
+[features]
+cairo = ["cairo-rs"]
+server = []
+
+[dependencies]
+log = "0.4"
+simple_logger = "1.3"
+
+cairo-rs = { version = "0.7.1", optional = true }

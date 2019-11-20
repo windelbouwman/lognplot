@@ -1,20 +1,15 @@
-//!
-//! Plot library.
-//!
-
-#[macro_use]
-extern crate log;
-
 mod axis;
 mod axis_options;
 mod chart;
 mod curve;
-mod render;
 
 pub use chart::Chart;
 pub use curve::{Curve, CurveData};
-use quartzcanvas::{geometry::Size, Canvas};
-pub use render::draw_chart;
+
+use crate::geometry::Size;
+use crate::render::Canvas;
+
+use crate::render::draw_chart;
 
 /// Entry function to plot a series of x values versus a series of y values!
 pub fn plot(canvas: &mut dyn Canvas, x: Vec<f64>, y: Vec<f64>, size: Size) {

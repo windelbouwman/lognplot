@@ -1,17 +1,12 @@
 //! Time series database, usable as a library.
 
-#[macro_use]
-extern crate log;
-
 mod btree;
 mod connection;
-pub mod datasource;
 mod db;
 mod handle;
 mod metrics;
 mod query;
 mod sample;
-mod time;
 mod trace;
 
 use btree::Btree;
@@ -19,7 +14,6 @@ pub use db::TsDb;
 pub use handle::TsDbHandle;
 pub use query::{Query, QueryResult, SubResult};
 pub use sample::Sample;
-pub use time::{TimeSpan, TimeStamp};
 pub use trace::Trace;
 
 #[cfg(test)]

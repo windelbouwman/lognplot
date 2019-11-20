@@ -1,7 +1,7 @@
-use quartzcanvas::geometry::Point;
-use quartzcanvas::geometry::Range;
-use quartzcanvas::style::{Color, Stroke};
-use quartztsdb::Trace;
+use crate::geometry::Point;
+use crate::geometry::Range;
+use crate::style::{Color, Stroke};
+// use quartztsdb::Trace;
 use std::str::FromStr;
 use std::sync::Arc;
 
@@ -16,7 +16,7 @@ pub struct Curve {
 /// A dataset. Can be either a trace, or a vector of points!
 #[derive(Debug, Clone)]
 pub enum CurveData {
-    Trace(Arc<Trace>),
+    // Trace(Arc<Trace>),
     Points(Vec<Point>),
     Aggregations(Vec<Aggregate>),
 }
