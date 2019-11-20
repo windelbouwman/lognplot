@@ -7,7 +7,7 @@ use tokio::net::TcpListener;
 use tokio::prelude::*;
 
 use super::peer::{process_client, PeerHandle};
-use crate::TsDbHandle;
+use crate::tsdb::TsDbHandle;
 
 /// This is a handle to a started TCP server.
 /// You can use this handle to stop the server.

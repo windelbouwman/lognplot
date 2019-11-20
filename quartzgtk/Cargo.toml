@@ -12,6 +12,6 @@ cairo-rs = "0.7.1"
 gio = "0.7.0"
 gtk = "0.7.0"
 gdk = "0.11"
-lognplot = { path = "../lognplot", features=["cairo"] }
+lognplot = { path = "../lognplot", features=["cairo", "server"] }
 simple_logger = "1.3.0"
 log = "0.4.8"

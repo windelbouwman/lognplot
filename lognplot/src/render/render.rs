@@ -1,9 +1,9 @@
 //! Functionality to emit a plot to a canvas.
 
+use super::Canvas;
 use crate::chart::Chart;
 use crate::geometry::{Point, Size};
 use crate::style::Color;
-use super::Canvas;
 
 /// Draw the given chart onto the canvas!
 pub fn draw_chart(chart: &Chart, canvas: &mut dyn Canvas, size: Size) {

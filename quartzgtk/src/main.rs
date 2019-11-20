@@ -1,16 +1,16 @@
 #[macro_use]
 extern crate log;
 
-use std::time::Instant;
 use gio::prelude::*;
 use gtk::prelude::*;
+use std::time::Instant;
 
 use gtk::Application;
 
-use lognplot::geometry::Size;
-use lognplot::style::Color;
 use lognplot::chart::plot;
-use lognplot::render::{Canvas, CairoCanvas};
+use lognplot::geometry::Size;
+use lognplot::render::{CairoCanvas, Canvas};
+use lognplot::server::run_server;
 
 fn test1(canvas: &mut dyn Canvas, size: Size) {
     let mut x = vec![];
@@ -31,7 +31,7 @@ fn draw_on_canvas(drawingArea: &gtk::DrawingArea, canvas: &cairo::Context) -> In
     // println!("Draw, width = {:?}, height= {:?}", width, height);
     let mut canvas2 = CairoCanvas::new(&canvas);
 
-    let t1 = Instant::now();    
+    let t1 = Instant::now();
     test1(&mut canvas2, size);
     let t2 = Instant::now();
     let draw_duration = t2 - t1;
@@ -44,10 +44,10 @@ fn on_key(draw_area: &gtk::DrawingArea, key: &gdk::EventKey) -> Inhibit {
     match key.get_keyval() {
         gdk::enums::key::Left => {
             println!("Left!");
-        },
+        }
         gdk::enums::key::Right => {
             println!("Right!");
-        },
+        }
         x => {
             println!("Key! {:?}", x);
         }
@@ -57,6 +57,9 @@ fn on_key(draw_area: &gtk::DrawingArea, key: &gdk::EventKey) -> Inhibit {
 }
 
 fn main() {
+    simple_logger::init().unwrap();
+    info!("BOOTING QUARTZ TOOL");
+
     let application = Application::new(Some("com.github.windelbouwman.quartz"), Default::default())
         .expect("failed to initialize GTK application");
 

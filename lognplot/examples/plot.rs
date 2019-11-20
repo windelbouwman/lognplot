@@ -1,8 +1,8 @@
 /// Demonstration of the plot usage!
 use std::fs::File;
 
-use lognplot::geometry::Size;
 use lognplot::chart::plot;
+use lognplot::geometry::Size;
 use lognplot::render::SvgOutput;
 
 fn main() {

@@ -6,4 +6,6 @@
 //! - Demo data (random values)
 
 mod peer;
-pub mod server;
+mod server;
+
+pub use server::run_server;

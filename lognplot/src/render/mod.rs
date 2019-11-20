@@ -10,9 +10,9 @@ mod cairo_canvas;
 
 // re-exports
 
-pub use canvas::{Canvas};
-pub use svg_output::SvgOutput;
+pub use canvas::Canvas;
 pub use render::draw_chart;
+pub use svg_output::SvgOutput;
 
 #[cfg(feature = "cairo")]
 pub use cairo_canvas::CairoCanvas;

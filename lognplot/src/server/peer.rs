@@ -6,7 +6,8 @@ use tokio::codec::{Framed, LengthDelimitedCodec};
 use tokio::net::TcpStream;
 use tokio::prelude::*;
 
-use crate::tsdb::{Sample, TimeStamp, TsDbHandle};
+use crate::time::TimeStamp;
+use crate::tsdb::{Sample, TsDbHandle};
 
 /// A handle to a peer connection
 pub struct PeerHandle {

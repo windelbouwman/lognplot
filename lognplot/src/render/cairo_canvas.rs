@@ -1,6 +1,6 @@
 use super::Canvas;
-use crate::style::Color;
 use crate::geometry::Point;
+use crate::style::Color;
 
 pub struct CairoCanvas<'a> {
     cr: &'a cairo::Context,

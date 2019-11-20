@@ -4,7 +4,7 @@
 //! This library serves the purpose of logging data
 //! from a system, and plotting the data at the same
 //! time.
-//! 
+//!
 //! This can be handy when debugging a system under test.
 
 #[macro_use]
