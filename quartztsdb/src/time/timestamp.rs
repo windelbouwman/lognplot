@@ -16,6 +16,10 @@ impl TimeStamp {
     pub fn new(amount: f64) -> Self {
         Self { amount }
     }
+
+    pub fn from_seconds(seconds: isize) -> Self {
+        Self::new(seconds as f64)
+    }
 }
 
 impl TimeModifiers for TimeStamp {

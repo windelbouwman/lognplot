@@ -4,7 +4,7 @@ use super::backends::vulkan::VulkanEngine;
 use super::backends::Paintable;
 
 use super::GraphControl;
-use quartzcanvas::Canvas;
+use quartzcanvas::{geometry::Size, Canvas};
 use quartzgui::widgets::{Button, Container};
 use quartzplot::plot;
 use quartzplot::{Chart, Curve, CurveData};
@@ -26,7 +26,9 @@ fn test1(canvas: &mut dyn Canvas) {
     let x = vec![1.0, 2.0, 3.0, 4.0, 5.0, 8.0];
     let y = vec![9.0, 2.2, 5.5, 2.2, 1.2, 1.7];
 
-    plot(canvas, x, y);
+    let size = Size::new(600.0, 600.0);
+
+    plot(canvas, x, y, size);
 }
 
 impl Paintable for MainApp {

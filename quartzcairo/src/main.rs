@@ -5,7 +5,11 @@ extern crate cairo;
 extern crate gio;
 extern crate gtk;
 
-use quartzcanvas::{geometry::Point, style::Color, Canvas};
+use quartzcanvas::{
+    geometry::{Point, Size},
+    style::Color,
+    Canvas,
+};
 use quartzplot::plot;
 use std::env::args;
 use std::time::Instant;
@@ -16,7 +20,7 @@ use gtk::DrawingArea;
 
 use cairo::{Context, FontSlant, FontWeight};
 
-fn test1(canvas: &mut dyn Canvas) {
+fn test1(canvas: &mut dyn Canvas, size: Size) {
     let mut x = vec![];
     let mut y = vec![];
     for i in 0..900 {
@@ -25,7 +29,7 @@ fn test1(canvas: &mut dyn Canvas) {
         y.push(20.0 * f.sin() + f * 2.0);
     }
 
-    plot(canvas, x, y);
+    plot(canvas, x, y, size);
 }
 
 struct CairoCanvas<'a> {
@@ -61,7 +65,10 @@ impl<'a> Canvas for CairoCanvas<'a> {
 }
 
 fn build_ui(application: &gtk::Application) {
-    drawable(application, 500, 500, |_, cr| {
+    drawable(application, 500, 500, |area, cr| {
+        let width = area.get_allocated_width();
+        let height = area.get_allocated_height();
+        let size = Size::new(width as f64, height as f64);
         let t1 = Instant::now();
         cr.select_font_face("Sans", FontSlant::Normal, FontWeight::Normal);
 
@@ -69,7 +76,7 @@ fn build_ui(application: &gtk::Application) {
         cr.paint();
 
         let mut cc = CairoCanvas::new(cr);
-        test1(&mut cc);
+        test1(&mut cc, size);
         let t2 = Instant::now();
         let draw_duration = t2 - t1;
         info!("Drawing time: {:?}", draw_duration);

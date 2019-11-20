@@ -1,7 +1,7 @@
 /// Demonstration of the plot usage!
 use std::fs::File;
 
-use quartzcanvas::SvgOutput;
+use quartzcanvas::{geometry::Size, SvgOutput};
 use quartzplot::plot;
 
 fn main() {
@@ -13,5 +13,6 @@ fn main() {
     let mut buffer = File::create("plot.svg").unwrap();
     let mut canvas = SvgOutput::new(&mut buffer);
 
-    plot(&mut canvas, x, y);
+    let size = Size::new(1000.0, 1000.0);
+    plot(&mut canvas, x, y, size);
 }

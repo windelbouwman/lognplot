@@ -34,6 +34,7 @@ impl Axis {
         let approx = (10.0_f64).powf(-scale) * domain / (n_ticks as f64);
 
         // Snap to grid:
+        // 10, 20, 25, 50
         let options = vec![0.1, 0.2, 0.5, 1.0, 2.0, 5.0];
         let best = options
             .iter()

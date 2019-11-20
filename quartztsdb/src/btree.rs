@@ -281,7 +281,7 @@ mod tests {
         let tree = Btree::default();
 
         // Insert some samples:
-        let t1 = TimeStamp::new(1.0);
+        let t1 = TimeStamp::from_seconds(1);
         let sample = Sample::new(t1, 3.1415926);
         tree.append_sample(sample);
 
@@ -297,7 +297,7 @@ mod tests {
 
         // Insert some samples:
         for i in 0..1000 {
-            let t1 = TimeStamp::new(i as f64);
+            let t1 = TimeStamp::from_seconds(i);
             let sample = Sample::new(t1, i as f64);
             tree.append_sample(sample);
         }
@@ -309,7 +309,7 @@ mod tests {
         assert_eq!(tree.len(), 1000);
 
         // Check query
-        let time_span = TimeSpan::new(TimeStamp::new(3.0), TimeStamp::new(13.0));
+        let time_span = TimeSpan::new(TimeStamp::from_seconds(3), TimeStamp::from_seconds(13));
         tree.query_range(&time_span, 9);
     }
 }

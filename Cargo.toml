@@ -4,6 +4,7 @@ members = [
     "quartz",
     "quartzcairo",
     "quartzgui",
+    "quartzgtk",
     "quartzcanvas",
     "quartztsdb",
     "quartzplot"

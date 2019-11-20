@@ -26,4 +26,8 @@ impl LockedTsDb {
     pub fn add_values(&self, name: &str, samples: Vec<Sample>) {
         self.db.lock().unwrap().add_values(name, samples);
     }
+
+    pub fn query(&self) {
+        unimplemented!("TODO");
+    }
 }

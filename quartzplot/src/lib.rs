@@ -13,10 +13,11 @@ mod render;
 
 pub use chart::Chart;
 pub use curve::{Curve, CurveData};
-use quartzcanvas::{Canvas, CanvasDrawAble};
+use quartzcanvas::{geometry::Size, Canvas};
+pub use render::draw_chart;
 
 /// Entry function to plot a series of x values versus a series of y values!
-pub fn plot(canvas: &mut dyn Canvas, x: Vec<f64>, y: Vec<f64>) {
+pub fn plot(canvas: &mut dyn Canvas, x: Vec<f64>, y: Vec<f64>, size: Size) {
     info!("Plotting len(x)= {:?} len(y)= {:?}", x.len(), y.len());
     let mut chart = Chart::default();
     chart.set_xlabel("Time");
@@ -26,5 +27,5 @@ pub fn plot(canvas: &mut dyn Canvas, x: Vec<f64>, y: Vec<f64>) {
     let curve = Curve::new(curve_data);
     chart.add_curve(curve);
     chart.autoscale();
-    chart.draw(canvas);
+    draw_chart(&chart, canvas, size);
 }

@@ -50,6 +50,15 @@ impl Chart {
         self.curves.push(curve);
     }
 
+    /// Perform a bit of horizontal panning
+    pub fn pan_horizontal(&mut self, amount: f64) {
+        let domain = self.x_axis.domain();
+        let step = domain * amount;
+        let x1 = self.x_axis.begin() + step;
+        let x2 = self.x_axis.end() + step;
+        self.x_axis.set_limits(x1, x2);
+    }
+
     /// Adjust scale ranges so we fit all data in view.
     pub fn autoscale(&mut self) {
         let mut spans = vec![];
