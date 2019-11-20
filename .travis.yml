@@ -14,4 +14,4 @@ matrix:
     - language: rust
       cache: cargo
       script:
-        - cargo test -p quartztsdb quartzplot
+        - cargo test -p lognplot
