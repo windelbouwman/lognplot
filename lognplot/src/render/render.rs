@@ -1,6 +1,7 @@
 //! Functionality to emit a plot to a canvas.
 
 use super::Canvas;
+use super::{ChartLayout, ChartOptions};
 use crate::chart::Chart;
 use crate::geometry::{Point, Size};
 use crate::style::Color;
@@ -20,56 +21,6 @@ struct ChartRenderer<'a> {
     layout: ChartLayout,
     // Parameters:
     options: ChartOptions,
-}
-
-struct ChartLayout {
-    width: f64,
-    height: f64,
-    plot_top: f64,
-    plot_left: f64,
-    plot_bottom: f64,
-    plot_right: f64,
-    plot_width: f64,
-    plot_height: f64,
-}
-
-impl ChartLayout {
-    fn new(size: Size) -> Self {
-        ChartLayout {
-            // TODO: casowary?
-            width: size.width,
-            height: size.height,
-            plot_top: 0.0,
-            plot_left: 0.0,
-            plot_bottom: 0.0,
-            plot_right: 0.0,
-            plot_width: 0.0,
-            plot_height: 0.0,
-        }
-    }
-
-    fn layout(&mut self, options: &ChartOptions) {
-        self.plot_top = options.padding;
-        self.plot_left = 50.0;
-        self.plot_bottom = self.height - 50.0;
-        self.plot_right = self.width - options.padding;
-        self.plot_height = self.plot_bottom - self.plot_top;
-        self.plot_width = self.plot_right - self.plot_left;
-    }
-}
-
-struct ChartOptions {
-    tick_size: f64,
-    padding: f64,
-}
-
-impl Default for ChartOptions {
-    fn default() -> Self {
-        ChartOptions {
-            tick_size: 7.0,
-            padding: 10.0,
-        }
-    }
 }
 
 impl<'a> ChartRenderer<'a> {

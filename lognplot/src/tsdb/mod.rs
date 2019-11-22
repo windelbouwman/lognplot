@@ -1,14 +1,17 @@
 //! Time series database, usable as a library.
 
+mod aggregation;
 mod btree;
 mod connection;
 mod db;
 mod handle;
 mod metrics;
+mod observation;
 mod query;
 mod sample;
 mod trace;
 
+pub use aggregation::Aggregation;
 use btree::Btree;
 pub use db::TsDb;
 pub use handle::TsDbHandle;

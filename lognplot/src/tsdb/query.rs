@@ -2,7 +2,9 @@
 //!
 //! The database can be queried, and will give a `QueryResult` back.
 
+use super::metrics::SampleMetrics;
 use super::sample::Sample;
+use super::Aggregation;
 use crate::time::{Resolution, TimeSpan, TimeStamp};
 
 #[derive(Debug)]
@@ -82,12 +84,10 @@ impl QueryResult {
 }
 
 pub enum SubResult {
-    Single { samples: Vec<Sample> },
-    Aggregated { aggregates: Vec<Aggregate> },
-}
-
-pub struct Aggregate {
-    min: f64,
-    max: f64,
-    mean: f64,
+    Single {
+        samples: Vec<Sample>,
+    },
+    Aggregated {
+        aggregates: Vec<Aggregation<SampleMetrics>>,
+    },
 }

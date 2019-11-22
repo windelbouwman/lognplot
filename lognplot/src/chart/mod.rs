@@ -1,3 +1,8 @@
+//! Data visualisation.
+//!
+//! This module provides functions for defining a chart.
+//! For rendering this chart, see the render module.
+
 mod axis;
 mod axis_options;
 mod chart;

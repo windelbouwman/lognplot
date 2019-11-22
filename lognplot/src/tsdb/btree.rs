@@ -3,7 +3,8 @@
 //! The idea is to create leave nodes and intermediate nodes.
 //! Leave and intermediate nodes can have multiple child nodes.
 
-use super::metrics::SampleMetrics;
+use super::aggregation::Aggregation;
+use super::metrics::{Metrics, SampleMetrics};
 use super::sample::Sample;
 use crate::time::TimeSpan;
 
@@ -12,7 +13,7 @@ use std::cell::RefCell;
 /// This implements a b-tree structure.
 #[derive(Debug)]
 pub struct Btree {
-    root: RefCell<Node>,
+    root: RefCell<Node<SampleMetrics>>,
 }
 
 /// Create an empty b-tree
@@ -70,31 +71,43 @@ const CHUNK_SIZE: usize = 32;
 /// to store a sequence of sample along with some
 /// metrics about those samples.
 #[derive(Debug)]
-enum Node {
+enum Node<M>
+where
+    M: Metrics,
+{
     /// An intermediate chunk with some leave
     /// chunk.
-    SubChunk(InternalNode),
+    SubChunk(InternalNode<M>),
 
     /// A leave chunk with some samples in it.
-    Leave(LeaveNode),
+    Leave(LeaveNode<M>),
     // TODO: in future support on disk node?
 }
 
 /// Intermediate node
 #[derive(Debug)]
-struct InternalNode {
-    children: Vec<Node>,
-    metrics: Option<SampleMetrics>,
+struct InternalNode<M>
+where
+    M: Metrics,
+{
+    children: Vec<Node<M>>,
+    metrics: Option<Aggregation<M>>,
 }
 
 /// Leave node type
 #[derive(Debug)]
-struct LeaveNode {
+struct LeaveNode<M>
+where
+    M: Metrics,
+{
     samples: Vec<Sample>,
-    metrics: Option<SampleMetrics>,
+    metrics: Option<Aggregation<M>>,
 }
 
-impl Node {
+impl<M> Node<M>
+where
+    M: Metrics + Clone,
+{
     fn new_intermediate() -> Self {
         Node::SubChunk(InternalNode::new())
     }
@@ -111,15 +124,15 @@ impl Node {
         }
     }
 
-    fn add_child(&mut self, child: Node) {
+    fn add_child(&mut self, child: Node<M>) {
         match self {
             Node::SubChunk(internal_node) => internal_node.add_child(child),
-            x => panic!("Wrong node type ({:?}) to add a child to", x),
+            x => panic!("Wrong node type to add a child to"),
         }
     }
 
     /// The append sample to operation!
-    fn append_sample(&mut self, sample: Sample) -> Option<Node> {
+    fn append_sample(&mut self, sample: Sample) -> Option<Node<M>> {
         match self {
             Node::SubChunk(internal_node) => {
                 internal_node.append_sample(sample).map(Node::SubChunk)
@@ -138,7 +151,7 @@ impl Node {
     }
 
     /// Get metrics for this node
-    fn metrics(&self) -> Option<SampleMetrics> {
+    fn metrics(&self) -> Option<Aggregation<M>> {
         match self {
             Node::Leave(leave) => leave.metrics(),
             Node::SubChunk(internal) => internal.metrics(),
@@ -150,7 +163,10 @@ impl Node {
     }
 }
 
-impl InternalNode {
+impl<M> InternalNode<M>
+where
+    M: Metrics + Clone,
+{
     fn new() -> Self {
         InternalNode {
             children: Vec::with_capacity(CHUNK_SIZE),
@@ -162,7 +178,7 @@ impl InternalNode {
         self.children.len() >= CHUNK_SIZE
     }
 
-    fn metrics(&self) -> Option<SampleMetrics> {
+    fn metrics(&self) -> Option<Aggregation<M>> {
         if self.metrics.is_some() {
             // We have pre-calculated metrics!
             self.metrics.clone()
@@ -171,12 +187,12 @@ impl InternalNode {
         }
     }
 
-    fn calculate_metrics_from_child_nodes(&self) -> Option<SampleMetrics> {
-        let mut metrics: Option<SampleMetrics> = None;
+    fn calculate_metrics_from_child_nodes(&self) -> Option<Aggregation<M>> {
+        let mut metrics: Option<Aggregation<M>> = None;
         for child in &self.children {
             if let Some(child_metrics) = child.metrics() {
                 if let Some(metrics2) = &mut metrics {
-                    metrics2.include(child_metrics);
+                    metrics2.include(&child_metrics);
                 } else {
                     metrics = Some(child_metrics);
                 }
@@ -185,7 +201,7 @@ impl InternalNode {
         metrics
     }
 
-    fn append_sample(&mut self, sample: Sample) -> Option<InternalNode> {
+    fn append_sample(&mut self, sample: Sample) -> Option<InternalNode<M>> {
         // For now alway insert into last chunk:
         let optional_new_chunk = self.children.last_mut().unwrap().append_sample(sample);
 
@@ -211,7 +227,7 @@ impl InternalNode {
     /// Append a chunk into this chunk.
     /// Note: chunk must be of variant subchunk, otherwise this
     /// will fail.
-    fn add_child(&mut self, child: Node) {
+    fn add_child(&mut self, child: Node<M>) {
         assert!(self.children.len() < CHUNK_SIZE);
         self.children.push(child);
     }
@@ -225,7 +241,10 @@ impl InternalNode {
     }
 }
 
-impl LeaveNode {
+impl<M> LeaveNode<M>
+where
+    M: Metrics + Clone,
+{
     /// Create a new leave chunk!
     fn new() -> Self {
         LeaveNode {
@@ -238,11 +257,11 @@ impl LeaveNode {
         self.samples.len() >= CHUNK_SIZE
     }
 
-    fn metrics(&self) -> Option<SampleMetrics> {
+    fn metrics(&self) -> Option<Aggregation<M>> {
         self.metrics.clone()
     }
 
-    fn append_sample(&mut self, sample: Sample) -> Option<LeaveNode> {
+    fn append_sample(&mut self, sample: Sample) -> Option<LeaveNode<M>> {
         if self.samples.len() < CHUNK_SIZE {
             self.add_sample(sample);
             None
@@ -259,7 +278,7 @@ impl LeaveNode {
         assert!(self.samples.len() < CHUNK_SIZE);
 
         if self.metrics.is_none() {
-            self.metrics = Some(SampleMetrics::from_sample(&sample))
+            self.metrics = Some(Aggregation::from_sample(&sample))
         } else {
             self.metrics.as_mut().unwrap().update(&sample);
         }
