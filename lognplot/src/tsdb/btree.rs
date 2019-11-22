@@ -3,34 +3,45 @@
 //! The idea is to create leave nodes and intermediate nodes.
 //! Leave and intermediate nodes can have multiple child nodes.
 
-use super::aggregation::Aggregation;
-use super::metrics::{Metrics, SampleMetrics};
-use super::sample::Sample;
+use super::metrics::Metrics;
+use super::{Aggregation, Observation};
 use crate::time::TimeSpan;
 
 use std::cell::RefCell;
 
 /// This implements a b-tree structure.
 #[derive(Debug)]
-pub struct Btree {
-    root: RefCell<Node<SampleMetrics>>,
+pub struct Btree<V, M>
+where
+    M: Metrics<V> + From<V>,
+{
+    root: RefCell<Node<V, M>>,
 }
 
 /// Create an empty b-tree
-impl Default for Btree {
+impl<V, M> Default for Btree<V, M>
+where
+    M: Metrics<V> + From<V> + Clone,
+    V: Clone,
+{
     fn default() -> Self {
         let root = RefCell::new(Node::new_leave());
         Btree { root }
     }
 }
 
-impl Btree {
+impl<V, M> Btree<V, M>
+where
+    M: Metrics<V> + From<V> + Clone,
+    V: Clone,
+{
     /// Append a sample to the tree
-    pub fn append_sample(&self, sample: Sample) {
+    pub fn append_sample(&self, observation: Observation<V>) {
         // Strategy, traverse down, until a leave, and split on the way back upwards if
         // required.
         // Find proper chunk, or create one if required.
-        let optionally_root_split = self.root.borrow_mut().append_sample(sample);
+
+        let optionally_root_split = self.root.borrow_mut().append_sample(observation);
 
         if let Some(root_sibling) = optionally_root_split {
             let new_root = Node::new_intermediate();
@@ -41,24 +52,38 @@ impl Btree {
     }
 
     /// Bulk import samples.
-    pub fn append_samples(&self, samples: Vec<Sample>) {
-        for sample in samples {
-            self.append_sample(sample);
-        }
-    }
+    // pub fn append_samples(&self, samples: Vec<Sample>) {
+    //     for sample in samples {
+    //         self.append_sample(sample);
+    //     }
+    // }
 
     /// Query the tree for some data.
-    pub fn query_range(&self, timespan: &TimeSpan, min_items: usize) -> Vec<Sample> {
-        vec![]
+    pub fn query_range(&self, timespan: &TimeSpan, min_items: usize) -> RangeQueryResult<V, M> {
+        // big TODO
+        let samples = vec![];
+        RangeQueryResult::Observations(samples)
     }
 
-    pub fn to_vec(&self) -> Vec<Sample> {
+    /// Get a flat list of all observation in this tree.
+    pub fn to_vec(&self) -> Vec<Observation<V>> {
         self.root.borrow().to_vec()
     }
 
     pub fn len(&self) -> usize {
         self.root.borrow().len()
     }
+}
+
+/// Inner results, can be either a series of single
+/// observations, or a series of aggregate observations.
+#[derive(Debug)]
+pub enum RangeQueryResult<V, M>
+where
+    M: Metrics<V> + From<V>,
+{
+    Observations(Vec<Observation<V>>),
+    Aggregations(Vec<Aggregation<V, M>>),
 }
 
 /// This constant defines the fanout ratio.
@@ -71,42 +96,53 @@ const CHUNK_SIZE: usize = 32;
 /// to store a sequence of sample along with some
 /// metrics about those samples.
 #[derive(Debug)]
-enum Node<M>
+enum Node<V, M>
 where
-    M: Metrics,
+    M: Metrics<V> + From<V>,
 {
     /// An intermediate chunk with some leave
     /// chunk.
-    SubChunk(InternalNode<M>),
+    SubChunk(InternalNode<V, M>),
 
     /// A leave chunk with some samples in it.
-    Leave(LeaveNode<M>),
+    Leave(LeaveNode<V, M>),
     // TODO: in future support on disk node?
+}
+
+impl<V, M> Default for Node<V, M>
+where
+    M: Metrics<V> + Clone + From<V>,
+    V: Clone,
+{
+    fn default() -> Self {
+        Node::new_leave()
+    }
 }
 
 /// Intermediate node
 #[derive(Debug)]
-struct InternalNode<M>
+struct InternalNode<V, M>
 where
-    M: Metrics,
+    M: Metrics<V> + From<V>,
 {
-    children: Vec<Node<M>>,
-    metrics: Option<Aggregation<M>>,
+    children: Vec<Node<V, M>>,
+    metrics: Option<Aggregation<V, M>>,
 }
 
 /// Leave node type
 #[derive(Debug)]
-struct LeaveNode<M>
+struct LeaveNode<V, M>
 where
-    M: Metrics,
+    M: Metrics<V> + From<V>,
 {
-    samples: Vec<Sample>,
-    metrics: Option<Aggregation<M>>,
+    samples: Vec<Observation<V>>,
+    metrics: Option<Aggregation<V, M>>,
 }
 
-impl<M> Node<M>
+impl<V, M> Node<V, M>
 where
-    M: Metrics + Clone,
+    M: Metrics<V> + Clone + From<V>,
+    V: Clone,
 {
     fn new_intermediate() -> Self {
         Node::SubChunk(InternalNode::new())
@@ -117,22 +153,22 @@ where
     }
 
     /// Test if this chunk is full
-    fn is_full(&self) -> bool {
+    fn _is_full(&self) -> bool {
         match self {
-            Node::Leave(leave) => leave.is_full(),
-            Node::SubChunk(internal) => internal.is_full(),
+            Node::Leave(leave) => leave._is_full(),
+            Node::SubChunk(internal) => internal._is_full(),
         }
     }
 
-    fn add_child(&mut self, child: Node<M>) {
+    fn add_child(&mut self, child: Node<V, M>) {
         match self {
             Node::SubChunk(internal_node) => internal_node.add_child(child),
-            x => panic!("Wrong node type to add a child to"),
+            _x => panic!("Wrong node type to add a child to"),
         }
     }
 
     /// The append sample to operation!
-    fn append_sample(&mut self, sample: Sample) -> Option<Node<M>> {
+    fn append_sample(&mut self, sample: Observation<V>) -> Option<Node<V, M>> {
         match self {
             Node::SubChunk(internal_node) => {
                 internal_node.append_sample(sample).map(Node::SubChunk)
@@ -143,7 +179,7 @@ where
 
     /// Get all samples from this chunk and all it's potential
     /// sub chunks.
-    fn to_vec(&self) -> Vec<Sample> {
+    fn to_vec(&self) -> Vec<Observation<V>> {
         match self {
             Node::SubChunk(internal) => internal.to_vec(),
             Node::Leave(leave) => leave.to_vec(),
@@ -151,7 +187,7 @@ where
     }
 
     /// Get metrics for this node
-    fn metrics(&self) -> Option<Aggregation<M>> {
+    fn metrics(&self) -> Option<Aggregation<V, M>> {
         match self {
             Node::Leave(leave) => leave.metrics(),
             Node::SubChunk(internal) => internal.metrics(),
@@ -163,9 +199,10 @@ where
     }
 }
 
-impl<M> InternalNode<M>
+impl<V, M> InternalNode<V, M>
 where
-    M: Metrics + Clone,
+    M: Metrics<V> + Clone + From<V>,
+    V: Clone,
 {
     fn new() -> Self {
         InternalNode {
@@ -174,11 +211,11 @@ where
         }
     }
 
-    fn is_full(&self) -> bool {
+    fn _is_full(&self) -> bool {
         self.children.len() >= CHUNK_SIZE
     }
 
-    fn metrics(&self) -> Option<Aggregation<M>> {
+    fn metrics(&self) -> Option<Aggregation<V, M>> {
         if self.metrics.is_some() {
             // We have pre-calculated metrics!
             self.metrics.clone()
@@ -187,8 +224,8 @@ where
         }
     }
 
-    fn calculate_metrics_from_child_nodes(&self) -> Option<Aggregation<M>> {
-        let mut metrics: Option<Aggregation<M>> = None;
+    fn calculate_metrics_from_child_nodes(&self) -> Option<Aggregation<V, M>> {
+        let mut metrics: Option<Aggregation<V, M>> = None;
         for child in &self.children {
             if let Some(child_metrics) = child.metrics() {
                 if let Some(metrics2) = &mut metrics {
@@ -201,7 +238,7 @@ where
         metrics
     }
 
-    fn append_sample(&mut self, sample: Sample) -> Option<InternalNode<M>> {
+    fn append_sample(&mut self, sample: Observation<V>) -> Option<InternalNode<V, M>> {
         // For now alway insert into last chunk:
         let optional_new_chunk = self.children.last_mut().unwrap().append_sample(sample);
 
@@ -227,13 +264,13 @@ where
     /// Append a chunk into this chunk.
     /// Note: chunk must be of variant subchunk, otherwise this
     /// will fail.
-    fn add_child(&mut self, child: Node<M>) {
+    fn add_child(&mut self, child: Node<V, M>) {
         assert!(self.children.len() < CHUNK_SIZE);
         self.children.push(child);
     }
 
-    fn to_vec(&self) -> Vec<Sample> {
-        let mut samples: Vec<Sample> = vec![];
+    fn to_vec(&self) -> Vec<Observation<V>> {
+        let mut samples: Vec<Observation<V>> = vec![];
         for child in &self.children {
             samples.extend(child.to_vec());
         }
@@ -241,9 +278,10 @@ where
     }
 }
 
-impl<M> LeaveNode<M>
+impl<V, M> LeaveNode<V, M>
 where
-    M: Metrics + Clone,
+    M: Metrics<V> + Clone + From<V>,
+    V: Clone,
 {
     /// Create a new leave chunk!
     fn new() -> Self {
@@ -253,15 +291,17 @@ where
         }
     }
 
-    fn is_full(&self) -> bool {
+    fn _is_full(&self) -> bool {
         self.samples.len() >= CHUNK_SIZE
     }
 
-    fn metrics(&self) -> Option<Aggregation<M>> {
+    fn metrics(&self) -> Option<Aggregation<V, M>> {
         self.metrics.clone()
     }
 
-    fn append_sample(&mut self, sample: Sample) -> Option<LeaveNode<M>> {
+    /// Append a single observation to this tree.
+    /// If the node is full, return a new leave node.
+    fn append_sample(&mut self, sample: Observation<V>) -> Option<LeaveNode<V, M>> {
         if self.samples.len() < CHUNK_SIZE {
             self.add_sample(sample);
             None
@@ -274,35 +314,38 @@ where
         }
     }
 
-    fn add_sample(&mut self, sample: Sample) {
+    fn add_sample(&mut self, sample: Observation<V>) {
         assert!(self.samples.len() < CHUNK_SIZE);
 
         if self.metrics.is_none() {
-            self.metrics = Some(Aggregation::from_sample(&sample))
+            self.metrics = Some(Aggregation::from(sample.clone()))
         } else {
             self.metrics.as_mut().unwrap().update(&sample);
         }
         self.samples.push(sample);
     }
 
-    fn to_vec(&self) -> Vec<Sample> {
+    fn to_vec(&self) -> Vec<Observation<V>> {
         self.samples.clone()
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{Btree, Sample};
+    use super::super::metrics::SampleMetrics;
+    use super::super::Sample;
+    use super::{Btree, Observation};
     use crate::time::{TimeSpan, TimeStamp};
 
     #[test]
     fn btree_single_insertion() {
-        let tree = Btree::default();
+        let tree = Btree::<Sample, SampleMetrics>::default();
 
         // Insert some samples:
         let t1 = TimeStamp::from_seconds(1);
-        let sample = Sample::new(t1, 3.1415926);
-        tree.append_sample(sample);
+        let sample1 = Sample::new(t1.clone(), 3.1415926);
+        let observation = Observation::new(t1.clone(), sample1);
+        tree.append_sample(observation);
 
         assert_eq!(tree.to_vec().len(), 1);
 
@@ -312,13 +355,14 @@ mod tests {
 
     #[test]
     fn btree_mutliple_insertions() {
-        let tree = Btree::default();
+        let tree = Btree::<Sample, SampleMetrics>::default();
 
         // Insert some samples:
         for i in 0..1000 {
             let t1 = TimeStamp::from_seconds(i);
-            let sample = Sample::new(t1, i as f64);
-            tree.append_sample(sample);
+            let sample = Sample::new(t1.clone(), i as f64);
+            let observation = Observation::new(t1, sample);
+            tree.append_sample(observation);
         }
 
         // Check plain to vector:
@@ -329,6 +373,7 @@ mod tests {
 
         // Check query
         let time_span = TimeSpan::new(TimeStamp::from_seconds(3), TimeStamp::from_seconds(13));
-        tree.query_range(&time_span, 9);
+        let _result = tree.query_range(&time_span, 9);
+        // TODO: check result.
     }
 }

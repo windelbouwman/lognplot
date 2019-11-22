@@ -4,7 +4,8 @@
 
 use super::metrics::SampleMetrics;
 use super::sample::Sample;
-use super::Aggregation;
+// use super::{Aggregation, Observation};
+use super::RangeQueryResult;
 use crate::time::{Resolution, TimeSpan, TimeStamp};
 
 #[derive(Debug)]
@@ -61,33 +62,13 @@ impl QueryBuilder {
 }
 
 /// This holds the result of a query to the database.
-/// The result can be a combination of several things, depending upon query type.
+/// The result can be several things, depending upon query type.
 /// It can be min/max/mean slices, or single values, if the data is present at the
 /// proper resolution.
+#[derive(Debug)]
 pub struct QueryResult {
     pub query: Query,
-    pub samples: Vec<SubResult>,
+    pub inner: RangeQueryResult<Sample, SampleMetrics>,
 }
 
-impl QueryResult {
-    pub fn into_vec(self) -> Vec<Sample> {
-        let mut all_samples = vec![];
-        for sub in self.samples.into_iter() {
-            if let SubResult::Single { samples } = sub {
-                all_samples.extend(samples);
-            } else {
-                panic!("Result contains aggregates!");
-            }
-        }
-        all_samples
-    }
-}
-
-pub enum SubResult {
-    Single {
-        samples: Vec<Sample>,
-    },
-    Aggregated {
-        aggregates: Vec<Aggregation<SampleMetrics>>,
-    },
-}
+impl QueryResult {}

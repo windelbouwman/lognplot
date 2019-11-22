@@ -5,39 +5,46 @@
 //! Also: keep track of certain metrics, such as min, max and sum.
 
 // use std::cell::RefCell;
-use super::query::{Query, QueryResult, SubResult};
+use super::metrics::SampleMetrics;
+use super::query::{Query, QueryResult};
 use super::sample::Sample;
-use super::Btree;
+use super::{Btree, Observation};
 
 /// A trace is a single signal with a history in time.
 #[derive(Debug)]
 pub struct Trace {
-    tree: Btree,
+    tree: Btree<Sample, SampleMetrics>,
 }
 
 impl Trace {
     /// Add a vector of values to this trace.
     pub fn add_values(&mut self, samples: Vec<Sample>) {
-        self.tree.append_samples(samples);
+        for sample in samples {
+            self.add_sample(sample);
+        }
+
+        // self.tree.append_samples(samples);
     }
 
     /// Add a single sample.
-    pub fn add_sample(&mut self, value: Sample) {
-        self.tree.append_sample(value);
+    pub fn add_sample(&mut self, sample: Sample) {
+        let timestamp = sample.timestamp.clone();
+        let observation = Observation::new(timestamp, sample);
+
+        self.tree.append_sample(observation);
     }
 
     /// Query this trace for some data.
     pub fn query(&self, query: Query) -> QueryResult {
         let samples = self.tree.query_range(&query.interval, 1000);
-        let samples2 = SubResult::Single { samples };
 
         QueryResult {
             query,
-            samples: vec![samples2],
+            inner: samples,
         }
     }
 
-    pub fn to_vec(&self) -> Vec<Sample> {
+    pub fn to_vec(&self) -> Vec<Observation<Sample>> {
         self.tree.to_vec()
     }
 

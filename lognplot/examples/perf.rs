@@ -2,7 +2,7 @@ use lognplot::time::TimeStamp;
 /// Demo of raw database performance.
 ///
 /// Strategy: insert 1 million points, and measure how long it took.
-use lognplot::tsdb::{Query, Sample, SubResult, TsDb};
+use lognplot::tsdb::{Query, Sample, TsDb};
 use std::time::Instant;
 
 fn main() {
@@ -49,7 +49,7 @@ fn do_query(db: &TsDb) {
     let result = db.get_values("fu", query);
 
     println!("Got result: {:?}", result.query);
-    println!("Num result: {:?}", result.samples.len());
-    let raw_samples = result.into_vec();
-    println!("Raw samples: {}", raw_samples.len());
+    println!("Num result: {:?}", result.inner);
+    // let raw_samples = result.into_vec();
+    // println!("Raw samples: {}", raw_samples.len());
 }

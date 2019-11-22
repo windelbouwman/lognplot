@@ -31,15 +31,14 @@ struct LogMetrics {
 }
 
 /// Implement this for specific observations.
-pub trait Metrics {
-    fn from_sample(sample: &Sample) -> Self;
+pub trait Metrics<V> {
     // TODO: we might merge update and include into a single function?
-    fn update(&mut self, sample: &Sample);
+    fn update(&mut self, sample: &V);
     fn include(&mut self, metrics: &Self);
 }
 
-impl Metrics for SampleMetrics {
-    fn from_sample(sample: &Sample) -> Self {
+impl From<Sample> for SampleMetrics {
+    fn from(sample: Sample) -> Self {
         SampleMetrics {
             min: sample.value,
             max: sample.value,
@@ -48,7 +47,9 @@ impl Metrics for SampleMetrics {
             count: 1,
         }
     }
+}
 
+impl Metrics<Sample> for SampleMetrics {
     /// Integrate a single sample into tha metrics.
     /// This involves updating the min and max values
     /// as well as the count and the sum.

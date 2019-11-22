@@ -12,10 +12,11 @@ mod sample;
 mod trace;
 
 pub use aggregation::Aggregation;
-use btree::Btree;
+use btree::{Btree, RangeQueryResult};
 pub use db::TsDb;
 pub use handle::TsDbHandle;
-pub use query::{Query, QueryResult, SubResult};
+pub use observation::Observation;
+pub use query::{Query, QueryResult};
 pub use sample::Sample;
 pub use trace::Trace;
 
@@ -45,7 +46,7 @@ mod tests {
         // Now onto the query part:
         let timespan = TimeSpan::new(ts.add_millis(-1), ts.add_millis(1));
         let query = Query::new(timespan, Resolution::NanoSeconds);
-        let result = db.get_values(trace_name, query);
+        let _result = db.get_values(trace_name, query);
         // assert_eq!(1, result.samples.first().unwrap().len());
         db.close();
     }
@@ -68,7 +69,7 @@ mod tests {
         // Query empty range:
         let timespan = TimeSpan::new(ts.add_millis(1), ts.add_millis(3));
         let query = Query::new(timespan, Resolution::NanoSeconds);
-        let result = db.get_values(trace_name, query);
+        let _result = db.get_values(trace_name, query);
         // assert_eq!(0, result.samples.first().unwrap().len());
 
         db.close();
