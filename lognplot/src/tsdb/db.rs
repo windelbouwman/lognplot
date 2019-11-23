@@ -4,6 +4,7 @@ use super::handle::{make_handle, TsDbHandle};
 use super::query::{Query, QueryResult};
 use super::sample::Sample;
 use super::trace::Trace;
+use super::Observation;
 use std::collections::HashMap;
 
 /// A time series database which can be used as a library.
@@ -34,7 +35,7 @@ impl TsDb {
     }
 
     /// Add a batch of values
-    pub fn add_values(&mut self, name: &str, samples: Vec<Sample>) {
+    pub fn add_values(&mut self, name: &str, samples: Vec<Observation<Sample>>) {
         let trace = self.data.get_mut(name).unwrap();
         trace.add_values(samples);
     }
@@ -45,11 +46,11 @@ impl TsDb {
         // self.get_trace(name)
     }
 
-    pub fn add_value(&mut self, name: &str, sample: Sample) {
+    pub fn add_value(&mut self, name: &str, sample: Observation<Sample>) {
         self.data.get_mut(name).unwrap().add_sample(sample);
     }
 
-    pub fn get_values(&self, name: &str, query: Query) -> QueryResult {
+    pub fn query(&self, name: &str, query: Query) -> QueryResult {
         self.data.get(name).unwrap().query(query)
     }
 }

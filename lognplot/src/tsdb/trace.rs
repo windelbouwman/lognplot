@@ -5,9 +5,8 @@
 //! Also: keep track of certain metrics, such as min, max and sum.
 
 // use std::cell::RefCell;
-use super::metrics::SampleMetrics;
 use super::query::{Query, QueryResult};
-use super::sample::Sample;
+use super::sample::{Sample, SampleMetrics};
 use super::{Btree, Observation};
 
 /// A trace is a single signal with a history in time.
@@ -18,7 +17,7 @@ pub struct Trace {
 
 impl Trace {
     /// Add a vector of values to this trace.
-    pub fn add_values(&mut self, samples: Vec<Sample>) {
+    pub fn add_values(&mut self, samples: Vec<Observation<Sample>>) {
         for sample in samples {
             self.add_sample(sample);
         }
@@ -27,16 +26,13 @@ impl Trace {
     }
 
     /// Add a single sample.
-    pub fn add_sample(&mut self, sample: Sample) {
-        let timestamp = sample.timestamp.clone();
-        let observation = Observation::new(timestamp, sample);
-
+    pub fn add_sample(&mut self, observation: Observation<Sample>) {
         self.tree.append_sample(observation);
     }
 
     /// Query this trace for some data.
     pub fn query(&self, query: Query) -> QueryResult {
-        let samples = self.tree.query_range(&query.interval, 1000);
+        let samples = self.tree.query_range(&query.interval, query.amount);
 
         QueryResult {
             query,

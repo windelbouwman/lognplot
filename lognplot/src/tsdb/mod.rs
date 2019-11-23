@@ -5,6 +5,7 @@ mod btree;
 mod connection;
 mod db;
 mod handle;
+mod logrecords;
 mod metrics;
 mod observation;
 mod query;
@@ -15,6 +16,7 @@ pub use aggregation::Aggregation;
 use btree::{Btree, RangeQueryResult};
 pub use db::TsDb;
 pub use handle::TsDbHandle;
+pub use metrics::Metrics;
 pub use observation::Observation;
 pub use query::{Query, QueryResult};
 pub use sample::Sample;
@@ -24,6 +26,7 @@ pub use trace::Trace;
 mod tests {
     use super::connection::Connection;
     use super::query::Query;
+    use super::Observation;
     use super::Sample;
     use super::TsDb;
     use crate::time::TimeModifiers;
@@ -39,38 +42,26 @@ mod tests {
         db.new_trace(trace_name);
 
         // Insert data:
-        let ts = TimeStamp::new(0.0);
-        let sample = Sample::new(ts.clone(), 3.1415926);
-        db.add_value(trace_name, sample.clone());
+        let ts = TimeStamp::from_seconds(0);
+        let sample = Sample::new(3.1415926);
+        let observation = Observation::new(ts.clone(), sample);
+        db.add_value(trace_name, observation);
 
         // Now onto the query part:
-        let timespan = TimeSpan::new(ts.add_millis(-1), ts.add_millis(1));
-        let query = Query::new(timespan, Resolution::NanoSeconds);
-        let _result = db.get_values(trace_name, query);
-        // assert_eq!(1, result.samples.first().unwrap().len());
-        db.close();
-    }
-
-    #[test]
-    fn empty_query() {
-        let mut db = TsDb::new();
-        db.open();
-
-        let trace_name = "foo";
-
-        // Create a trace:
-        db.new_trace(trace_name);
-
-        // Insert data:
-        let ts = TimeStamp::new(0.0);
-        let sample = Sample::new(ts.clone(), 3.1415926);
-        db.add_value(trace_name, sample.clone());
+        let query = Query::create()
+            .start(ts.add_millis(-1))
+            .end(ts.add_millis(1))
+            .build();
+        let result = db.query(trace_name, query);
+        assert_eq!(1, result.len());
 
         // Query empty range:
-        let timespan = TimeSpan::new(ts.add_millis(1), ts.add_millis(3));
-        let query = Query::new(timespan, Resolution::NanoSeconds);
-        let _result = db.get_values(trace_name, query);
-        // assert_eq!(0, result.samples.first().unwrap().len());
+        let query = Query::create()
+            .start(ts.add_millis(1))
+            .end(ts.add_millis(3))
+            .build();
+        let result = db.query(trace_name, query);
+        assert_eq!(0, result.len());
 
         db.close();
     }

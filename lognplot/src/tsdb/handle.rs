@@ -1,6 +1,6 @@
 //! Thread usable handle. Wrapper around a database.
 
-use super::{Sample, TsDb};
+use super::{Observation, Query, QueryResult, Sample, TsDb};
 use std::sync::{Arc, Mutex};
 
 pub type TsDbHandle = Arc<LockedTsDb>;
@@ -23,11 +23,12 @@ impl LockedTsDb {
         self.db.lock().unwrap().new_trace(name)
     }
 
-    pub fn add_values(&self, name: &str, samples: Vec<Sample>) {
+    pub fn add_values(&self, name: &str, samples: Vec<Observation<Sample>>) {
         self.db.lock().unwrap().add_values(name, samples);
     }
 
-    pub fn query(&self) {
-        unimplemented!("TODO");
+    /// Query the database.
+    pub fn query(&self, name: &str, query: Query) -> QueryResult {
+        self.db.lock().unwrap().query(name, query)
     }
 }

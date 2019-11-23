@@ -2,8 +2,7 @@
 //!
 //! The database can be queried, and will give a `QueryResult` back.
 
-use super::metrics::SampleMetrics;
-use super::sample::Sample;
+use super::sample::{Sample, SampleMetrics};
 // use super::{Aggregation, Observation};
 use super::RangeQueryResult;
 use crate::time::{Resolution, TimeSpan, TimeStamp};
@@ -12,6 +11,7 @@ use crate::time::{Resolution, TimeSpan, TimeStamp};
 pub struct Query {
     pub interval: TimeSpan,
     pub resolution: Resolution,
+    pub amount: usize,
 }
 
 impl Query {
@@ -19,10 +19,11 @@ impl Query {
         QueryBuilder::new()
     }
 
-    pub fn new(interval: TimeSpan, resolution: Resolution) -> Self {
+    pub fn new(interval: TimeSpan, resolution: Resolution, amount: usize) -> Self {
         Query {
             interval,
             resolution,
+            amount,
         }
     }
 }
@@ -30,6 +31,7 @@ impl Query {
 pub struct QueryBuilder {
     start: Option<TimeStamp>,
     end: Option<TimeStamp>,
+    amount: usize,
 }
 
 impl QueryBuilder {
@@ -37,6 +39,7 @@ impl QueryBuilder {
         QueryBuilder {
             start: None,
             end: None,
+            amount: 10,
         }
     }
 
@@ -52,12 +55,17 @@ impl QueryBuilder {
         self
     }
 
+    pub fn amount(mut self, amount: usize) -> Self {
+        self.amount = amount;
+        self
+    }
+
     /// Finish building the query, and construct it!
     pub fn build(self) -> Query {
         let start = self.start.expect("No 'start' value given for the query!");
         let end = self.end.expect("No 'end' value given for the query!");
         let interval = TimeSpan::new(start, end);
-        Query::new(interval, Resolution::NanoSeconds)
+        Query::new(interval, Resolution::NanoSeconds, self.amount)
     }
 }
 
@@ -71,4 +79,8 @@ pub struct QueryResult {
     pub inner: RangeQueryResult<Sample, SampleMetrics>,
 }
 
-impl QueryResult {}
+impl QueryResult {
+    pub fn len(&self) -> usize {
+        self.inner.len()
+    }
+}

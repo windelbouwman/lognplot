@@ -66,8 +66,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::super::metrics::SampleMetrics;
-    use super::super::sample::Sample;
+    use super::super::sample::{Sample, SampleMetrics};
     use super::{Aggregation, Observation};
     use crate::time::{TimeSpan, TimeStamp};
 
@@ -78,9 +77,9 @@ mod tests {
         let t2 = TimeStamp::from_seconds(8);
         let t3 = TimeStamp::from_seconds(18);
 
-        let sample1 = Sample::new(t1.clone(), 2.2);
-        let sample2 = Sample::new(t2.clone(), 5.2);
-        let sample3 = Sample::new(t3.clone(), -9.0);
+        let sample1 = Sample::new(2.2);
+        let sample2 = Sample::new(5.2);
+        let sample3 = Sample::new(-9.0);
 
         let observation1 = Observation::new(t1.clone(), sample1);
         let observation2 = Observation::new(t2.clone(), sample2);

@@ -41,7 +41,7 @@ where
         // required.
         // Find proper chunk, or create one if required.
 
-        let optionally_root_split = self.root.borrow_mut().append_sample(observation);
+        let optionally_root_split = self.root.borrow_mut().append_observation(observation);
 
         if let Some(root_sibling) = optionally_root_split {
             let new_root = Node::new_intermediate();
@@ -61,8 +61,14 @@ where
     /// Query the tree for some data.
     pub fn query_range(&self, timespan: &TimeSpan, min_items: usize) -> RangeQueryResult<V, M> {
         // big TODO
-        let samples = vec![];
-        RangeQueryResult::Observations(samples)
+        let root_node = self.root.borrow();
+        let mut selection = root_node.select_range(timespan);
+
+        while (selection.len() < min_items) && selection.can_enhance() {
+            selection = selection.enhance(timespan);
+        }
+
+        selection.into_query_result()
     }
 
     /// Get a flat list of all observation in this tree.
@@ -86,6 +92,18 @@ where
     Aggregations(Vec<Aggregation<V, M>>),
 }
 
+impl<V, M> RangeQueryResult<V, M>
+where
+    M: Metrics<V> + From<V>,
+{
+    pub fn len(&self) -> usize {
+        match self {
+            RangeQueryResult::Observations(observations) => observations.len(),
+            RangeQueryResult::Aggregations(aggregations) => aggregations.len(),
+        }
+    }
+}
+
 /// This constant defines the fanout ratio.
 /// Each leave contains maximum this number of values
 /// Also, each intermediate node also contains this maximum number
@@ -102,7 +120,7 @@ where
 {
     /// An intermediate chunk with some leave
     /// chunk.
-    SubChunk(InternalNode<V, M>),
+    Intermediate(InternalNode<V, M>),
 
     /// A leave chunk with some samples in it.
     Leave(LeaveNode<V, M>),
@@ -135,7 +153,7 @@ struct LeaveNode<V, M>
 where
     M: Metrics<V> + From<V>,
 {
-    samples: Vec<Observation<V>>,
+    observations: Vec<Observation<V>>,
     metrics: Option<Aggregation<V, M>>,
 }
 
@@ -145,7 +163,7 @@ where
     V: Clone,
 {
     fn new_intermediate() -> Self {
-        Node::SubChunk(InternalNode::new())
+        Node::Intermediate(InternalNode::new())
     }
 
     fn new_leave() -> Self {
@@ -155,25 +173,43 @@ where
     /// Test if this chunk is full
     fn _is_full(&self) -> bool {
         match self {
-            Node::Leave(leave) => leave._is_full(),
-            Node::SubChunk(internal) => internal._is_full(),
+            Node::Leave(leave) => leave.is_full(),
+            Node::Intermediate(internal) => internal.is_full(),
         }
     }
 
     fn add_child(&mut self, child: Node<V, M>) {
         match self {
-            Node::SubChunk(internal_node) => internal_node.add_child(child),
+            Node::Intermediate(internal_node) => internal_node.add_child(child),
             _x => panic!("Wrong node type to add a child to"),
         }
     }
 
-    /// The append sample to operation!
-    fn append_sample(&mut self, sample: Observation<V>) -> Option<Node<V, M>> {
+    /// The append observation to operation!
+    fn append_observation(&mut self, observation: Observation<V>) -> Option<Node<V, M>> {
         match self {
-            Node::SubChunk(internal_node) => {
-                internal_node.append_sample(sample).map(Node::SubChunk)
+            Node::Intermediate(internal_node) => internal_node
+                .append_observation(observation)
+                .map(Node::Intermediate),
+            Node::Leave(leave_node) => leave_node.append_observation(observation).map(Node::Leave),
+        }
+    }
+
+    /// Select all child elements
+    fn select_all(&self) -> RangeSelectionResult<V, M> {
+        match self {
+            Node::Intermediate(internal) => RangeSelectionResult::Nodes(internal.select_all()),
+            Node::Leave(leave) => RangeSelectionResult::Observations(leave.select_all()),
+        }
+    }
+
+    /// Select a timespan of elements
+    fn select_range(&self, timespan: &TimeSpan) -> RangeSelectionResult<V, M> {
+        match self {
+            Node::Intermediate(internal) => {
+                RangeSelectionResult::Nodes(internal.select_range(timespan))
             }
-            Node::Leave(leave_node) => leave_node.append_sample(sample).map(Node::Leave),
+            Node::Leave(leave) => RangeSelectionResult::Observations(leave.select_range(timespan)),
         }
     }
 
@@ -181,7 +217,7 @@ where
     /// sub chunks.
     fn to_vec(&self) -> Vec<Observation<V>> {
         match self {
-            Node::SubChunk(internal) => internal.to_vec(),
+            Node::Intermediate(internal) => internal.to_vec(),
             Node::Leave(leave) => leave.to_vec(),
         }
     }
@@ -190,12 +226,107 @@ where
     fn metrics(&self) -> Option<Aggregation<V, M>> {
         match self {
             Node::Leave(leave) => leave.metrics(),
-            Node::SubChunk(internal) => internal.metrics(),
+            Node::Intermediate(internal) => internal.metrics(),
         }
     }
 
     fn len(&self) -> usize {
         self.metrics().map_or(0, |m| m.count)
+    }
+}
+
+/// The result of selecting a time range on a node.
+enum RangeSelectionResult<'t, V, M>
+where
+    M: Metrics<V> + From<V>,
+{
+    Nodes(Vec<&'t Node<V, M>>),
+    Observations(Vec<&'t Observation<V>>),
+}
+
+impl<'t, V, M> RangeSelectionResult<'t, V, M>
+where
+    M: Metrics<V> + From<V> + Clone,
+    V: Clone,
+{
+    fn len(&self) -> usize {
+        match self {
+            RangeSelectionResult::Nodes(nodes) => nodes.len(),
+            RangeSelectionResult::Observations(observations) => observations.len(),
+        }
+    }
+
+    // fn is_empty(&self) -> bool {
+    //     self.len() == 0
+    // }
+
+    /// Test if we can enhance this selection result any further.
+    fn can_enhance(&self) -> bool {
+        match self {
+            RangeSelectionResult::Nodes(nodes) => !nodes.is_empty(),
+            RangeSelectionResult::Observations(_) => false,
+        }
+    }
+
+    /// Zoom in on a sequence of nodes, by selecting the
+    /// child nodes which are in range.
+    fn enhance(self, timespan: &TimeSpan) -> RangeSelectionResult<'t, V, M> {
+        match self {
+            RangeSelectionResult::Nodes(nodes) => {
+                assert!(!nodes.is_empty());
+
+                if nodes.len() == 1 {
+                    // Special case of a single node.
+                    nodes.first().unwrap().select_range(timespan)
+                } else {
+                    // perform select range on first and last node, select all on the middle nodes.
+                    assert!(nodes.len() > 1);
+                    let (first, tail) = nodes.split_first().unwrap();
+                    let (last, middle) = tail.split_last().unwrap();
+
+                    let mut result = first.select_range(timespan); // first
+                    for node in middle {
+                        result.extend(node.select_all()); // middle
+                    }
+                    result.extend(last.select_range(timespan)); // last
+
+                    result
+                }
+            }
+            RangeSelectionResult::Observations(_) => {
+                panic!("This should never happen. Do not call enhance on observation level.")
+            }
+        }
+    }
+
+    /// Append a second selection to this selection!
+    fn extend(&mut self, mut other: Self) {
+        match self {
+            RangeSelectionResult::Observations(observations) => match &mut other {
+                RangeSelectionResult::Observations(other_observations) => {
+                    observations.append(other_observations);
+                }
+                _ => {
+                    panic!("Can only concatenate selection results of the same type");
+                }
+            },
+            _ => unimplemented!("TODO!"),
+        }
+    }
+
+    /// Convert selection into query result!
+    fn into_query_result(self) -> RangeQueryResult<V, M> {
+        match self {
+            RangeSelectionResult::Nodes(nodes) => {
+                // unimplemented!("TODO!");
+                RangeQueryResult::Aggregations(
+                    nodes.into_iter().map(|n| n.metrics().unwrap()).collect(),
+                )
+            }
+            RangeSelectionResult::Observations(observations) => {
+                RangeQueryResult::Observations(observations.into_iter().cloned().collect())
+            }
+        }
     }
 }
 
@@ -211,7 +342,7 @@ where
         }
     }
 
-    fn _is_full(&self) -> bool {
+    fn is_full(&self) -> bool {
         self.children.len() >= CHUNK_SIZE
     }
 
@@ -238,16 +369,17 @@ where
         metrics
     }
 
-    fn append_sample(&mut self, sample: Observation<V>) -> Option<InternalNode<V, M>> {
+    fn append_observation(&mut self, observation: Observation<V>) -> Option<InternalNode<V, M>> {
         // For now alway insert into last chunk:
-        let optional_new_chunk = self.children.last_mut().unwrap().append_sample(sample);
+        let optional_new_chunk = self
+            .children
+            .last_mut()
+            .unwrap()
+            .append_observation(observation);
 
         // Optionally we have a new chunk which must be added.
         if let Some(new_child) = optional_new_chunk {
-            if self.children.len() < CHUNK_SIZE {
-                self.add_child(new_child);
-                None
-            } else {
+            if self.is_full() {
                 self.metrics = self.calculate_metrics_from_child_nodes();
                 // Split required!
                 // for now, just split by creating a new node.
@@ -255,6 +387,9 @@ where
                 let mut new_sibling = InternalNode::new();
                 new_sibling.add_child(new_child);
                 Some(new_sibling)
+            } else {
+                self.add_child(new_child);
+                None
             }
         } else {
             None
@@ -267,6 +402,26 @@ where
     fn add_child(&mut self, child: Node<V, M>) {
         assert!(self.children.len() < CHUNK_SIZE);
         self.children.push(child);
+    }
+
+    /// Select child nodes in range.
+    fn select_range(&self, timespan: &TimeSpan) -> Vec<&Node<V, M>> {
+        let mut in_range_nodes = vec![];
+
+        for child in &self.children {
+            if let Some(child_metrics) = child.metrics() {
+                if child_metrics.timespan.overlap(timespan) {
+                    in_range_nodes.push(child);
+                }
+            }
+        }
+
+        in_range_nodes
+    }
+
+    /// Select all child nodes.
+    fn select_all(&self) -> Vec<&Node<V, M>> {
+        self.children.iter().collect()
     }
 
     fn to_vec(&self) -> Vec<Observation<V>> {
@@ -286,13 +441,14 @@ where
     /// Create a new leave chunk!
     fn new() -> Self {
         LeaveNode {
-            samples: Vec::with_capacity(CHUNK_SIZE),
+            observations: Vec::with_capacity(CHUNK_SIZE),
             metrics: Default::default(),
         }
     }
 
-    fn _is_full(&self) -> bool {
-        self.samples.len() >= CHUNK_SIZE
+    /// Test if this leave is full or not.
+    fn is_full(&self) -> bool {
+        self.observations.len() >= CHUNK_SIZE
     }
 
     fn metrics(&self) -> Option<Aggregation<V, M>> {
@@ -301,39 +457,58 @@ where
 
     /// Append a single observation to this tree.
     /// If the node is full, return a new leave node.
-    fn append_sample(&mut self, sample: Observation<V>) -> Option<LeaveNode<V, M>> {
-        if self.samples.len() < CHUNK_SIZE {
-            self.add_sample(sample);
-            None
-        } else {
+    fn append_observation(&mut self, observation: Observation<V>) -> Option<LeaveNode<V, M>> {
+        if self.is_full() {
             // We must split!
             // debug!("Split of leave node!");
             let mut new_leave = LeaveNode::new();
-            new_leave.add_sample(sample);
+            new_leave.add_sample(observation);
             Some(new_leave)
+        } else {
+            self.add_sample(observation);
+            None
         }
     }
 
-    fn add_sample(&mut self, sample: Observation<V>) {
-        assert!(self.samples.len() < CHUNK_SIZE);
+    fn add_sample(&mut self, observation: Observation<V>) {
+        assert!(!self.is_full());
 
+        // Update metrics:
         if self.metrics.is_none() {
-            self.metrics = Some(Aggregation::from(sample.clone()))
+            self.metrics = Some(Aggregation::from(observation.clone()))
         } else {
-            self.metrics.as_mut().unwrap().update(&sample);
+            self.metrics.as_mut().unwrap().update(&observation);
         }
-        self.samples.push(sample);
+
+        self.observations.push(observation);
+    }
+
+    /// Select the observations from this leave which fall into the given
+    /// timespan.
+    fn select_range(&self, timespan: &TimeSpan) -> Vec<&Observation<V>> {
+        let mut in_range_observations = vec![];
+
+        for observation in &self.observations {
+            if timespan.contains(&observation.timestamp) {
+                in_range_observations.push(observation);
+            }
+        }
+
+        in_range_observations
+    }
+
+    fn select_all(&self) -> Vec<&Observation<V>> {
+        self.observations.iter().collect()
     }
 
     fn to_vec(&self) -> Vec<Observation<V>> {
-        self.samples.clone()
+        self.observations.clone()
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::super::metrics::SampleMetrics;
-    use super::super::Sample;
+    use super::super::sample::{Sample, SampleMetrics};
     use super::{Btree, Observation};
     use crate::time::{TimeSpan, TimeStamp};
 
@@ -343,8 +518,8 @@ mod tests {
 
         // Insert some samples:
         let t1 = TimeStamp::from_seconds(1);
-        let sample1 = Sample::new(t1.clone(), 3.1415926);
-        let observation = Observation::new(t1.clone(), sample1);
+        let sample1 = Sample::new(3.1415926);
+        let observation = Observation::new(t1, sample1);
         tree.append_sample(observation);
 
         assert_eq!(tree.to_vec().len(), 1);
@@ -360,7 +535,7 @@ mod tests {
         // Insert some samples:
         for i in 0..1000 {
             let t1 = TimeStamp::from_seconds(i);
-            let sample = Sample::new(t1.clone(), i as f64);
+            let sample = Sample::new(i as f64);
             let observation = Observation::new(t1, sample);
             tree.append_sample(observation);
         }
@@ -372,8 +547,8 @@ mod tests {
         assert_eq!(tree.len(), 1000);
 
         // Check query
-        let time_span = TimeSpan::new(TimeStamp::from_seconds(3), TimeStamp::from_seconds(13));
-        let _result = tree.query_range(&time_span, 9);
-        // TODO: check result.
+        let time_span = TimeSpan::from_seconds(3, 13);
+        let result = tree.query_range(&time_span, 9);
+        assert_eq!(result.len(), 11);
     }
 }

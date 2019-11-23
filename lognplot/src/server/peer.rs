@@ -7,7 +7,7 @@ use tokio::net::TcpStream;
 use tokio::prelude::*;
 
 use crate::time::TimeStamp;
-use crate::tsdb::{Sample, TsDbHandle};
+use crate::tsdb::{Observation, Sample, TsDbHandle};
 
 /// A handle to a peer connection
 pub struct PeerHandle {
@@ -36,7 +36,7 @@ struct SampleBatch {
 impl SampleBatch {
     /// Convert a batch of samples received over the wire to
     /// a vector of samples
-    fn to_samples(&self) -> Vec<Sample> {
+    fn to_samples(&self) -> Vec<Observation<Sample>> {
         // let start_time = self.t0;
         self.data
             .iter()
@@ -44,7 +44,7 @@ impl SampleBatch {
             .map(|(index, value)| {
                 let t = self.t0 + self.dt * index as f64;
                 let timestamp = TimeStamp::new(t);
-                Sample::new(timestamp, *value)
+                Observation::new(timestamp, Sample::new(*value))
             })
             .collect()
     }
