@@ -1,5 +1,5 @@
 import unittest
-from chart1.metrics import samples_to_metric
+from lognplot.metrics import samples_to_metric
 
 
 class MatricsTestCase(unittest.TestCase):

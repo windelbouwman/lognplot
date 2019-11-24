@@ -1,5 +1,5 @@
 import unittest
-from chart1.utils import chunk, clip
+from lognplot.utils import chunk, clip
 
 
 class RoundTestCase(unittest.TestCase):

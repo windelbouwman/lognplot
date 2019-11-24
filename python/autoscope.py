@@ -3,8 +3,8 @@
 
 import time
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout
-from chart1 import Chart, ZoomSerie
-from chart1.qt.widgets.chartwidget import ChartWidget
+from lognplot import Chart, ZoomSerie
+from lognplot.qt.widgets.chartwidget import ChartWidget
 
 
 def main():

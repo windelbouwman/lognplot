@@ -1,5 +1,5 @@
 import unittest
-from chart1 import Chart, ZoomSerie
+from lognplot import Chart, ZoomSerie
 
 
 class ChartTestCase(unittest.TestCase):

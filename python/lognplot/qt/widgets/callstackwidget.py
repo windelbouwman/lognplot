@@ -11,4 +11,3 @@ class CallStackWidget(QWidget):
 
     def paintEvent(self, e):
         super().paintEvent(e)
-

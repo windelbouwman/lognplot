@@ -1,5 +1,5 @@
 import unittest
-from chart1.btree import overlap, Btree
+from lognplot.btree import overlap, Btree
 
 
 class BtreeTestCase(unittest.TestCase):

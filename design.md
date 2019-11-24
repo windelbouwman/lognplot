@@ -70,11 +70,26 @@ since for example EPOCH.
 
 Resolution requirements.
 
+## Data ingestion
+
+To fill the database with data from a live system, we have several options.
+
+- Send data via REST API
+- Send data via TCP
+- Implement system interfacing logic in the app itself, so we can read the data.
+
+Socket approach is beneficial, since we can write data grabbing applications in
+python / any other language, and send the data over a TCP link.
+
+### TCP link design
+
+
+
 # References
 
-- youtube lecture on databases by CMU
-- youtube lectures from databankenlernen.de
-- sqlite sourcecode
-- akumuli database
-- btrdb -> some time series database?
+- youtube lecture on databases by CMU (https://www.youtube.com/watch?v=1D81vXw2T_w&list=PLSE8ODhjZXjbohkNBWQs_otTrBTrjyohi)
+- youtube lectures from databankenlernen.de (https://bigdata.uni-saarland.de/datenbankenlernen/) (https://www.youtube.com/watch?v=PaQ0162Gez0)
+- sqlite sourcecode (https://www.sqlite.org/fileformat2.html)
+- akumuli database (https://akumuli.org/)
+- btrdb -> some time series database? (http://btrdb.io/index.html)
 
