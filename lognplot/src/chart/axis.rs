@@ -1,5 +1,6 @@
 use super::axis_options::AxisOptions;
 use crate::geometry::Range;
+use crate::time::{TimeSpan, TimeStamp};
 
 #[derive(Default, Clone)]
 pub struct Axis {
@@ -20,6 +21,12 @@ impl Axis {
 
     pub fn end(&self) -> f64 {
         self.range.end()
+    }
+
+    /// Get the time selected by this axis!
+    pub fn timespan(&self) -> TimeSpan {
+        // TODO: temp hack?
+        TimeSpan::new(TimeStamp::new(self.begin()), TimeStamp::new(self.end()))
     }
 
     pub fn domain(&self) -> f64 {

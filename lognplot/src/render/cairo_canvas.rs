@@ -12,6 +12,16 @@ impl<'a> CairoCanvas<'a> {
     }
 }
 
+impl<'a> CairoCanvas<'a> {
+    fn make_path(&self, points: &[Point]) {
+        let (first, rest) = points.split_first().unwrap();
+        self.cr.move_to(first.x(), first.y());
+        for p in rest {
+            self.cr.line_to(p.x(), p.y());
+        }
+    }
+}
+
 impl<'a> Canvas for CairoCanvas<'a> {
     fn set_pen(&mut self, color: Color) {
         self.cr.set_source_rgb(
@@ -26,10 +36,27 @@ impl<'a> Canvas for CairoCanvas<'a> {
         self.cr.show_text(text);
     }
 
-    fn draw_line(&mut self, p1: &Point, p2: &Point) {
+    fn draw_line(&mut self, points: &[Point]) {
         self.cr.set_line_width(3.0);
-        self.cr.move_to(p1.x(), p1.y());
-        self.cr.line_to(p2.x(), p2.y());
-        self.cr.stroke();
+        if points.len() > 1 {
+            self.make_path(points);
+            self.cr.stroke();
+        }
+    }
+
+    fn draw_polygon(&mut self, points: &[Point]) {
+        if points.len() > 1 {
+            self.make_path(points);
+            self.cr.close_path();
+            self.cr.stroke();
+        }
+    }
+
+    fn fill_polygon(&mut self, points: &[Point]) {
+        if points.len() > 1 {
+            self.make_path(points);
+            self.cr.close_path();
+            self.cr.fill();
+        }
     }
 }

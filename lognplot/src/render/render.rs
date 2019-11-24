@@ -5,6 +5,8 @@ use super::{ChartLayout, ChartOptions};
 use crate::chart::Chart;
 use crate::geometry::{Point, Size};
 use crate::style::Color;
+use crate::time::TimeStamp;
+use crate::tsdb::{Aggregation, Observation, RangeQueryResult, Sample, SampleMetrics};
 
 /// Draw the given chart onto the canvas!
 pub fn draw_chart(chart: &Chart, canvas: &mut dyn Canvas, size: Size) {
@@ -39,7 +41,7 @@ impl<'a> ChartRenderer<'a> {
         self.layout.layout(&self.options);
         self.draw_axis();
         self.draw_box();
-        self.draw_lines();
+        self.draw_curves();
 
         // Print title of chart:
         self.canvas.set_pen(Color::black());
@@ -52,7 +54,13 @@ impl<'a> ChartRenderer<'a> {
     /// Draw x and y axis with tick markers.
     fn draw_axis(&mut self) {
         let n_x_ticks = self.layout.plot_width as usize / 50;
-        let x_ticks = self.chart.x_axis.calc_tiks(n_x_ticks);
+        let x_ticks: Vec<(TimeStamp, String)> = self
+            .chart
+            .x_axis
+            .calc_tiks(n_x_ticks)
+            .into_iter()
+            .map(|(x, s)| (TimeStamp::new(x), s))
+            .collect();
         self.draw_x_axis(&x_ticks);
 
         let n_y_ticks = self.layout.plot_height as usize / 50;
@@ -65,7 +73,7 @@ impl<'a> ChartRenderer<'a> {
     }
 
     // X axis:
-    fn draw_x_axis(&mut self, x_ticks: &[(f64, String)]) {
+    fn draw_x_axis(&mut self, x_ticks: &[(TimeStamp, String)]) {
         self.canvas.set_pen(Color::black());
 
         if let Some(title) = &self.chart.x_axis.label {
@@ -73,30 +81,22 @@ impl<'a> ChartRenderer<'a> {
             self.canvas.print_text(&p, title);
         }
 
-        self.canvas.draw_line(
-            &Point::new(
-                self.layout.plot_left,
-                self.layout.plot_bottom + self.options.tick_size,
-            ),
-            &Point::new(
-                self.layout.plot_right,
-                self.layout.plot_bottom + self.options.tick_size,
-            ),
-        );
+        let y = self.layout.plot_bottom + self.options.tick_size;
+        let baseline = vec![
+            Point::new(self.layout.plot_left, y),
+            Point::new(self.layout.plot_right, y),
+        ];
+
+        self.canvas.draw_line(&baseline);
 
         for (p, label) in x_ticks.iter() {
-            let x = self.x_domain_to_pixel(*p);
-            let p1 = Point::new(
-                x,
-                self.layout.plot_bottom + self.options.tick_size + self.options.tick_size + 5.0,
-            );
+            let x = self.x_domain_to_pixel(p);
+            let p1 = Point::new(x, y + self.options.tick_size + 5.0);
             let p2 = Point::new(x, self.layout.plot_bottom + self.options.tick_size);
-            let p3 = Point::new(
-                x,
-                self.layout.plot_bottom + self.options.tick_size + self.options.tick_size,
-            );
+            let p3 = Point::new(x, y + self.options.tick_size);
             self.canvas.print_text(&p1, label);
-            self.canvas.draw_line(&p2, &p3);
+            let line = vec![p2, p3];
+            self.canvas.draw_line(&line);
         }
     }
 
@@ -109,38 +109,34 @@ impl<'a> ChartRenderer<'a> {
             self.canvas.print_text(&p, title);
         }
 
-        self.canvas.draw_line(
-            &Point::new(
-                self.layout.plot_left - self.options.tick_size,
-                self.layout.plot_top,
-            ),
-            &Point::new(
-                self.layout.plot_left - self.options.tick_size,
-                self.layout.plot_bottom,
-            ),
-        );
+        let x = self.layout.plot_left - self.options.tick_size;
+        let baseline = vec![
+            Point::new(x, self.layout.plot_top),
+            Point::new(x, self.layout.plot_bottom),
+        ];
+
+        self.canvas.draw_line(&baseline);
 
         for (p, label) in y_ticks.iter() {
             let y = self.y_domain_to_pixel(*p);
-            let p1 = Point::new(
-                self.layout.plot_left - self.options.tick_size * 2.0 - 30.0,
-                y,
-            );
-            let p2 = Point::new(self.layout.plot_left - self.options.tick_size, y);
-            let p3 = Point::new(self.layout.plot_left - self.options.tick_size * 2.0, y);
+            let p1 = Point::new(x - self.options.tick_size * 2.0 - 30.0, y);
+            let p2 = Point::new(x, y);
+            let p3 = Point::new(x - self.options.tick_size, y);
             self.canvas.print_text(&p1, label);
-            self.canvas.draw_line(&p2, &p3);
+            let line = vec![p2, p3];
+            self.canvas.draw_line(&line);
         }
     }
 
-    fn draw_grid(&mut self, x_ticks: &[(f64, String)], y_ticks: &[(f64, String)]) {
+    fn draw_grid(&mut self, x_ticks: &[(TimeStamp, String)], y_ticks: &[(f64, String)]) {
         if self.chart.grid {
             // vertical grid lines:
             for (p, _) in x_ticks.iter() {
-                let x = self.x_domain_to_pixel(*p);
+                let x = self.x_domain_to_pixel(p);
                 let p1 = Point::new(x, self.layout.plot_top);
                 let p2 = Point::new(x, self.layout.plot_bottom);
-                self.canvas.draw_line(&p1, &p2);
+                let line = vec![p1, p2];
+                self.canvas.draw_line(&line);
             }
 
             // horizontal grid lines:
@@ -148,7 +144,8 @@ impl<'a> ChartRenderer<'a> {
                 let y = self.y_domain_to_pixel(*p);
                 let p1 = Point::new(self.layout.plot_left, y);
                 let p2 = Point::new(self.layout.plot_right, y);
-                self.canvas.draw_line(&p1, &p2);
+                let line = vec![p1, p2];
+                self.canvas.draw_line(&line);
             }
         }
     }
@@ -162,40 +159,92 @@ impl<'a> ChartRenderer<'a> {
 
         // Draw four lines:
         self.canvas.set_pen(Color::black());
-        self.canvas.draw_line(&top_left, &top_right);
-        self.canvas.draw_line(&top_left, &bottom_left);
-        self.canvas.draw_line(&bottom_left, &bottom_right);
-        self.canvas.draw_line(&top_right, &bottom_right);
+        let outline = vec![top_left, top_right, bottom_right, bottom_left];
+        self.canvas.draw_polygon(&outline);
     }
 
     /// Draw the actual curves!
-    fn draw_lines(&mut self) {
+    fn draw_curves(&mut self) {
+        let timespan = self.chart.x_axis.timespan();
+        let point_count = (self.layout.plot_width as usize) / 40;
+
         for curve in &self.chart.curves {
             // trace!("Plotting curve {:?}", curve);
 
             self.canvas.set_pen(curve.color());
 
             // Create pairs:
-            let points: Vec<Point> = curve
-                .get_points()
-                .into_iter()
-                .map(|p| Point::new(self.x_domain_to_pixel(p.x()), self.y_domain_to_pixel(p.y())))
-                .collect();
-
-            let pairs = points.iter().zip(points.iter().skip(1));
-            for (p1, p2) in pairs {
-                self.canvas.draw_line(p1, p2);
+            let curve_data = curve.query(&timespan, point_count);
+            match curve_data {
+                RangeQueryResult::Aggregations(aggregations) => {
+                    self.draw_aggregations(aggregations);
+                }
+                RangeQueryResult::Observations(observations) => {
+                    self.draw_observations(observations);
+                }
             }
         }
     }
 
+    /// Draw single observations.
+    fn draw_observations(&mut self, observations: Vec<Observation<Sample>>) {
+        let points: Vec<Point> = observations
+            .into_iter()
+            .map(|o| {
+                Point::new(
+                    self.x_domain_to_pixel(&o.timestamp),
+                    self.y_domain_to_pixel(o.value.value),
+                )
+            })
+            .collect();
+        trace!("Drawing {} points", points.len());
+
+        self.canvas.draw_line(&points);
+    }
+
+    /// Draw aggregated values
+    fn draw_aggregations(&mut self, aggregations: Vec<Aggregation<Sample, SampleMetrics>>) {
+        // Create polygon from metrics:
+        let mut top_line: Vec<Point> = vec![];
+        let mut mean_line: Vec<Point> = vec![];
+        let mut bottom_line: Vec<Point> = vec![];
+
+        for aggregation in aggregations {
+            let x1 = self.x_domain_to_pixel(&aggregation.timespan.start);
+            let x2 = self.x_domain_to_pixel(&aggregation.timespan.end);
+            let y_max = self.y_domain_to_pixel(aggregation.metrics().max);
+            let y_min = self.y_domain_to_pixel(aggregation.metrics().min);
+            let y_mean = self.y_domain_to_pixel(aggregation.metrics().mean());
+            top_line.push(Point::new(x1, y_max));
+            top_line.push(Point::new(x2, y_max));
+            bottom_line.push(Point::new(x1, y_min));
+            bottom_line.push(Point::new(x2, y_min));
+            mean_line.push(Point::new(x1, y_mean));
+            mean_line.push(Point::new(x2, y_mean));
+        }
+
+        bottom_line.reverse();
+        let mut poly_points: Vec<Point> = top_line;
+        poly_points.extend(bottom_line);
+        trace!("Polygon with {} points", poly_points.len());
+        trace!("Mean line with {} points", mean_line.len());
+
+        // Draw the contour and mean line.
+        self.canvas.set_pen(Color::new(100, 100, 0));
+        self.canvas.fill_polygon(&poly_points);
+        self.canvas.set_pen(Color::new(200, 0, 0));
+        self.canvas.draw_line(&mean_line);
+    }
+
     /// Transform x-value to pixel/point location.
-    fn x_domain_to_pixel(&self, x: f64) -> f64 {
+    fn x_domain_to_pixel(&self, t: &TimeStamp) -> f64 {
+        let x = t.amount;
         let domain = self.chart.x_axis.domain();
         let a = (self.layout.plot_width) / domain;
         a * (x - self.chart.x_axis.begin()) + self.layout.plot_left
     }
 
+    /// Convert a y value into a proper pixel y value.
     fn y_domain_to_pixel(&self, y: f64) -> f64 {
         let domain = self.chart.y_axis.domain();
         let a = self.layout.plot_height / domain;

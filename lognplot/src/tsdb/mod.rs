@@ -13,13 +13,14 @@ mod sample;
 mod trace;
 
 pub use aggregation::Aggregation;
-use btree::{Btree, RangeQueryResult};
+use btree::Btree;
+pub use btree::RangeQueryResult;
 pub use db::TsDb;
 pub use handle::TsDbHandle;
 pub use metrics::Metrics;
 pub use observation::Observation;
 pub use query::{Query, QueryResult};
-pub use sample::Sample;
+pub use sample::{Sample, SampleMetrics};
 pub use trace::Trace;
 
 #[cfg(test)]
@@ -30,7 +31,7 @@ mod tests {
     use super::Sample;
     use super::TsDb;
     use crate::time::TimeModifiers;
-    use crate::time::{Resolution, TimeSpan, TimeStamp};
+    use crate::time::TimeStamp;
 
     #[test]
     fn basic_usage() {

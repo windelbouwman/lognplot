@@ -14,14 +14,14 @@ def main():
     t = 0.0
     A = 10.0  # Sine wave amplitude [-]
     F = 1.3  # Sine wave frequency [Hz]
-    A2 = 0.05
+    A2 = 1.2
     F2 = 100
     B = 5.0  # Sine wave offset
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.connect(('127.0.0.1', 12345))
 
-    dt = 0.01  # 10 kHz
-    n_samples = 20
+    dt = 0.0001  # 10 kHz
+    n_samples = 2000
     while True:
         samples = []
         t0 = t

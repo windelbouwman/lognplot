@@ -5,8 +5,8 @@ use super::TimeStamp;
 /// is not fixed on the global time scale.
 #[derive(Debug, PartialEq, Clone)]
 pub struct TimeSpan {
-    start: TimeStamp,
-    end: TimeStamp,
+    pub start: TimeStamp,
+    pub end: TimeStamp,
 }
 
 impl TimeSpan {

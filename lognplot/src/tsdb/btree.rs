@@ -302,15 +302,20 @@ where
     /// Append a second selection to this selection!
     fn extend(&mut self, mut other: Self) {
         match self {
-            RangeSelectionResult::Observations(observations) => match &mut other {
-                RangeSelectionResult::Observations(other_observations) => {
+            RangeSelectionResult::Observations(observations) => {
+                if let RangeSelectionResult::Observations(other_observations) = &mut other {
                     observations.append(other_observations);
-                }
-                _ => {
+                } else {
                     panic!("Can only concatenate selection results of the same type");
                 }
-            },
-            _ => unimplemented!("TODO!"),
+            }
+            RangeSelectionResult::Nodes(nodes) => {
+                if let RangeSelectionResult::Nodes(other_nodes) = &mut other {
+                    nodes.append(other_nodes)
+                } else {
+                    panic!("Can only concatenate selection results of the same type");
+                }
+            }
         }
     }
 

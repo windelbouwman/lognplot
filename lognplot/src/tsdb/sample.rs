@@ -40,6 +40,13 @@ pub struct SampleMetrics {
     pub count: usize,
 }
 
+impl SampleMetrics {
+    /// Calculate the mean value of this metrics.
+    pub fn mean(&self) -> f64 {
+        self.sum / (self.count as f64)
+    }
+}
+
 impl From<Sample> for SampleMetrics {
     fn from(sample: Sample) -> Self {
         SampleMetrics {

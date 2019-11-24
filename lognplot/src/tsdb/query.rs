@@ -55,6 +55,14 @@ impl QueryBuilder {
         self
     }
 
+    /// Select this time period for query.
+    pub fn span(mut self, timespan: &TimeSpan) -> Self {
+        self.start = Some(timespan.start.clone());
+        self.end = Some(timespan.end.clone());
+        self
+    }
+
+    /// Select the minimum amount of results we want.
     pub fn amount(mut self, amount: usize) -> Self {
         self.amount = amount;
         self

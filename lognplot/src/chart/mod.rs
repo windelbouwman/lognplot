@@ -23,7 +23,7 @@ pub fn plot(canvas: &mut dyn Canvas, x: Vec<f64>, y: Vec<f64>, size: Size) {
     chart.set_xlabel("Time");
     chart.set_ylabel("Value");
     chart.set_title("W00tie");
-    let curve_data = CurveData::new(x, y);
+    let curve_data = CurveData::points(x, y);
     let curve = Curve::new(curve_data);
     chart.add_curve(curve);
     chart.autoscale();

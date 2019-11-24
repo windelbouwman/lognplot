@@ -6,5 +6,7 @@ use crate::style::Color;
 pub trait Canvas {
     fn set_pen(&mut self, color: Color);
     fn print_text(&mut self, p: &Point, text: &str);
-    fn draw_line(&mut self, p1: &Point, p2: &Point);
+    fn draw_line(&mut self, points: &[Point]);
+    fn draw_polygon(&mut self, points: &[Point]);
+    fn fill_polygon(&mut self, points: &[Point]);
 }

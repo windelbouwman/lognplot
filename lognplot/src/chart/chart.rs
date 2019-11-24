@@ -50,6 +50,24 @@ impl Chart {
         self.curves.push(curve);
     }
 
+    /// Zoom horizontally.
+    pub fn zoom_horizontal(&mut self, amount: f64) {
+        let domain = self.x_axis.domain();
+        let step = domain * amount;
+        let x1 = self.x_axis.begin() - step;
+        let x2 = self.x_axis.end() + step;
+        self.x_axis.set_limits(x1, x2);
+    }
+
+    /// Perform vertical zooming
+    pub fn zoom_vertical(&mut self, amount: f64) {
+        let domain = self.y_axis.domain();
+        let step = domain * amount;
+        let y1 = self.y_axis.begin() - step;
+        let y2 = self.y_axis.end() + step;
+        self.y_axis.set_limits(y1, y2);
+    }
+
     /// Perform a bit of horizontal panning
     pub fn pan_horizontal(&mut self, amount: f64) {
         let domain = self.x_axis.domain();
@@ -59,13 +77,23 @@ impl Chart {
         self.x_axis.set_limits(x1, x2);
     }
 
+    /// Perform vertical pan motion on the plot.
+    pub fn pan_vertical(&mut self, amount: f64) {
+        let domain = self.y_axis.domain();
+        let step = domain * amount;
+        let y1 = self.y_axis.begin() + step;
+        let y2 = self.y_axis.end() + step;
+        self.y_axis.set_limits(y1, y2);
+    }
+
     /// Adjust scale ranges so we fit all data in view.
     pub fn autoscale(&mut self) {
-        let mut spans = vec![];
+        // let mut spans = vec![];
         for curve in &self.curves {
-            let span = curve.get_span();
-            spans.push(span);
+            // let span = curve.get_span();
+            // spans.push(span);
         }
+        // TODO!
 
         // self.curves
         self.x_axis.set_limits(2.0, 98.0);

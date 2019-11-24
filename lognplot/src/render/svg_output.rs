@@ -26,6 +26,24 @@ impl<'w> SvgOutput<'w> {
             pen: Color::black(),
         }
     }
+
+    fn get_stroke_style(&self) -> String {
+        format!(
+            r#"stroke:rgb({},{},{});stroke-width:2"#,
+            self.pen.r(),
+            self.pen.g(),
+            self.pen.b()
+        )
+    }
+
+    /// Convert array of points into SVG points string.
+    fn points_to_string(points: &[Point]) -> String {
+        let point_texts: Vec<String> = points
+            .iter()
+            .map(|p| format!("{},{}", p.x(), p.y()))
+            .collect();
+        point_texts.join(" ")
+    }
 }
 
 /// Implement the canvas API for svg output!
@@ -46,25 +64,66 @@ impl<'w> Canvas for SvgOutput<'w> {
         .unwrap();
     }
 
-    /// Draw a line between two points.
-    fn draw_line(&mut self, p1: &Point, p2: &Point) {
-        trace!("Line between {:?} and {:?}", p1, p2);
-        let style = format!(
-            r#"stroke:rgb({},{},{});stroke-width:2"#,
-            self.pen.r(),
-            self.pen.g(),
-            self.pen.b()
-        );
-        writeln!(
-            self.file,
-            r#"   <line x1="{}" y1="{}" x2="{}" y2="{}" style="{}" />"#,
-            p1.x(),
-            p1.y(),
-            p2.x(),
-            p2.y(),
-            style
-        )
-        .unwrap();
+    /// Draw a line between points.
+    fn draw_line(&mut self, points: &[Point]) {
+        let style = self.get_stroke_style();
+
+        if points.len() == 2 {
+            let p1 = points[0];
+            let p2 = points[1];
+            trace!("Line between {:?} and {:?}", p1, p2);
+            writeln!(
+                self.file,
+                r#"   <line x1="{}" y1="{}" x2="{}" y2="{}" style="{}" />"#,
+                p1.x(),
+                p1.y(),
+                p2.x(),
+                p2.y(),
+                style
+            )
+            .unwrap();
+        } else if points.len() > 2 {
+            let point_text = Self::points_to_string(points);
+            writeln!(
+                self.file,
+                r#"   <polyline points="{}" style="{}" />"#,
+                point_text, style
+            )
+            .unwrap();
+        }
+    }
+
+    fn draw_polygon(&mut self, points: &[Point]) {
+        if points.len() > 2 {
+            let style = self.get_stroke_style();
+
+            let point_text = Self::points_to_string(points);
+            writeln!(
+                self.file,
+                r#"   <polygon points="{}" style="{}" />"#,
+                point_text, style
+            )
+            .unwrap();
+        }
+    }
+
+    fn fill_polygon(&mut self, points: &[Point]) {
+        if points.len() > 2 {
+            let style = format!(
+                r#"fill:rgb({},{},{});stroke-width:1"#,
+                self.pen.r(),
+                self.pen.g(),
+                self.pen.b()
+            );
+
+            let point_text = Self::points_to_string(points);
+            writeln!(
+                self.file,
+                r#"   <polygon points="{}" style="{}" />"#,
+                point_text, style
+            )
+            .unwrap();
+        }
     }
 }
 
