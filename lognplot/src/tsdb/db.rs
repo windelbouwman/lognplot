@@ -2,9 +2,9 @@
 
 use super::handle::{make_handle, TsDbHandle};
 use super::query::{Query, QueryResult};
-use super::sample::Sample;
+use super::sample::{Sample, SampleMetrics};
 use super::trace::Trace;
-use super::Observation;
+use super::{Aggregation, Observation};
 use std::collections::HashMap;
 
 /// A time series database which can be used as a library.
@@ -46,11 +46,17 @@ impl TsDb {
         // self.get_trace(name)
     }
 
-    pub fn add_value(&mut self, name: &str, sample: Observation<Sample>) {
-        self.data.get_mut(name).unwrap().add_sample(sample);
+    pub fn add_value(&mut self, name: &str, observation: Observation<Sample>) {
+        self.data.get_mut(name).unwrap().add_sample(observation);
     }
 
+    /// Query the given trace for data.
     pub fn query(&self, name: &str, query: Query) -> QueryResult {
         self.data.get(name).unwrap().query(query)
+    }
+
+    /// Get a summary for the given trace.
+    pub fn summary(&self, name: &str) -> Option<Aggregation<Sample, SampleMetrics>> {
+        self.data.get(name).unwrap().summary()
     }
 }

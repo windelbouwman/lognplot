@@ -2,6 +2,7 @@
 
 use super::axis::Axis;
 use super::curve::Curve;
+use crate::tsdb::{Aggregation, Sample, SampleMetrics};
 
 /// A single 2D-chart
 #[derive(Clone)]
@@ -88,15 +89,15 @@ impl Chart {
 
     /// Adjust scale ranges so we fit all data in view.
     pub fn autoscale(&mut self) {
-        // let mut spans = vec![];
-        for curve in &self.curves {
-            // let span = curve.get_span();
-            // spans.push(span);
-        }
-        // TODO!
+        // Retrieve info from all curves:
+        let summaries: Vec<Aggregation<Sample, SampleMetrics>> =
+            self.curves.iter().filter_map(|c| c.summary()).collect();
 
-        // self.curves
-        self.x_axis.set_limits(2.0, 98.0);
-        self.y_axis.set_limits(-70.0, 350.0);
+        if let Some(summary) = Aggregation::from_aggregations(&summaries) {
+            self.x_axis
+                .set_limits(summary.timespan.start.amount, summary.timespan.end.amount);
+            self.y_axis
+                .set_limits(summary.metrics().min, summary.metrics().max);
+        }
     }
 }

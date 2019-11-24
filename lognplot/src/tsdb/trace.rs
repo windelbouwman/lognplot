@@ -7,7 +7,7 @@
 // use std::cell::RefCell;
 use super::query::{Query, QueryResult};
 use super::sample::{Sample, SampleMetrics};
-use super::{Btree, Observation};
+use super::{Aggregation, Btree, Observation};
 
 /// A trace is a single signal with a history in time.
 #[derive(Debug)]
@@ -38,6 +38,10 @@ impl Trace {
             query,
             inner: samples,
         }
+    }
+
+    pub fn summary(&self) -> Option<Aggregation<Sample, SampleMetrics>> {
+        self.tree.summary()
     }
 
     pub fn to_vec(&self) -> Vec<Observation<Sample>> {

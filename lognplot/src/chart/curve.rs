@@ -1,8 +1,7 @@
 use crate::geometry::Point;
-use crate::geometry::Range;
 use crate::style::{Color, Stroke};
 use crate::time::{TimeSpan, TimeStamp};
-use crate::tsdb::{Observation, Sample, SampleMetrics};
+use crate::tsdb::{Aggregation, Observation, Sample, SampleMetrics};
 use crate::tsdb::{Query, RangeQueryResult, TsDbHandle};
 use std::str::FromStr;
 
@@ -73,6 +72,54 @@ impl CurveData {
             }
         }
     }
+
+    fn summary(&self) -> Option<Aggregation<Sample, SampleMetrics>> {
+        match &self {
+            CurveData::Points(points) => point_summary(points),
+            CurveData::Trace { name, db } => db.summary(name),
+        }
+    }
+}
+
+/// Calculate aggregate information about points.
+fn point_summary(points: &[Point]) -> Option<Aggregation<Sample, SampleMetrics>> {
+    if points.is_empty() {
+        None
+    } else {
+        let count = points.len();
+        let (first, rest) = points.split_first().unwrap();
+        let mut xmin = first.x();
+        let mut xmax = xmin;
+        let mut ymin = first.y();
+        let mut ymax = ymin;
+        let mut ysum = ymin;
+        let mut ysum_squared = ymin * ymin;
+        for p in rest {
+            if p.x() > xmax {
+                xmax = p.x();
+            }
+
+            if p.x() < xmin {
+                xmin = p.x();
+            }
+
+            if p.y() > ymax {
+                ymax = p.y();
+            }
+
+            if p.y() < ymin {
+                ymin = p.y();
+            }
+
+            ysum += p.y();
+            ysum_squared += p.y() * p.y();
+        }
+
+        let timespan = TimeSpan::new(TimeStamp::new(xmin), TimeStamp::new(xmax));
+        let metrics = SampleMetrics::new(ymin, ymax, ysum, ysum_squared, count);
+        let aggregation = Aggregation::new(timespan, metrics, count);
+        Some(aggregation)
+    }
 }
 
 impl Curve {
@@ -91,32 +138,9 @@ impl Curve {
         self.stroke.color.clone()
     }
 
-    /// Retrieve the horizontal range of this curve.
-    /// TODO: rename into get_domain? get_range?
-    pub fn get_span(&self) -> Option<Range<f64>> {
-        match &self.data {
-            CurveData::Points(points) => {
-                if points.is_empty() {
-                    None
-                } else {
-                    let mut xmin = points[0].x();
-                    let mut xmax = xmin;
-                    for p in points {
-                        if p.x() > xmax {
-                            xmax = p.x();
-                        }
-
-                        if p.x() < xmin {
-                            xmin = p.x();
-                        }
-                    }
-                    Some(Range::new(xmin, xmax))
-                }
-            }
-            x => {
-                unimplemented!("TBD: Implement this for {:?} as well?", x);
-            }
-        }
+    /// Retrieve a data summary of this curve.
+    pub fn summary(&self) -> Option<Aggregation<Sample, SampleMetrics>> {
+        self.data.summary()
     }
 
     /// Pull data in for drawing the graph.

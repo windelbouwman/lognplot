@@ -28,6 +28,17 @@ impl TimeSpan {
         }
     }
 
+    /// Adjust this timespan to include the given span.
+    pub fn extend_to_include_span(&mut self, span: &Self) {
+        if &span.start < &self.start {
+            self.start = span.start.clone();
+        }
+
+        if &span.end > &self.end {
+            self.end = span.end.clone();
+        }
+    }
+
     pub fn contains(&self, timestamp: &TimeStamp) -> bool {
         (&self.start <= timestamp) && (timestamp <= &self.end)
     }
@@ -38,5 +49,51 @@ impl TimeSpan {
         assert!(other.start <= other.end);
 
         (self.start <= other.end) && (other.start <= self.end)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::TimeSpan;
+
+    #[test]
+    fn no_overlap1() {
+        // Create test samples:
+        let span1 = TimeSpan::from_seconds(1, 3);
+        let span2 = TimeSpan::from_seconds(6, 7);
+        assert!(!span1.overlap(&span2));
+        assert!(!span2.overlap(&span1));
+    }
+
+    #[test]
+    fn no_overlap2() {
+        let span1 = TimeSpan::from_seconds(10, 13);
+        let span2 = TimeSpan::from_seconds(6, 7);
+        assert!(!span1.overlap(&span2));
+        assert!(!span2.overlap(&span1));
+    }
+
+    #[test]
+    fn overlap1() {
+        let span1 = TimeSpan::from_seconds(1, 8);
+        let span2 = TimeSpan::from_seconds(6, 17);
+        assert!(span1.overlap(&span2));
+        assert!(span2.overlap(&span1));
+    }
+
+    #[test]
+    fn overlap2() {
+        let span1 = TimeSpan::from_seconds(1, 19);
+        let span2 = TimeSpan::from_seconds(6, 17);
+        assert!(span1.overlap(&span2));
+        assert!(span2.overlap(&span1));
+    }
+
+    #[test]
+    fn overlap3() {
+        let span1 = TimeSpan::from_seconds(8, 19);
+        let span2 = TimeSpan::from_seconds(6, 17);
+        assert!(span1.overlap(&span2));
+        assert!(span2.overlap(&span1));
     }
 }

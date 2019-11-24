@@ -60,7 +60,6 @@ where
 
     /// Query the tree for some data.
     pub fn query_range(&self, timespan: &TimeSpan, min_items: usize) -> RangeQueryResult<V, M> {
-        // big TODO
         let root_node = self.root.borrow();
         let mut selection = root_node.select_range(timespan);
 
@@ -69,6 +68,10 @@ where
         }
 
         selection.into_query_result()
+    }
+
+    pub fn summary(&self) -> Option<Aggregation<V, M>> {
+        self.root.borrow().metrics()
     }
 
     /// Get a flat list of all observation in this tree.
@@ -104,11 +107,13 @@ where
     }
 }
 
+const INTERMEDIATE_CHUNK_SIZE: usize = 5;
+
 /// This constant defines the fanout ratio.
 /// Each leave contains maximum this number of values
 /// Also, each intermediate node also contains this maximum number
 /// of subchunks.
-const CHUNK_SIZE: usize = 32;
+const LEAVE_CHUNK_SIZE: usize = 32;
 
 /// This is a sort of B+ tree data structure
 /// to store a sequence of sample along with some
@@ -322,12 +327,9 @@ where
     /// Convert selection into query result!
     fn into_query_result(self) -> RangeQueryResult<V, M> {
         match self {
-            RangeSelectionResult::Nodes(nodes) => {
-                // unimplemented!("TODO!");
-                RangeQueryResult::Aggregations(
-                    nodes.into_iter().map(|n| n.metrics().unwrap()).collect(),
-                )
-            }
+            RangeSelectionResult::Nodes(nodes) => RangeQueryResult::Aggregations(
+                nodes.into_iter().map(|n| n.metrics().unwrap()).collect(),
+            ),
             RangeSelectionResult::Observations(observations) => {
                 RangeQueryResult::Observations(observations.into_iter().cloned().collect())
             }
@@ -342,13 +344,13 @@ where
 {
     fn new() -> Self {
         InternalNode {
-            children: Vec::with_capacity(CHUNK_SIZE),
+            children: Vec::with_capacity(INTERMEDIATE_CHUNK_SIZE),
             metrics: Default::default(),
         }
     }
 
     fn is_full(&self) -> bool {
-        self.children.len() >= CHUNK_SIZE
+        self.children.len() >= INTERMEDIATE_CHUNK_SIZE
     }
 
     fn metrics(&self) -> Option<Aggregation<V, M>> {
@@ -405,7 +407,7 @@ where
     /// Note: chunk must be of variant subchunk, otherwise this
     /// will fail.
     fn add_child(&mut self, child: Node<V, M>) {
-        assert!(self.children.len() < CHUNK_SIZE);
+        assert!(!self.is_full());
         self.children.push(child);
     }
 
@@ -446,14 +448,14 @@ where
     /// Create a new leave chunk!
     fn new() -> Self {
         LeaveNode {
-            observations: Vec::with_capacity(CHUNK_SIZE),
+            observations: Vec::with_capacity(LEAVE_CHUNK_SIZE),
             metrics: Default::default(),
         }
     }
 
     /// Test if this leave is full or not.
     fn is_full(&self) -> bool {
-        self.observations.len() >= CHUNK_SIZE
+        self.observations.len() >= LEAVE_CHUNK_SIZE
     }
 
     fn metrics(&self) -> Option<Aggregation<V, M>> {

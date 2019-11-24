@@ -25,24 +25,53 @@ where
 
 impl<V, M> From<Observation<V>> for Aggregation<V, M>
 where
-    M: Metrics<V> + From<V>,
+    M: Metrics<V> + From<V> + Clone,
 {
     fn from(sample: Observation<V>) -> Self {
         let timespan = TimeSpan::new(sample.timestamp.clone(), sample.timestamp.clone());
         let metrics = M::from(sample.value);
-        Aggregation {
-            metrics,
-            timespan,
-            count: 1,
-            _phantom: Default::default(),
-        }
+        Aggregation::new(timespan, metrics, 1)
+    }
+}
+
+impl<V, M> From<&Aggregation<V, M>> for Aggregation<V, M>
+where
+    M: Metrics<V> + From<V> + Clone,
+{
+    fn from(reference: &Aggregation<V, M>) -> Self {
+        let timespan = reference.timespan.clone();
+        let metrics = reference.metrics.clone();
+        Aggregation::new(timespan, metrics, 1)
     }
 }
 
 impl<V, M> Aggregation<V, M>
 where
-    M: Metrics<V> + From<V>,
+    M: Metrics<V> + From<V> + Clone,
 {
+    pub fn new(timespan: TimeSpan, metrics: M, count: usize) -> Self {
+        Aggregation {
+            metrics,
+            timespan,
+            count,
+            _phantom: Default::default(),
+        }
+    }
+
+    /// Merge given aggregations into a single aggregate
+    pub fn from_aggregations(aggregations: &[Aggregation<V, M>]) -> Option<Self> {
+        if aggregations.is_empty() {
+            None
+        } else {
+            let (first, rest) = aggregations.split_first().unwrap();
+            let mut merged_aggregations: Aggregation<V, M> = Aggregation::from(first);
+            for aggregation in rest {
+                merged_aggregations.include(aggregation);
+            }
+            Some(merged_aggregations)
+        }
+    }
+
     pub fn update(&mut self, sample: &Observation<V>) {
         self.metrics.update(&sample.value);
         self.count += 1;
@@ -56,7 +85,8 @@ where
         self.metrics.include(&aggregation.metrics);
         self.count += aggregation.count;
 
-        // TODO: time span!
+        // Adjust time span:
+        self.timespan.extend_to_include_span(&aggregation.timespan);
     }
 
     pub fn metrics(&self) -> &M {

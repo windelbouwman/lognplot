@@ -14,38 +14,38 @@ use lognplot::tsdb::{Observation, Sample, TsDbHandle};
 /// Struct with some GUI state in it which will be shown in the GUI.
 struct GuiState {
     chart: Chart,
-    // db: TsDbHandle,
 }
 
 fn new_chart(db: TsDbHandle) -> Chart {
     db.new_trace("Trace0");
 
     // Create data:
-    let mut x = vec![];
-    let mut y = vec![];
-    for i in 0..900 {
-        let f = (i as f64) * 0.1;
-        let v = 20.0 * f.sin() + f * 2.0;
+    // let mut x = vec![];
+    // let mut y = vec![];
+    // for i in 0..900 {
+    //     let f = (i as f64) * 0.1;
+    //     let v = 20.0 * f.sin() + f * 2.0;
 
-        // Construct raw data:
-        x.push(f);
-        y.push(v);
+    //     // Construct raw data:
+    //     x.push(f);
+    //     y.push(v);
 
-        // Add observations:
-        let timestamp = TimeStamp::new(f);
-        let sample = Sample::new(v + 20.0);
-        let observation = Observation::new(timestamp, sample);
-        // db.add_value("bla", observation);
-    }
+    //     // Add observations:
+    //     let timestamp = TimeStamp::new(f);
+    //     let sample = Sample::new(v + 20.0);
+    //     let observation = Observation::new(timestamp, sample);
+    //     // db.add_value("bla", observation);
+    // }
 
-    info!("Plotting len(x)= {:?} len(y)= {:?}", x.len(), y.len());
+    // info!("Plotting len(x)= {:?} len(y)= {:?}", x.len(), y.len());
+
     let mut chart = Chart::default();
     chart.set_xlabel("Time");
     chart.set_ylabel("Value");
     chart.set_title("W00tie");
-    let curve_data = CurveData::points(x, y);
-    let curve = Curve::new(curve_data);
-    chart.add_curve(curve);
+    // let curve_data = CurveData::points(x, y);
+    // let curve = Curve::new(curve_data);
+    // chart.add_curve(curve);
 
     let tsdb_data = CurveData::trace("Trace0", db);
     let curve2 = Curve::new(tsdb_data);
