@@ -19,6 +19,7 @@ class Axis:
         assert not math.isclose(domain, 0)
 
         scale = math.floor(math.log10(domain))
+        # print('domain', domain, 'scale', scale)
         approx = math.pow(10, -scale) * domain / n_ticks
         options = [0.1, 0.2, 0.5, 1.0, 2.0, 5.0]
         best = min(options, key=lambda x: abs(x - approx))
@@ -28,7 +29,20 @@ class Axis:
         end = self.maximum
 
         values = float_range(start, end, step_size)
-        return [(x, str(x)) for x in values]
+
+        # If values are bigger than 1, do not use decimal
+        # point.
+        # If values are below 1, then use decimal rounding.
+        # TODO, maybe return a gain factor, and scale the values?
+        # TODO: maybe return an offset?
+        if scale > 0:
+            # Use integer values
+            fmt = lambda x: f"{int(x)}"
+        else:
+            digits = -scale + 1
+            fmt = lambda x: f"{round(x,digits):.0{digits}f}"
+
+        return [(x, fmt(x)) for x in values]
 
     @property
     def domain(self):

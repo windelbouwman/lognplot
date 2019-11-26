@@ -35,7 +35,7 @@ mod tests {
 
     #[test]
     fn basic_usage() {
-        let mut db = TsDb::new();
+        let mut db = TsDb::default();
         db.open();
         let trace_name = "foo";
 

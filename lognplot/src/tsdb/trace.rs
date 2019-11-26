@@ -8,6 +8,7 @@
 use super::query::{Query, QueryResult};
 use super::sample::{Sample, SampleMetrics};
 use super::{Aggregation, Btree, Observation};
+use crate::time::TimeSpan;
 
 /// A trace is a single signal with a history in time.
 #[derive(Debug)]
@@ -42,6 +43,10 @@ impl Trace {
 
     pub fn summary(&self) -> Option<Aggregation<Sample, SampleMetrics>> {
         self.tree.summary()
+    }
+
+    pub fn range_summary(&self, timespan: &TimeSpan) -> Option<Aggregation<Sample, SampleMetrics>> {
+        self.tree.range_summary(timespan)
     }
 
     pub fn to_vec(&self) -> Vec<Observation<Sample>> {

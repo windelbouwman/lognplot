@@ -39,8 +39,14 @@ impl TimeSpan {
         }
     }
 
+    /// Test if this timespan contains a timestamp.
     pub fn contains(&self, timestamp: &TimeStamp) -> bool {
         (&self.start <= timestamp) && (timestamp <= &self.end)
+    }
+
+    /// Test if this timespan fully covers another timespan.
+    pub fn covers(&self, other: &TimeSpan) -> bool {
+        (&self.start <= &other.start) && (&other.end <= &self.end)
     }
 
     /// Test if those two timespans overlap.

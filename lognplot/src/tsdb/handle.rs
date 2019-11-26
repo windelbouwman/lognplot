@@ -1,6 +1,7 @@
 //! Thread usable handle. Wrapper around a database.
 
 use super::{Aggregation, Observation, Query, QueryResult, Sample, SampleMetrics, TsDb};
+use crate::time::TimeSpan;
 use std::sync::{Arc, Mutex};
 
 pub type TsDbHandle = Arc<LockedTsDb>;
@@ -41,5 +42,13 @@ impl LockedTsDb {
 
     pub fn summary(&self, name: &str) -> Option<Aggregation<Sample, SampleMetrics>> {
         self.db.lock().unwrap().summary(name)
+    }
+
+    pub fn range_summary(
+        &self,
+        name: &str,
+        timespan: &TimeSpan,
+    ) -> Option<Aggregation<Sample, SampleMetrics>> {
+        self.db.lock().unwrap().range_summary(name, timespan)
     }
 }

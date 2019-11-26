@@ -8,6 +8,7 @@ use std::io::Write;
 pub struct SvgOutput<'w> {
     file: &'w mut dyn Write,
     pen: Color,
+    width: f64,
 }
 
 impl<'w> SvgOutput<'w> {
@@ -24,6 +25,7 @@ impl<'w> SvgOutput<'w> {
         SvgOutput {
             file,
             pen: Color::black(),
+            width: 1.0,
         }
     }
 
@@ -50,6 +52,10 @@ impl<'w> SvgOutput<'w> {
 impl<'w> Canvas for SvgOutput<'w> {
     fn set_pen(&mut self, color: Color) {
         self.pen = color;
+    }
+
+    fn set_line_width(&mut self, width: f64) {
+        self.width = width;
     }
 
     fn print_text(&mut self, p: &Point, text: &str) {

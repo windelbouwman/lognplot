@@ -75,6 +75,7 @@ impl<'a> ChartRenderer<'a> {
     // X axis:
     fn draw_x_axis(&mut self, x_ticks: &[(TimeStamp, String)]) {
         self.canvas.set_pen(Color::black());
+        self.canvas.set_line_width(2.0);
 
         if let Some(title) = &self.chart.x_axis.label {
             let p = Point::new(self.layout.width / 2.0, self.layout.height - 10.0);
@@ -103,6 +104,7 @@ impl<'a> ChartRenderer<'a> {
     // y axis:
     fn draw_y_axis(&mut self, y_ticks: &[(f64, String)]) {
         self.canvas.set_pen(Color::black());
+        self.canvas.set_line_width(2.0);
 
         if let Some(title) = &self.chart.y_axis.label {
             let p = Point::new(10.0, self.layout.height / 2.0);
@@ -129,6 +131,9 @@ impl<'a> ChartRenderer<'a> {
     }
 
     fn draw_grid(&mut self, x_ticks: &[(TimeStamp, String)], y_ticks: &[(f64, String)]) {
+        self.canvas.set_pen(Color::gray());
+        self.canvas.set_line_width(1.0);
+
         if self.chart.grid {
             // vertical grid lines:
             for (p, _) in x_ticks.iter() {
@@ -159,6 +164,7 @@ impl<'a> ChartRenderer<'a> {
 
         // Draw four lines:
         self.canvas.set_pen(Color::black());
+        self.canvas.set_line_width(2.0);
         let outline = vec![top_left, top_right, bottom_right, bottom_left];
         self.canvas.draw_polygon(&outline);
     }
@@ -172,6 +178,7 @@ impl<'a> ChartRenderer<'a> {
             // trace!("Plotting curve {:?}", curve);
 
             self.canvas.set_pen(curve.color());
+            self.canvas.set_line_width(2.0);
 
             // Create pairs:
             let curve_data = curve.query(&timespan, point_count);

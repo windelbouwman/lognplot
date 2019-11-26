@@ -26,6 +26,7 @@ where
 impl<V, M> From<Observation<V>> for Aggregation<V, M>
 where
     M: Metrics<V> + From<V> + Clone,
+    V: Clone,
 {
     fn from(sample: Observation<V>) -> Self {
         let timespan = TimeSpan::new(sample.timestamp.clone(), sample.timestamp.clone());
@@ -34,9 +35,24 @@ where
     }
 }
 
+/*
+TODO: is this a good or bad idea?
+impl<V, M> From<&Observation<V>> for Aggregation<V, M>
+where
+    M: Metrics<V> + From<V> + Clone,
+{
+    fn from(sample: &Observation<V>) -> Self {
+        let timespan = TimeSpan::new(sample.timestamp.clone(), sample.timestamp.clone());
+        let metrics = M::from(&sample.value);
+        Aggregation::new(timespan, metrics, 1)
+    }
+}
+*/
+
 impl<V, M> From<&Aggregation<V, M>> for Aggregation<V, M>
 where
     M: Metrics<V> + From<V> + Clone,
+    V: Clone,
 {
     fn from(reference: &Aggregation<V, M>) -> Self {
         let timespan = reference.timespan.clone();
@@ -48,6 +64,7 @@ where
 impl<V, M> Aggregation<V, M>
 where
     M: Metrics<V> + From<V> + Clone,
+    V: Clone,
 {
     pub fn new(timespan: TimeSpan, metrics: M, count: usize) -> Self {
         Aggregation {
@@ -64,15 +81,28 @@ where
             None
         } else {
             let (first, rest) = aggregations.split_first().unwrap();
-            let mut merged_aggregations: Aggregation<V, M> = Aggregation::from(first);
+            let mut merged_aggregations = Aggregation::from(first);
             for aggregation in rest {
-                merged_aggregations.include(aggregation);
+                merged_aggregations.include_aggregation(aggregation);
             }
             Some(merged_aggregations)
         }
     }
 
-    pub fn update(&mut self, sample: &Observation<V>) {
+    pub fn from_observations(observations: &[Observation<V>]) -> Option<Self> {
+        if observations.is_empty() {
+            None
+        } else {
+            let (first, rest) = observations.split_first().unwrap();
+            let mut aggregation = Aggregation::from(first.clone());
+            for observation in rest {
+                aggregation.include_observation(observation);
+            }
+            Some(aggregation)
+        }
+    }
+
+    pub fn include_observation(&mut self, sample: &Observation<V>) {
         self.metrics.update(&sample.value);
         self.count += 1;
 
@@ -81,7 +111,7 @@ where
     }
 
     /// Update aggregation with another aggregation
-    pub fn include(&mut self, aggregation: &Aggregation<V, M>) {
+    pub fn include_aggregation(&mut self, aggregation: &Aggregation<V, M>) {
         self.metrics.include(&aggregation.metrics);
         self.count += aggregation.count;
 
@@ -116,8 +146,8 @@ mod tests {
         let observation3 = Observation::new(t3.clone(), sample3);
 
         let mut aggregation = Aggregation::<Sample, SampleMetrics>::from(observation1);
-        aggregation.update(&observation2);
-        aggregation.update(&observation3);
+        aggregation.include_observation(&observation2);
+        aggregation.include_observation(&observation3);
         assert_eq!(aggregation.count, 3);
         assert_eq!(aggregation.metrics().max, 5.2);
         assert_eq!(aggregation.metrics().min, -9.0);

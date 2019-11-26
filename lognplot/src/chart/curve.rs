@@ -79,6 +79,13 @@ impl CurveData {
             CurveData::Trace { name, db } => db.summary(name),
         }
     }
+
+    fn range_summary(&self, timespan: &TimeSpan) -> Option<Aggregation<Sample, SampleMetrics>> {
+        match &self {
+            CurveData::Points(_points) => None, // TODO??
+            CurveData::Trace { name, db } => db.range_summary(name, timespan),
+        }
+    }
 }
 
 /// Calculate aggregate information about points.
@@ -136,6 +143,11 @@ impl Curve {
 
     pub fn color(&self) -> Color {
         self.stroke.color.clone()
+    }
+
+    /// Retrieve a data summary of a time slice of this curve.
+    pub fn range_summary(&self, timespan: &TimeSpan) -> Option<Aggregation<Sample, SampleMetrics>> {
+        self.data.range_summary(timespan)
     }
 
     /// Retrieve a data summary of this curve.

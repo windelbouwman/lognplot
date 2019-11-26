@@ -107,8 +107,8 @@ class ChartRenderer:
         self._draw_bouding_rect()
 
         min_ticks = 2
-        x_tick_spacing = 80
-        y_tick_spacing = 40
+        x_tick_spacing = 100
+        y_tick_spacing = 50
         amount_x_ticks = max(min_ticks, int(self._layout.chart_width // x_tick_spacing))
         amount_y_ticks = max(
             min_ticks, int(self._layout.chart_height // y_tick_spacing)

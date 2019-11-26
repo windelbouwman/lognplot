@@ -10,6 +10,9 @@ use crate::time::TimeSpan;
 use std::cell::RefCell;
 
 /// This implements a b-tree structure.
+///
+/// The tree structure supports fast lookup
+/// of time ranges.
 #[derive(Debug)]
 pub struct Btree<V, M>
 where
@@ -59,6 +62,9 @@ where
     // }
 
     /// Query the tree for some data.
+    ///
+    /// This will go into deeper levels of detail, until a certain
+    /// amount of data points is found.
     pub fn query_range(&self, timespan: &TimeSpan, min_items: usize) -> RangeQueryResult<V, M> {
         let root_node = self.root.borrow();
         let mut selection = root_node.select_range(timespan);
@@ -70,6 +76,64 @@ where
         selection.into_query_result()
     }
 
+    /// Get a data summary about the given time span.
+    ///
+    /// Strategy here is to go into child nodes at the
+    /// edges of the selection. The middle child nodes
+    /// can be aggregated earlier on.
+    pub fn range_summary(&self, timespan: &TimeSpan) -> Option<Aggregation<V, M>> {
+        // Start with a selection in the root node
+        let root_node = self.root.borrow();
+        let mut partially_selected_nodes: Vec<&Node<V, M>> = vec![&root_node];
+        let mut selected_nodes = vec![];
+        let mut selected_observations: Vec<Observation<V>> = vec![];
+        // let mut selection = root_node.select_range(timespan);
+
+        while !partially_selected_nodes.is_empty() {
+            let partial_node = partially_selected_nodes.pop().unwrap();
+            let selection = partial_node.select_range(timespan);
+            match selection {
+                RangeSelectionResult::Nodes(nodes) => {
+                    for node in nodes {
+                        if let Some(aggregation) = node.metrics() {
+                            if timespan.covers(&aggregation.timespan) {
+                                selected_nodes.push(aggregation);
+                            } else {
+                                partially_selected_nodes.push(node);
+                            }
+                        }
+                    }
+                }
+                RangeSelectionResult::Observations(observations) => {
+                    for observation in observations {
+                        selected_observations.push(observation.clone());
+                    }
+                    // selected_observations.extend(observations.iter().map(|o| o.clone()).collect());
+                }
+            };
+        }
+
+        println!(
+            "Nodes: {:?}, observations: {:?}",
+            selected_nodes.len(),
+            selected_observations.len()
+        );
+
+        // Now we have nodes and individual observations, take metrics of those.
+        let all_aggregations: Vec<Option<Aggregation<V, M>>> = vec![
+            Aggregation::from_aggregations(&selected_nodes),
+            Aggregation::from_observations(&selected_observations),
+        ];
+        let all_aggregations: Vec<Aggregation<V, M>> =
+            all_aggregations.into_iter().filter_map(|a| a).collect();
+        let summary = Aggregation::from_aggregations(&all_aggregations);
+
+        // assert!(timespan.covers(summary.timespan));
+
+        summary
+    }
+
+    /// Get a summary about all data in this tree.
     pub fn summary(&self) -> Option<Aggregation<V, M>> {
         self.root.borrow().metrics()
     }
@@ -367,7 +431,7 @@ where
         for child in &self.children {
             if let Some(child_metrics) = child.metrics() {
                 if let Some(metrics2) = &mut metrics {
-                    metrics2.include(&child_metrics);
+                    metrics2.include_aggregation(&child_metrics);
                 } else {
                     metrics = Some(child_metrics);
                 }
@@ -484,7 +548,10 @@ where
         if self.metrics.is_none() {
             self.metrics = Some(Aggregation::from(observation.clone()))
         } else {
-            self.metrics.as_mut().unwrap().update(&observation);
+            self.metrics
+                .as_mut()
+                .unwrap()
+                .include_observation(&observation);
         }
 
         self.observations.push(observation);

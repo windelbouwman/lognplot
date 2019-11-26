@@ -1,74 +1,13 @@
 use gio::prelude::*;
 use gtk::prelude::*;
 use gtk::Application;
-use std::cell::RefCell;
-use std::rc::Rc;
 use std::time::Instant;
 
-use lognplot::chart::{Chart, Curve, CurveData};
 use lognplot::geometry::Size;
 use lognplot::render::{draw_chart, CairoCanvas};
-use lognplot::time::TimeStamp;
-use lognplot::tsdb::{Observation, Sample, TsDbHandle};
+use lognplot::tsdb::TsDbHandle;
 
-/// Struct with some GUI state in it which will be shown in the GUI.
-struct GuiState {
-    chart: Chart,
-}
-
-fn new_chart(db: TsDbHandle) -> Chart {
-    db.new_trace("Trace0");
-
-    // Create data:
-    // let mut x = vec![];
-    // let mut y = vec![];
-    // for i in 0..900 {
-    //     let f = (i as f64) * 0.1;
-    //     let v = 20.0 * f.sin() + f * 2.0;
-
-    //     // Construct raw data:
-    //     x.push(f);
-    //     y.push(v);
-
-    //     // Add observations:
-    //     let timestamp = TimeStamp::new(f);
-    //     let sample = Sample::new(v + 20.0);
-    //     let observation = Observation::new(timestamp, sample);
-    //     // db.add_value("bla", observation);
-    // }
-
-    // info!("Plotting len(x)= {:?} len(y)= {:?}", x.len(), y.len());
-
-    let mut chart = Chart::default();
-    chart.set_xlabel("Time");
-    chart.set_ylabel("Value");
-    chart.set_title("W00tie");
-    // let curve_data = CurveData::points(x, y);
-    // let curve = Curve::new(curve_data);
-    // chart.add_curve(curve);
-
-    let tsdb_data = CurveData::trace("Trace0", db);
-    let curve2 = Curve::new(tsdb_data);
-
-    chart.add_curve(curve2);
-    chart.autoscale();
-    chart
-}
-
-impl GuiState {
-    fn new(db: TsDbHandle) -> Self {
-        GuiState {
-            chart: new_chart(db.clone()),
-            // db,
-        }
-    }
-
-    fn into_handle(self) -> GuiStateHandle {
-        Rc::new(RefCell::new(self))
-    }
-}
-
-type GuiStateHandle = Rc<RefCell<GuiState>>;
+use super::{GuiState, GuiStateHandle};
 
 pub fn open_gui(db_handle: TsDbHandle) {
     let app_state = GuiState::new(db_handle.clone()).into_handle();
@@ -127,29 +66,35 @@ fn draw_on_canvas<'t>(
 
 fn on_key(draw_area: &gtk::DrawingArea, key: &gdk::EventKey, app_state: GuiStateHandle) -> Inhibit {
     match key.get_keyval() {
-        gdk::enums::key::Up => {
-            app_state.borrow_mut().chart.pan_vertical(-0.1);
-            println!("Up!");
+        gdk::enums::key::Up | gdk::enums::key::w => {
+            app_state.borrow_mut().pan_up();
         }
-        gdk::enums::key::Left => {
-            app_state.borrow_mut().chart.pan_horizontal(-0.1);
-            println!("Left!");
+        gdk::enums::key::s => {
+            app_state.borrow_mut().pan_down();
         }
-        gdk::enums::key::Right => {
-            app_state.borrow_mut().chart.pan_horizontal(0.1);
-            println!("Right!");
+        gdk::enums::key::Left | gdk::enums::key::a => {
+            app_state.borrow_mut().pan_left();
         }
-        gdk::enums::key::KP_Add => {
-            app_state.borrow_mut().chart.zoom_horizontal(0.1);
-            println!("Plus!");
+        gdk::enums::key::Right | gdk::enums::key::d => {
+            app_state.borrow_mut().pan_right();
         }
-        gdk::enums::key::KP_Subtract => {
-            app_state.borrow_mut().chart.zoom_horizontal(-0.1);
-            println!("Minus!");
+        gdk::enums::key::i => {
+            info!("Zoom vertical");
+            app_state.borrow_mut().chart.zoom_vertical(0.1);
+        }
+        gdk::enums::key::k => {
+            info!("Zoom vertical");
+            app_state.borrow_mut().chart.zoom_vertical(-0.1);
+        }
+        gdk::enums::key::KP_Add | gdk::enums::key::l => {
+            app_state.borrow_mut().zoom_in_horizontal();
+        }
+        gdk::enums::key::KP_Subtract | gdk::enums::key::j => {
+            app_state.borrow_mut().zoom_out_horizontal();
         }
         gdk::enums::key::Return => {
+            info!("Autoscale!");
             app_state.borrow_mut().chart.autoscale();
-            println!("Enter bar!");
         }
 
         x => {

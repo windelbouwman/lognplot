@@ -10,7 +10,10 @@ pub struct Observation<V> {
     pub value: V,
 }
 
-impl<V> Observation<V> {
+impl<V> Observation<V>
+where
+    V: Clone,
+{
     /// Create a new observation at a given time.
     pub fn new(timestamp: TimeStamp, value: V) -> Self {
         Observation { timestamp, value }

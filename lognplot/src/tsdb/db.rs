@@ -5,6 +5,7 @@ use super::query::{Query, QueryResult};
 use super::sample::{Sample, SampleMetrics};
 use super::trace::Trace;
 use super::{Aggregation, Observation};
+use crate::time::TimeSpan;
 use std::collections::HashMap;
 
 /// A time series database which can be used as a library.
@@ -22,14 +23,16 @@ impl std::fmt::Display for TsDb {
     }
 }
 
-/// Database for time series.
-impl TsDb {
-    pub fn new() -> Self {
+impl Default for TsDb {
+    fn default() -> Self {
         let path = "x".to_string();
         let data = HashMap::new();
         Self { path, data }
     }
+}
 
+/// Database for time series.
+impl TsDb {
     pub fn into_handle(self) -> TsDbHandle {
         make_handle(self)
     }
@@ -58,5 +61,14 @@ impl TsDb {
     /// Get a summary for the given trace.
     pub fn summary(&self, name: &str) -> Option<Aggregation<Sample, SampleMetrics>> {
         self.data.get(name).unwrap().summary()
+    }
+
+    /// Calculate a summary of the data within the given timespan.
+    pub fn range_summary(
+        &self,
+        name: &str,
+        timespan: &TimeSpan,
+    ) -> Option<Aggregation<Sample, SampleMetrics>> {
+        self.data.get(name).unwrap().range_summary(timespan)
     }
 }

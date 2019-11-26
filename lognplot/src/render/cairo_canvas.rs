@@ -31,13 +31,16 @@ impl<'a> Canvas for CairoCanvas<'a> {
         );
     }
 
+    fn set_line_width(&mut self, width: f64) {
+        self.cr.set_line_width(width);
+    }
+
     fn print_text(&mut self, p: &Point, text: &str) {
         self.cr.move_to(p.x(), p.y());
         self.cr.show_text(text);
     }
 
     fn draw_line(&mut self, points: &[Point]) {
-        self.cr.set_line_width(3.0);
         if points.len() > 1 {
             self.make_path(points);
             self.cr.stroke();

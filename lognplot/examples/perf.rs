@@ -6,7 +6,7 @@ use lognplot::tsdb::{Observation, Query, Sample, TsDb};
 use std::time::Instant;
 
 fn main() {
-    let mut db = TsDb::new();
+    let mut db = TsDb::default();
 
     insertions(&mut db);
     do_query(&db);
