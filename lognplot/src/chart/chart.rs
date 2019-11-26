@@ -2,6 +2,7 @@
 
 use super::axis::ValueAxis;
 use super::curve::Curve;
+use crate::time::TimeSpan;
 use crate::tsdb::{Aggregation, Sample, SampleMetrics};
 
 /// A single 2D-chart
@@ -82,9 +83,31 @@ impl Chart {
             .collect();
 
         if let Some(summary) = Aggregation::from_aggregations(&summaries) {
-            self.y_axis
-                .set_limits(summary.metrics().min, summary.metrics().max);
+            self.fit_y_axis_to_metrics(summary.metrics());
         }
+    }
+
+    /// Adjust Y-axis such that we view the given metrics.
+    fn fit_y_axis_to_metrics(&mut self, metrics: &SampleMetrics) {
+        let mut domain = metrics.max - metrics.min;
+        if domain.abs() < 1.0e-17 {
+            domain = 1.0;
+        }
+
+        let minimum = metrics.min - 0.05 * domain;
+        let maximum = metrics.max + 0.05 * domain;
+        self.y_axis.set_limits(minimum, maximum);
+    }
+
+    fn fit_x_axis_to_timespan(&mut self, timespan: &TimeSpan) {
+        let mut domain = timespan.end.amount - timespan.start.amount;
+        if domain.abs() < 1.0e-18 {
+            domain = 1.0;
+        }
+
+        let minimum = timespan.start.amount - domain * 0.05;
+        let maximum = timespan.end.amount + domain * 0.05;
+        self.x_axis.set_limits(minimum, maximum);
     }
 
     /// Adjust scale ranges so we fit all data in view.
@@ -94,10 +117,8 @@ impl Chart {
             self.curves.iter().filter_map(|c| c.summary()).collect();
 
         if let Some(summary) = Aggregation::from_aggregations(&summaries) {
-            self.x_axis
-                .set_limits(summary.timespan.start.amount, summary.timespan.end.amount);
-            self.y_axis
-                .set_limits(summary.metrics().min, summary.metrics().max);
+            self.fit_x_axis_to_timespan(&summary.timespan);
+            self.fit_y_axis_to_metrics(summary.metrics());
         }
     }
 }

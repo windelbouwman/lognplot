@@ -2,19 +2,26 @@
 [![Build Status](https://travis-ci.org/windelbouwman/quartz.svg?branch=master)](https://travis-ci.org/windelbouwman/quartz)
 [![dependency status](https://deps.rs/repo/github/windelbouwman/quartz/status.svg)](https://deps.rs/repo/github/windelbouwman/quartz)
 
-# Quartz
+# Lognplot
 
-Petabyte timeseries database on your laptop!
+Timeseries database on your laptop!
 
 Features:
 - Attosecond timestamps
 - Zoom levels
 - Triggers on data
 - Fast query of data
+- python implementation
+- rust implementation
 
 Plan:
 - Float only
 - Demo log program
+
+# Documentation
+
+Documentation for python users can be found here: https://lognplot.readthedocs.io/en/latest/
+
 
 ## Similar projects
 
@@ -30,13 +37,7 @@ Plan:
 The project is divided into several crates.
 
 - A time series database ala sqlite to store time series and query them.
-- A vulkan based canvas thingy
 - A cairo based drawing
-
-## About the name
-
-Quartz is a crystal used to create precise timing devices. See here: https://en.wikipedia.org/wiki/Quartz_clock
-
 
 # Idea list
 
