@@ -2,13 +2,16 @@
 
 Include this widget into your application to plot data.
 """
+from itertools import cycle
 from PyQt5.QtWidgets import QWidget
-from PyQt5.QtGui import QPainter
+from PyQt5.QtGui import QPainter, QPen
 from PyQt5.QtCore import Qt
 
 from ...utils import bench_it
 from ...chart import Chart
 from ..render import render_chart_on_qpainter
+
+color_wheel = ["blue", "red", "green", "black", "yellow"]
 
 
 class ChartWidget(QWidget):
@@ -18,11 +21,34 @@ class ChartWidget(QWidget):
     def __init__(self, db):
         super().__init__()
         self.chart = Chart(db)
+        self._colors = cycle(color_wheel)
 
         # Make sure we grab keyboard input:
         self.setFocusPolicy(Qt.StrongFocus)
 
-    def add_curve(self, name, color):
+        # Accept drop of signal names
+        self.setAcceptDrops(True)
+
+    def dragEnterEvent(self, event):
+        print("drag enter!")
+        if event.mimeData().hasFormat("text/plain"):
+            print("accept drag")
+            event.acceptProposedAction()
+
+    def dragMoveEvent(self, event):
+        print("drag move event!")
+
+    def dragLeaveEvent(self, event):
+        print("drag leave!")
+
+    def dropEvent(self, event):
+        names = event.mimeData().text()
+        print("Mime data text", names, type(names))
+        for name in names.split(":"):
+            self.add_curve(name)
+
+    def add_curve(self, name, color=None):
+        color = color or next(self._colors)
         self.chart.add_curve(name, color)
 
     def paintEvent(self, e):
@@ -32,6 +58,13 @@ class ChartWidget(QWidget):
         painter = QPainter(self)
         # with bench_it("render"):
         render_chart_on_qpainter(self.chart, painter, self.rect())
+
+        # Draw focus indicator:
+        if self.hasFocus():
+            pen = QPen(Qt.red)
+            pen.setWidth(4)
+            painter.setPen(pen)
+            painter.drawRect(self.rect())
 
     # Panning helpers:
     PAN_FACTOR = 0.05

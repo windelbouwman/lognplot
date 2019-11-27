@@ -68,14 +68,37 @@ class Btree:
 
     def query_metrics(self, selection_timespan):
         """ Retrieve metrics from a given range. """
-        # TODO: refactor!
-        nodes = self.query(selection_timespan, 500)
-        if nodes:
-            if isinstance(nodes[0], Metrics):
-                metrics = merge_metrics(nodes)
-            else:
-                metrics = samples_to_metric(nodes)
-            return metrics
+
+        partially_selected = [self.root_node]
+        selected_aggregations = []
+        selected_samples = []
+
+        while partially_selected:
+            partial_node = partially_selected.pop()
+            selection = partial_node.select_range(selection_timespan)
+            if selection:
+                if isinstance(selection[0], BtreeNode):
+                    for node in selection:
+                        aggregation = node.metrics
+                        if covers(selection_timespan, (aggregation.x1, aggregation.x2)):
+                            selected_aggregations.append(aggregation)
+                        else:
+                            partially_selected.append(node)
+                else:
+                    selected_samples.extend(selection)
+
+        # print(len(selected_aggregations), len(selected_samples))
+
+        if selected_samples:
+            selected_aggregations.append(samples_to_metric(selected_samples))
+
+        if selected_aggregations:
+            return merge_metrics(selected_aggregations)
+
+
+def covers(span1, span2):
+    """ Test if timespan covers span2 fully. """
+    return (span1[0] <= span2[0]) and (span2[1] <= span1[1])
 
 
 def enhance(nodes, selection_span):

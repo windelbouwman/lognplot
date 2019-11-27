@@ -226,17 +226,17 @@ class ChartRenderer:
         # Forward sweep:
         for metric in metrics:
             x1 = self._to_x_pixel(metric.x1)
-            x2 = self._to_x_pixel(metric.x2)
+            # x2 = self._to_x_pixel(metric.x2)
 
             # max line:
             y_max = self._to_y_pixel(metric.maximum)
             max_points.append(QPoint(x1, y_max))
-            max_points.append(QPoint(x2, y_max))
+            # max_points.append(QPoint(x2, y_max))
 
             # min line:
             y_min = self._to_y_pixel(metric.minimum)
             min_points.append(QPoint(x1, y_min))
-            min_points.append(QPoint(x2, y_min))
+            # min_points.append(QPoint(x2, y_min))
 
             mean = metric.mean
             stddev = metric.stddev
@@ -244,17 +244,17 @@ class ChartRenderer:
             # Mean line:
             y_mean = self._to_y_pixel(mean)
             mean_points.append(QPoint(x1, y_mean))
-            mean_points.append(QPoint(x2, y_mean))
+            # mean_points.append(QPoint(x2, y_mean))
 
             # stddev up line:
             y_stddev_up = self._to_y_pixel(mean + stddev)
             stddev_up_points.append(QPoint(x1, y_stddev_up))
-            stddev_up_points.append(QPoint(x2, y_stddev_up))
+            # stddev_up_points.append(QPoint(x2, y_stddev_up))
 
             # stddev down line:
             y_stddev_down = self._to_y_pixel(mean - stddev)
             stddev_down_points.append(QPoint(x1, y_stddev_down))
-            stddev_down_points.append(QPoint(x2, y_stddev_down))
+            # stddev_down_points.append(QPoint(x2, y_stddev_down))
 
         # Create contours:
         min_max_points = max_points + list(reversed(min_points))
@@ -286,6 +286,17 @@ class ChartRenderer:
         self.painter.setPen(pen)
         mean_line = QPolygon(mean_points)
         self.painter.drawPolyline(mean_line)
+
+        # min/max lines:
+        if False:
+            # This is a bit ugly:
+            pen = QPen(curve_color)
+            pen.setWidth(1)
+            self.painter.setPen(pen)
+            max_line = QPolygon(max_points)
+            self.painter.drawPolyline(max_line)
+            min_line = QPolygon(min_points)
+            self.painter.drawPolyline(min_line)
 
     def _to_x_pixel(self, value):
         """ Transform the given X value to a pixel position.

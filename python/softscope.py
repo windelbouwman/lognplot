@@ -5,26 +5,22 @@ Generate a 10 kHz samples sine wave and plot it live.
 
 import math
 import time
-import queue
 import random
 import threading
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout
-from PyQt5.QtCore import QTimer
-from lognplot.tsdb import TsDb
-from lognplot.qt.widgets import ChartWidget
+from PyQt5.QtWidgets import QApplication
+from lognplot.qt.widgets import SoftScope
 
 
 def main():
     app = QApplication([])
-    w = DemoGraphWidget()
-    t1 = threading.Thread(target=gen_data, args=(w._rx_queue,), daemon=True)
+    scope = SoftScope()
+    t1 = threading.Thread(target=gen_data, args=(scope.add_samples,), daemon=True)
     t1.start()
-    w.show()
+    scope.show()
     app.exec()
 
 
-def gen_data(tx_queue):
-    print("enter thread")
+def gen_data(add_samples):
     ts = 0.0001
     t = 0
     dt = 0.2
@@ -32,7 +28,6 @@ def gen_data(tx_queue):
     F2 = 3
     chunk_size = int(dt / ts)
     while True:
-
         samples = []
         samples2 = []
         for _ in range(chunk_size):
@@ -43,41 +38,9 @@ def gen_data(tx_queue):
 
             # Increment time:
             t += ts
-        tx_queue.put(("C1", samples))
-        tx_queue.put(("C2", samples2))
+        add_samples("C1", samples)
+        add_samples("C2", samples2)
         time.sleep(dt)
-    print("rip thread")
-
-
-class DemoGraphWidget(QWidget):
-    def __init__(self):
-        super().__init__()
-
-        self._db = TsDb()
-
-        self._chart_widget = ChartWidget(self._db)
-        self._chart_widget.add_curve("C1", "red")
-        self._chart_widget.add_curve("C2", "green")
-
-        l = QVBoxLayout()
-        l.addWidget(self._chart_widget)
-        self.setLayout(l)
-
-        self.resize(600, 400)
-
-        self._rx_queue = queue.Queue()
-        self._timer = QTimer()
-        self._timer.timeout.connect(self.on_timeout)
-        self._timer.start(50)
-
-    def on_timeout(self):
-        if not self._rx_queue.empty():
-            while not self._rx_queue.empty():
-                chunk = self._rx_queue.get()
-                name, samples = chunk
-                self._db.add_samples(name, samples)
-                self._rx_queue.task_done()
-            self.update()
 
 
 if __name__ == "__main__":

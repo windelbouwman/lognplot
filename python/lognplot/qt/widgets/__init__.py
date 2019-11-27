@@ -2,3 +2,4 @@
 """
 
 from .chartwidget import ChartWidget
+from .softscope import SoftScope
