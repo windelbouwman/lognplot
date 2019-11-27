@@ -2,12 +2,12 @@ import math
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QPainter
-from chart1 import Chart, PointSerie, ZoomSerie
 
-from chart1.utils import bench_it
-from chart1.qt.widgets.chartwidget import ChartWidget
-from chart1.logbar import LogBar
-from chart1.callstackbar import CallStackBar
+from lognplot.tsdb import TsDb
+from lognplot.utils import bench_it
+from lognplot.qt.widgets import ChartWidget
+from lognplot.logbar import LogBar
+from lognplot.callstackbar import CallStackBar
 
 
 def main():
@@ -22,27 +22,25 @@ def main():
 class DemoGraphWidget(QWidget):
     def __init__(self):
         super().__init__()
-        self._chart_widget = ChartWidget()
+        self._db = TsDb()
+        self._chart_widget = ChartWidget(self._db)
         l = QVBoxLayout()
         l.addWidget(self._chart_widget)
         self.setLayout(l)
         self.resize(600, 400)
 
         # num_points = 1_000_000
-        num_points = 10_000
+        num_points = 100_000
 
         with bench_it(f"create {num_points} demo samples"):
             samples = demo_samples(num_points)
 
-        series1 = PointSerie()
         with bench_it("create zoom series"):
-            series1 = ZoomSerie()
-            series1.add_samples(samples)
+            self._db.add_samples("S1", samples)
 
-        self._chart_widget.chart.add_serie(series1)
-        series4 = ZoomSerie()
-        series4.add_samples(demo_samples(5000, 50))
-        self._chart_widget.chart.add_serie(series4)
+        self._chart_widget.add_curve("S1", "blue")
+        self._db.add_samples("S2", demo_samples(5000, 50))
+        self._chart_widget.add_curve("S2", "green")
         print(self._chart_widget.chart.info())
 
 

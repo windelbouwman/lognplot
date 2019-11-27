@@ -10,8 +10,8 @@ import random
 import threading
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout
 from PyQt5.QtCore import QTimer
-from lognplot import ZoomSerie
-from lognplot.qt.widgets.chartwidget import ChartWidget
+from lognplot.tsdb import TsDb
+from lognplot.qt.widgets import ChartWidget
 
 
 def main():
@@ -53,16 +53,11 @@ class DemoGraphWidget(QWidget):
     def __init__(self):
         super().__init__()
 
-        self.series1 = ZoomSerie()
-        self.series2 = ZoomSerie()
-        self._serie_map = {
-            "C1": self.series1,
-            "C2": self.series2,
-        }
+        self._db = TsDb()
 
-        self._chart_widget = ChartWidget()
-        self._chart_widget.chart.add_serie(self.series1)
-        self._chart_widget.chart.add_serie(self.series2)
+        self._chart_widget = ChartWidget(self._db)
+        self._chart_widget.add_curve("C1", "red")
+        self._chart_widget.add_curve("C2", "green")
 
         l = QVBoxLayout()
         l.addWidget(self._chart_widget)
@@ -80,8 +75,7 @@ class DemoGraphWidget(QWidget):
             while not self._rx_queue.empty():
                 chunk = self._rx_queue.get()
                 name, samples = chunk
-                serie = self._serie_map[name]
-                serie.add_samples(samples)
+                self._db.add_samples(name, samples)
                 self._rx_queue.task_done()
             self.update()
 

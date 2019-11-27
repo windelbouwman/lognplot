@@ -1,5 +1,5 @@
 import unittest
-from lognplot.axis import ceil_to_multiple_of, Axis
+from lognplot.chart.axis import ceil_to_multiple_of, Axis
 
 
 class RoundTestCase(unittest.TestCase):

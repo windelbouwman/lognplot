@@ -3,7 +3,7 @@
 Idea from: https://www.speedscope.app/
 """
 
-from .btree import Btree
+from .tsdb.btree import Btree
 
 
 class CallStackBar:

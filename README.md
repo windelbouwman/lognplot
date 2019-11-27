@@ -1,6 +1,6 @@
 
-[![Build Status](https://travis-ci.org/windelbouwman/quartz.svg?branch=master)](https://travis-ci.org/windelbouwman/quartz)
-[![dependency status](https://deps.rs/repo/github/windelbouwman/quartz/status.svg)](https://deps.rs/repo/github/windelbouwman/quartz)
+[![Build Status](https://travis-ci.org/windelbouwman/lognplot.svg?branch=master)](https://travis-ci.org/windelbouwman/lognplot)
+[![dependency status](https://deps.rs/repo/github/windelbouwman/lognplot/status.svg)](https://deps.rs/repo/github/windelbouwman/lognplot)
 
 # Lognplot
 
@@ -11,17 +11,18 @@ Features:
 - Zoom levels
 - Triggers on data
 - Fast query of data
-- python implementation
-- rust implementation
+- python implementation (pyqt5)
+- rust implementation (gtk-rs / cairo)
 
 Plan:
 - Float only
 - Demo log program
+- PyQt5 implementation
+- gtk-rs implementation
 
 # Documentation
 
 Documentation for python users can be found here: https://lognplot.readthedocs.io/en/latest/
-
 
 ## Similar projects
 

@@ -9,7 +9,7 @@ matrix:
         - cd python
       script:
         - export PYTHONPATH=`pwd`
-        - pytest -v --cov=chart1
+        - pytest -v --cov=lognplot
 
     - language: rust
       cache: cargo

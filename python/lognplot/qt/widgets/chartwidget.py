@@ -15,12 +15,15 @@ class ChartWidget(QWidget):
     """ Charting widget.
     """
 
-    def __init__(self):
+    def __init__(self, db):
         super().__init__()
-        self.chart = Chart()
+        self.chart = Chart(db)
 
         # Make sure we grab keyboard input:
         self.setFocusPolicy(Qt.StrongFocus)
+
+    def add_curve(self, name, color):
+        self.chart.add_curve(name, color)
 
     def paintEvent(self, e):
         super().paintEvent(e)

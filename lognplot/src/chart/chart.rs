@@ -110,13 +110,16 @@ impl Chart {
         self.x_axis.set_limits(minimum, maximum);
     }
 
-    /// Adjust scale ranges so we fit all data in view.
-    pub fn autoscale(&mut self) {
-        // Retrieve info from all curves:
+    /// Retrieve meta-data from all curves.
+    fn data_summary(&self) -> Option<Aggregation<Sample, SampleMetrics>> {
         let summaries: Vec<Aggregation<Sample, SampleMetrics>> =
             self.curves.iter().filter_map(|c| c.summary()).collect();
+        Aggregation::from_aggregations(&summaries)
+    }
 
-        if let Some(summary) = Aggregation::from_aggregations(&summaries) {
+    /// Adjust scale ranges so we fit all data in view.
+    pub fn autoscale(&mut self) {
+        if let Some(summary) = self.data_summary() {
             self.fit_x_axis_to_timespan(&summary.timespan);
             self.fit_y_axis_to_metrics(summary.metrics());
         }

@@ -1,5 +1,5 @@
 import unittest
-from lognplot.btree import overlap, Btree
+from lognplot.tsdb.btree import overlap, Btree
 
 
 class BtreeTestCase(unittest.TestCase):
@@ -16,9 +16,9 @@ class BtreeTestCase(unittest.TestCase):
         tree.append((1, 9))
         tree.append((5, 11))
         tree.append((9, 9))
-        self.assertEqual([(1, 9), (5, 11), (9, 9)], tree.query(0, 30, 1))
-        self.assertEqual([(5, 11), (9, 9)], tree.query(5, 30, 1))
-        self.assertEqual([], tree.query(20, 30, 1))
+        self.assertEqual([(1, 9), (5, 11), (9, 9)], tree.query((0, 30), 1))
+        self.assertEqual([(5, 11), (9, 9)], tree.query((5, 30), 1))
+        self.assertEqual([], tree.query((20, 30), 1))
 
 
 class OverlapTestCase(unittest.TestCase):

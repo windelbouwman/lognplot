@@ -3,8 +3,8 @@
 
 import time
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout
-from lognplot import Chart, ZoomSerie
-from lognplot.qt.widgets.chartwidget import ChartWidget
+from lognplot.tsdb import TsDb
+from lognplot.qt.widgets import ChartWidget
 
 
 def main():
@@ -15,8 +15,8 @@ def main():
 
 
 class BenchmarkedChartWidget(ChartWidget):
-    def __init__(self, callback):
-        super().__init__()
+    def __init__(self, db, callback):
+        super().__init__(db)
         self._callback = callback
 
     def paintEvent(self, e):
@@ -30,14 +30,13 @@ class BenchmarkedChartWidget(ChartWidget):
 class AutoScopeGraphWidget(QWidget):
     def __init__(self):
         super().__init__()
-
-        self.series1 = ZoomSerie()
+        self._db = TsDb()
 
         def append_measurement(t, duration):
-            self.series1.add_sample((t, duration))
+            self._db.add_sample("S1", (t, duration))
 
-        self._chart_widget = BenchmarkedChartWidget(append_measurement)
-        self._chart_widget.chart.add_serie(self.series1)
+        self._chart_widget = BenchmarkedChartWidget(self._db, append_measurement)
+        self._chart_widget.add_curve("S1", "red")
 
         l = QVBoxLayout()
         l.addWidget(self._chart_widget)

@@ -1,4 +1,4 @@
-from .axis import Axis
+from .chart.axis import Axis
 
 
 class LogBar:

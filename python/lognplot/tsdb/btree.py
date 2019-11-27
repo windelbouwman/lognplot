@@ -49,18 +49,16 @@ class Btree:
         for sample in self.root_node:
             yield sample
 
-    def query(self, begin, end, min_count):
+    def query(self, selection_timespan, min_count):
         """ Query this tree for some data between the given points.
         """
-        assert begin < end
-        selection_span = (begin, end)
 
         # Initial query result:
-        nodes = self.root_node.select_range(selection_span)
+        nodes = self.root_node.select_range(selection_timespan)
 
         # Enhance resolution, while not enough samples.
         while nodes and len(nodes) < min_count and isinstance(nodes[0], BtreeNode):
-            nodes = enhance(nodes, selection_span)
+            nodes = enhance(nodes, selection_timespan)
 
         # Take metrics from internal nodes:
         if nodes and isinstance(nodes[0], BtreeNode):
@@ -68,9 +66,10 @@ class Btree:
 
         return nodes
 
-    def query_metrics(self, begin, end):
+    def query_metrics(self, selection_timespan):
         """ Retrieve metrics from a given range. """
-        nodes = self.query(begin, end, 500)
+        # TODO: refactor!
+        nodes = self.query(selection_timespan, 500)
         if nodes:
             if isinstance(nodes[0], Metrics):
                 metrics = merge_metrics(nodes)

@@ -1,93 +1,10 @@
-""" Render a graph on a QPainter. """
 import contextlib
 from PyQt5.QtGui import QPainter, QPen, QPolygon, QBrush, QColor
 from PyQt5.QtCore import QRect, Qt, QPoint
-from ..chart import Chart
-from ..series import PointSerie, CompactedSerie, ZoomSerie
-from ..utils import bench_it, clip
-from ..metrics import Metrics
-
-
-def render_chart_on_qpainter(chart: Chart, painter: QPainter, rect: QRect):
-    """ Call this function to paint a chart onto the given painter within the rectangle specified.
-    """
-    renderer = Renderer(painter, chart)
-    # with bench_it("render"):
-    renderer.render(rect)
-
-
-class ChartLayout:
-    def __init__(self, rect: QRect, options):
-        # Parameters:
-        self.axis_width = 40
-        self.axis_height = 40
-
-        # Inputs:
-        self.options = options
-        # print(rect, type(rect))
-        self.rect = rect
-
-        # Endless sea of variables :)
-        self.do_layout()
-
-    def do_layout(self):
-        # self.right = self.rect.right()
-        # self.bottom = self.rect.bottom()
-        self.chart_top = self.rect.top() + self.options.padding
-        self.chart_left = self.rect.left() + self.options.padding
-        if self.options.show_axis:
-            axis_height = self.axis_height
-            axis_width = self.axis_width
-        else:
-            axis_height = 0
-            axis_width = 0
-
-        self.chart_bottom = self.rect.bottom() - self.options.padding - axis_height
-        self.chart_right = self.rect.right() - self.options.padding - axis_width
-        self.chart_width = self.chart_right - self.chart_left
-        self.chart_height = self.chart_bottom - self.chart_top
-
-
-class ChartOptions:
-    def __init__(self):
-        self.show_axis = True
-        self.show_grid = True
-        self.padding = 10
-
-
-class Renderer:
-    """ Render a chart.
-
-    Optionally include a minimap?
-    """
-
-    def __init__(self, painter: QPainter, chart: Chart):
-        self.painter = painter
-        self.chart = chart
-
-    def render(self, rect: QRect):
-        options1 = ChartOptions()
-        chart_renderer = ChartRenderer(self.painter, rect, self.chart, options1)
-        chart_renderer.render()
-
-        # Create a new chart with the whole thing zoomed
-        minimap_chart = Chart()
-        for serie in self.chart.series:
-            minimap_chart.add_serie(serie)
-        minimap_chart.zoom_fit()
-
-        # Now render minimap in top left corner.
-        minimap_options = ChartOptions()
-        minimap_options.padding = 2
-        minimap_options.show_axis = False
-        minimap_rect = QRect(rect.x() + 40, rect.y() + 40, 120, 80)
-        self.painter.fillRect(minimap_rect, Qt.yellow)
-        minimap_chart_renderer = ChartRenderer(
-            self.painter, minimap_rect, minimap_chart, minimap_options
-        )
-        minimap_chart_renderer.render()
-        region = self.chart.get_region()
-        minimap_chart_renderer.shade_region(region)
+from ...chart import Chart
+from ...utils import bench_it, clip
+from ...tsdb.metrics import Metrics
+from .layout import ChartLayout
 
 
 class ChartRenderer:
@@ -124,7 +41,7 @@ class ChartRenderer:
             self._draw_x_axis(x_ticks)
             self._draw_y_axis(y_ticks)
 
-        self._draw_series()
+        self._draw_curves()
 
     def shade_region(self, region):
         """ Draw a shaded box in some region.
@@ -230,55 +147,37 @@ class ChartRenderer:
         # Remove the clipping rectangle:
         self.painter.restore()
 
-    def _draw_series(self):
+    def _draw_curves(self):
         """ Draw all data enclosed in the chart. """
         with self.clip_chart_rect():
-            for serie in self.chart.series:
+            for curve in self.chart.curves:
                 # with bench_it(f"render {serie}"):
-                self._draw_serie(serie)
+                self._draw_curve(curve)
 
-    def _draw_serie(self, serie):
+    def _draw_curve(self, curve):
         """ Draw a single time series. """
-        if isinstance(serie, PointSerie):
-            self._draw_point_serie(serie)
-        elif isinstance(serie, CompactedSerie):
-            self._draw_compacted_serie(serie)
-        elif isinstance(serie, ZoomSerie):
-            self._draw_zoomed_serie(serie)
-        else:  # pragma: no cover
-            raise NotImplementedError(str(serie))
-
-    def _draw_point_serie(self, serie):
-        self._draw_samples_as_lines(serie)
-
-    def _draw_compacted_serie(self, serie):
-        """ Render a series which contain aggregates
-
-        This means drawing the min/max values during a specific period.
-        Also, mean/stddev/median might be involved here!
-        """
-        self._draw_metrics_as_blocks(serie)
-
-    def _draw_zoomed_serie(self, serie):
         # with bench_it("series query"):
         begin = self.chart.x_axis.minimum
         end = self.chart.x_axis.maximum
+        assert begin <= end
+        timespan = (begin, end)
         # Determine how many data points we wish to visualize
         # This greatly determines drawing performance.
         min_count = int(self._layout.chart_width / 40)
-        data = serie.query(begin, end, min_count)
+        data = curve.query(timespan, min_count)
         # print("query result", type(data), len(data))
+        curve_color = QColor(curve.color)
 
         if data:
             if isinstance(data[0], Metrics):
                 # self._draw_metrics_as_blocks(data)
-                self._draw_metrics_as_shape(data)
+                self._draw_metrics_as_shape(data, curve_color)
             else:
-                self._draw_samples_as_lines(data)
+                self._draw_samples_as_lines(data, curve_color)
 
-    def _draw_samples_as_lines(self, samples):
+    def _draw_samples_as_lines(self, samples, curve_color: QColor):
         """ Draw raw samples as lines! """
-        pen = QPen(Qt.red)
+        pen = QPen(curve_color)
         pen.setWidth(2)
         self.painter.setPen(pen)
         points = [
@@ -310,7 +209,7 @@ class ChartRenderer:
             min_max_rect = QRect(x1, y1, width, height)
             self.painter.fillRect(min_max_rect, brush)
 
-    def _draw_metrics_as_shape(self, metrics):
+    def _draw_metrics_as_shape(self, metrics, curve_color: QColor):
         """ Draw aggregates as polygon shapes.
 
         This works by creating a contour around the min / max values.
@@ -319,48 +218,55 @@ class ChartRenderer:
         """
         # Draw a series of min/max rectangles.
         mean_points = []
-        min_max_points = []
-        stddev_points = []
+        min_points = []
+        max_points = []
+        stddev_up_points = []
+        stddev_down_points = []
 
         # Forward sweep:
         for metric in metrics:
             x1 = self._to_x_pixel(metric.x1)
             x2 = self._to_x_pixel(metric.x2)
 
-            # min max contour:
+            # max line:
             y_max = self._to_y_pixel(metric.maximum)
-            min_max_points.append(QPoint(x1, y_max))
-            min_max_points.append(QPoint(x2, y_max))
+            max_points.append(QPoint(x1, y_max))
+            max_points.append(QPoint(x2, y_max))
+
+            # min line:
+            y_min = self._to_y_pixel(metric.minimum)
+            min_points.append(QPoint(x1, y_min))
+            min_points.append(QPoint(x2, y_min))
+
+            mean = metric.mean
+            stddev = metric.stddev
 
             # Mean line:
-            y_mean = self._to_y_pixel(metric.mean)
+            y_mean = self._to_y_pixel(mean)
             mean_points.append(QPoint(x1, y_mean))
             mean_points.append(QPoint(x2, y_mean))
 
-            # stddev contour:
-            y_stddev_up = self._to_y_pixel(metric.mean + metric.stddev)
-            stddev_points.append(QPoint(x1, y_stddev_up))
-            stddev_points.append(QPoint(x2, y_stddev_up))
+            # stddev up line:
+            y_stddev_up = self._to_y_pixel(mean + stddev)
+            stddev_up_points.append(QPoint(x1, y_stddev_up))
+            stddev_up_points.append(QPoint(x2, y_stddev_up))
 
-        # Backwards sweep:
-        for metric in reversed(metrics):
-            x1 = self._to_x_pixel(metric.x1)
-            x2 = self._to_x_pixel(metric.x2)
+            # stddev down line:
+            y_stddev_down = self._to_y_pixel(mean - stddev)
+            stddev_down_points.append(QPoint(x1, y_stddev_down))
+            stddev_down_points.append(QPoint(x2, y_stddev_down))
 
-            # min max contour:
-            y_min = self._to_y_pixel(metric.minimum)
-            min_max_points.append(QPoint(x2, y_min))
-            min_max_points.append(QPoint(x1, y_min))
+        # Create contours:
+        min_max_points = max_points + list(reversed(min_points))
+        stddev_points = stddev_up_points + list(reversed(stddev_down_points))
 
-            # stddev contour:
-            y_stddev_down = self._to_y_pixel(metric.mean - metric.stddev)
-            stddev_points.append(QPoint(x2, y_stddev_down))
-            stddev_points.append(QPoint(x1, y_stddev_down))
+        # Determine colors:
+        stddev_color = QColor(curve_color)
+        stddev_color.setAlphaF(0.3)
+        min_max_color = QColor(curve_color)
+        min_max_color.setAlphaF(0.1)
 
         self.painter.setPen(Qt.NoPen)
-        color = QColor(Qt.red)
-        stddev_color = color.lighter(140)
-        min_max_color = color.lighter(170)
 
         # Min/max shape:
         min_max_shape = QPolygon(min_max_points)
@@ -375,7 +281,7 @@ class ChartRenderer:
         self.painter.drawPolygon(stddev_shape)
 
         # Mean line:
-        pen = QPen(color)
+        pen = QPen(curve_color)
         pen.setWidth(2)
         self.painter.setPen(pen)
         mean_line = QPolygon(mean_points)

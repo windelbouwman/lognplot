@@ -1,7 +1,8 @@
 import math
 from .axis import Axis
-from .utils import bench_it
-from .metrics import merge_metrics
+from .curve import Curve
+from ..utils import bench_it
+from ..tsdb.metrics import merge_metrics
 
 
 class Chart:
@@ -12,18 +13,20 @@ class Chart:
     axis, traces into a single object.
     """
 
-    def __init__(self):
+    def __init__(self, db):
         self.x_axis = Axis()
         self.y_axis = Axis()
-        self.series = []
+        self.curves = []
+        self.db = db
 
-    def add_serie(self, serie):
-        self.series.append(serie)
+    def add_curve(self, name, color):
+        curve = Curve(self.db, name, color)
+        self.curves.append(curve)
 
     def info(self):
-        print(f"Chart with {len(self.series)} series")
-        for index, serie in enumerate(self.series):
-            print(f"serie {index} with {len(serie)} samples")
+        print(f"Chart with {len(self.curves)} series")
+        for index, curve in enumerate(self.curves):
+            print(f"serie {index} with {len(curve)} samples")
 
     def horizontal_zoom(self, amount):
         """ Zoom in horizontal manner. """
@@ -54,10 +57,11 @@ class Chart:
         """ Automatically adjust the Y-axis to fit data in range. """
         begin = self.x_axis.minimum
         end = self.x_axis.maximum
+        timespan = (begin, end)
         metrics = []
         # with bench_it("autoscale_y"):
-        for serie in self.series:
-            metric = serie.query_metrics(begin, end)
+        for curve in self.curves:
+            metric = curve.query_metrics(timespan)
             if metric:
                 metrics.append(metric)
 
@@ -114,8 +118,8 @@ class Chart:
 
         # Gather bounding boxes of all curves:
         metrics = []
-        for serie in self.series:
-            metric = serie.metrics
+        for curve in self.curves:
+            metric = curve.query_summary()
             if metric:
                 metrics.append(metric)
 
