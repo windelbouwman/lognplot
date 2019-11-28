@@ -29,8 +29,8 @@ impl ChartLayout {
 
     pub fn layout(&mut self, options: &ChartOptions) {
         self.plot_top = options.padding;
-        self.plot_left = 50.0;
-        self.plot_bottom = self.height - 50.0;
+        self.plot_left = 140.0;
+        self.plot_bottom = self.height - 60.0;
         self.plot_right = self.width - options.padding;
         self.plot_height = self.plot_bottom - self.plot_top;
         self.plot_width = self.plot_right - self.plot_left;

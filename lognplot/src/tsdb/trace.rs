@@ -41,12 +41,15 @@ impl Trace {
         }
     }
 
-    pub fn summary(&self) -> Option<Aggregation<Sample, SampleMetrics>> {
-        self.tree.summary()
-    }
-
-    pub fn range_summary(&self, timespan: &TimeSpan) -> Option<Aggregation<Sample, SampleMetrics>> {
-        self.tree.range_summary(timespan)
+    pub fn summary(
+        &self,
+        timespan: Option<&TimeSpan>,
+    ) -> Option<Aggregation<Sample, SampleMetrics>> {
+        if let Some(timespan) = timespan {
+            self.tree.range_summary(timespan)
+        } else {
+            self.tree.summary()
+        }
     }
 
     pub fn to_vec(&self) -> Vec<Observation<Sample>> {

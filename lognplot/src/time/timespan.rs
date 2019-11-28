@@ -18,6 +18,11 @@ impl TimeSpan {
         Self::new(TimeStamp::from_seconds(start), TimeStamp::from_seconds(end))
     }
 
+    /// Retrieve the timestamp in the middle of this span.
+    pub fn middle_timestamp(&self) -> TimeStamp {
+        TimeStamp::new((self.start.amount + self.end.amount) / 2.0)
+    }
+
     pub fn extend_to_include(&mut self, time_point: &TimeStamp) {
         if time_point < &self.start {
             self.start = time_point.clone();

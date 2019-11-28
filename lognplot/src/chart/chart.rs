@@ -76,13 +76,8 @@ impl Chart {
     pub fn fit_y_axis(&mut self) {
         // First, determine metrics of data in view!
         let timespan = self.x_axis.timespan();
-        let summaries: Vec<Aggregation<Sample, SampleMetrics>> = self
-            .curves
-            .iter()
-            .filter_map(|c| c.range_summary(&timespan))
-            .collect();
 
-        if let Some(summary) = Aggregation::from_aggregations(&summaries) {
+        if let Some(summary) = self.data_summary(Some(&timespan)) {
             self.fit_y_axis_to_metrics(summary.metrics());
         }
     }
@@ -111,15 +106,21 @@ impl Chart {
     }
 
     /// Retrieve meta-data from all curves.
-    fn data_summary(&self) -> Option<Aggregation<Sample, SampleMetrics>> {
-        let summaries: Vec<Aggregation<Sample, SampleMetrics>> =
-            self.curves.iter().filter_map(|c| c.summary()).collect();
+    fn data_summary(
+        &self,
+        timespan: Option<&TimeSpan>,
+    ) -> Option<Aggregation<Sample, SampleMetrics>> {
+        let summaries: Vec<Aggregation<Sample, SampleMetrics>> = self
+            .curves
+            .iter()
+            .filter_map(|c| c.data_summary(timespan))
+            .collect();
         Aggregation::from_aggregations(&summaries)
     }
 
     /// Adjust scale ranges so we fit all data in view.
     pub fn autoscale(&mut self) {
-        if let Some(summary) = self.data_summary() {
+        if let Some(summary) = self.data_summary(None) {
             self.fit_x_axis_to_timespan(&summary.timespan);
             self.fit_y_axis_to_metrics(summary.metrics());
         }

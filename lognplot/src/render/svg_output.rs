@@ -1,3 +1,4 @@
+use super::canvas::{HorizontalAnchor, VerticalAnchor};
 use super::Canvas;
 use crate::geometry::Point;
 use crate::style::Color;
@@ -50,7 +51,7 @@ impl<'w> SvgOutput<'w> {
 
 /// Implement the canvas API for svg output!
 impl<'w> Canvas for SvgOutput<'w> {
-    fn set_pen(&mut self, color: Color) {
+    fn set_pen(&mut self, color: Color, _alpha: f64) {
         self.pen = color;
     }
 
@@ -58,7 +59,13 @@ impl<'w> Canvas for SvgOutput<'w> {
         self.width = width;
     }
 
-    fn print_text(&mut self, p: &Point, text: &str) {
+    fn print_text(
+        &mut self,
+        p: &Point,
+        _horizontal_anchor: HorizontalAnchor,
+        _vertical_anchor: VerticalAnchor,
+        text: &str,
+    ) {
         info!("Printing text! {}", text);
         writeln!(
             self.file,
@@ -130,6 +137,10 @@ impl<'w> Canvas for SvgOutput<'w> {
             )
             .unwrap();
         }
+    }
+
+    fn draw_circle(&mut self, _center: &Point, _radius: f64) {
+        // TODO!
     }
 }
 

@@ -73,17 +73,16 @@ impl CurveData {
         }
     }
 
-    fn summary(&self) -> Option<Aggregation<Sample, SampleMetrics>> {
+    fn summary(&self, timespan: Option<&TimeSpan>) -> Option<Aggregation<Sample, SampleMetrics>> {
         match &self {
-            CurveData::Points(points) => point_summary(points),
-            CurveData::Trace { name, db } => db.summary(name),
-        }
-    }
-
-    fn range_summary(&self, timespan: &TimeSpan) -> Option<Aggregation<Sample, SampleMetrics>> {
-        match &self {
-            CurveData::Points(_points) => None, // TODO??
-            CurveData::Trace { name, db } => db.range_summary(name, timespan),
+            CurveData::Points(points) => {
+                if timespan.is_some() {
+                    None // TODO??
+                } else {
+                    point_summary(points)
+                }
+            }
+            CurveData::Trace { name, db } => db.summary(name, timespan),
         }
     }
 }
@@ -145,14 +144,12 @@ impl Curve {
         self.stroke.color.clone()
     }
 
-    /// Retrieve a data summary of a time slice of this curve.
-    pub fn range_summary(&self, timespan: &TimeSpan) -> Option<Aggregation<Sample, SampleMetrics>> {
-        self.data.range_summary(timespan)
-    }
-
     /// Retrieve a data summary of this curve.
-    pub fn summary(&self) -> Option<Aggregation<Sample, SampleMetrics>> {
-        self.data.summary()
+    pub fn data_summary(
+        &self,
+        timespan: Option<&TimeSpan>,
+    ) -> Option<Aggregation<Sample, SampleMetrics>> {
+        self.data.summary(timespan)
     }
 
     /// Pull data in for drawing the graph.

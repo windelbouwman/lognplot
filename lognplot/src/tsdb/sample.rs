@@ -55,6 +55,16 @@ impl SampleMetrics {
     pub fn mean(&self) -> f64 {
         self.sum / (self.count as f64)
     }
+
+    /// Calculate the standard deviation
+    pub fn stddev(&self) -> f64 {
+        let variance: f64 = if self.count > 1 {
+            (self.sum_squared - self.sum * self.sum) / self.count as f64
+        } else {
+            0.0
+        };
+        variance.sqrt()
+    }
 }
 
 impl From<Sample> for SampleMetrics {

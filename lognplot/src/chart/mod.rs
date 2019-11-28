@@ -17,7 +17,10 @@ use crate::render::Canvas;
 use crate::render::draw_chart;
 
 /// Entry function to plot a series of x values versus a series of y values!
-pub fn plot(canvas: &mut dyn Canvas, x: Vec<f64>, y: Vec<f64>, size: Size) {
+pub fn plot<C>(canvas: &mut C, x: Vec<f64>, y: Vec<f64>, size: Size)
+where
+    C: Canvas,
+{
     info!("Plotting len(x)= {:?} len(y)= {:?}", x.len(), y.len());
     let mut chart = Chart::default();
     chart.set_xlabel("Time");

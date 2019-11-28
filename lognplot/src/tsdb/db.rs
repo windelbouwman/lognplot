@@ -58,17 +58,12 @@ impl TsDb {
         self.data.get(name).unwrap().query(query)
     }
 
-    /// Get a summary for the given trace.
-    pub fn summary(&self, name: &str) -> Option<Aggregation<Sample, SampleMetrics>> {
-        self.data.get(name).unwrap().summary()
-    }
-
-    /// Calculate a summary of the data within the given timespan.
-    pub fn range_summary(
+    /// Get a summary for a certain timerange (or all time) the given trace.
+    pub fn summary(
         &self,
         name: &str,
-        timespan: &TimeSpan,
+        timespan: Option<&TimeSpan>,
     ) -> Option<Aggregation<Sample, SampleMetrics>> {
-        self.data.get(name).unwrap().range_summary(timespan)
+        self.data.get(name).unwrap().summary(timespan)
     }
 }

@@ -9,6 +9,16 @@ use crate::time::TimeSpan;
 
 use std::cell::RefCell;
 
+/// This is the intermediate level fanout ratio.
+/// A higher number yields less overhead (zoom levels)
+const INTERMEDIATE_CHUNK_SIZE: usize = 5;
+
+/// This constant defines the fanout ratio.
+/// Each leave contains maximum this number of values
+/// Also, each intermediate node also contains this maximum number
+/// of subchunks.
+const LEAVE_CHUNK_SIZE: usize = 16;
+
 /// This implements a b-tree structure.
 ///
 /// The tree structure supports fast lookup
@@ -170,14 +180,6 @@ where
         }
     }
 }
-
-const INTERMEDIATE_CHUNK_SIZE: usize = 5;
-
-/// This constant defines the fanout ratio.
-/// Each leave contains maximum this number of values
-/// Also, each intermediate node also contains this maximum number
-/// of subchunks.
-const LEAVE_CHUNK_SIZE: usize = 32;
 
 /// This is a sort of B+ tree data structure
 /// to store a sequence of sample along with some

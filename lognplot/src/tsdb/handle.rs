@@ -40,15 +40,11 @@ impl LockedTsDb {
         self.db.lock().unwrap().query(name, query)
     }
 
-    pub fn summary(&self, name: &str) -> Option<Aggregation<Sample, SampleMetrics>> {
-        self.db.lock().unwrap().summary(name)
-    }
-
-    pub fn range_summary(
+    pub fn summary(
         &self,
         name: &str,
-        timespan: &TimeSpan,
+        timespan: Option<&TimeSpan>,
     ) -> Option<Aggregation<Sample, SampleMetrics>> {
-        self.db.lock().unwrap().range_summary(name, timespan)
+        self.db.lock().unwrap().summary(name, timespan)
     }
 }
