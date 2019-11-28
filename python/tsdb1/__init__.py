@@ -1,1 +1,0 @@
-from .pager import Pager

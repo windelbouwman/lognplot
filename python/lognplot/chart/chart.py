@@ -2,7 +2,7 @@ import math
 from .axis import Axis
 from .curve import Curve
 from ..utils import bench_it
-from ..tsdb.metrics import merge_metrics
+from ..tsdb import TimeSpan, Aggregation, Metrics
 
 
 class Chart:
@@ -55,23 +55,13 @@ class Chart:
 
     def autoscale_y(self):
         """ Automatically adjust the Y-axis to fit data in range. """
-        begin = self.x_axis.minimum
-        end = self.x_axis.maximum
-        timespan = (begin, end)
-        metrics = []
-        # with bench_it("autoscale_y"):
-        for curve in self.curves:
-            metric = curve.query_metrics(timespan)
-            if metric:
-                metrics.append(metric)
+        timespan = TimeSpan(self.x_axis.minimum, self.x_axis.maximum)
 
-        # If we gathered any metrics, group them here:
-        if metrics:
-            metric = merge_metrics(metrics)
-            self.fit_metrics_y_axis(metric)
-        # print("query result", type(data), len(data))
+        summary = self.data_summary(timespan=timespan)
+        if summary:
+            self.fit_metrics_y_axis(summary.metrics)
 
-    def fit_metrics_y_axis(self, metric):
+    def fit_metrics_y_axis(self, metric: Metrics):
         """ Adjust Y-axis to fit metrics into view. """
         domain = metric.maximum - metric.minimum
 
@@ -83,15 +73,15 @@ class Chart:
         maximum = metric.maximum + domain * 0.05
         self.y_axis.set_limits(minimum, maximum)
 
-    def fit_metrics_on_x_axis(self, metric):
-        """ Adjust X-axis to fit metrics in view. """
+    def fit_timespan_on_x_axis(self, timespan: TimeSpan):
+        """ Adjust X-axis to fit timespan in view. """
 
-        domain = metric.x2 - metric.x1
+        domain = timespan.end - timespan.begin
         if math.isclose(domain, 0):
             domain = 1
 
-        minimum = metric.x1 - domain * 0.05
-        maximum = metric.x2 + domain * 0.05
+        minimum = timespan.begin - domain * 0.05
+        maximum = timespan.end + domain * 0.05
         self.x_axis.set_limits(minimum, maximum)
 
     def get_region(self):
@@ -106,23 +96,24 @@ class Chart:
 
     def zoom_fit(self):
         """ Adjust axis to fit all curves. """
-        metric = self.metrics()
+        summary = self.data_summary()
 
         # If we have metrics, adjust axis.
-        if metric:
-            self.fit_metrics_y_axis(metric)
-            self.fit_metrics_on_x_axis(metric)
+        if summary:
+            self.fit_timespan_on_x_axis(summary.timespan)
+            self.fit_metrics_y_axis(summary.metrics)
 
-    def metrics(self):
+    def data_summary(self, timespan=None) -> Aggregation:
         """ Metrics of all signals in the plot. """
 
         # Gather bounding boxes of all curves:
-        metrics = []
+        aggregations = []
         for curve in self.curves:
-            metric = curve.query_summary()
-            if metric:
-                metrics.append(metric)
+            aggregation = curve.query_summary(timespan=timespan)
+
+            if aggregation:
+                aggregations.append(aggregation)
 
         # If we have bounds, merge them and adjust axis.
-        if metrics:
-            return merge_metrics(metrics)
+        if aggregations:
+            return Aggregation.from_aggregations(aggregations)

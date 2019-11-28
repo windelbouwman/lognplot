@@ -1,7 +1,7 @@
 import abc
-from ..utils import chunk
-from .metrics import Metrics, sample_to_metric, samples_to_metric
 from .btree import Btree
+from .aggregation import Aggregation
+from .timespan import TimeSpan
 
 
 class Serie(metaclass=abc.ABCMeta):
@@ -47,12 +47,11 @@ class ZoomSerie(Serie):
     def __iter__(self):
         return iter(self._tree)
 
-    @property
-    def metrics(self):
-        return self._tree.metrics
-
-    def query(self, selection_timespan, min_count):
+    def query(self, selection_timespan: TimeSpan, min_count: int):
         return self._tree.query(selection_timespan, min_count)
 
-    def query_metrics(self, selection_timespan):
-        return self._tree.query_metrics(selection_timespan)
+    def query_summary(self, selection_timespan=None) -> Aggregation:
+        if selection_timespan:
+            return self._tree.query_metrics(selection_timespan)
+        else:
+            return self._tree.aggregation

@@ -2,6 +2,8 @@
 """
 
 from .series import ZoomSerie
+from .aggregation import Aggregation
+from .timespan import TimeSpan
 
 
 class TsDb:
@@ -24,31 +26,27 @@ class TsDb:
             self._traces[name] = serie
         return serie
 
-    def add_sample(self, name, sample):
+    def add_sample(self, name: str, sample):
         """ Add a single sample to the given series. """
         serie = self.get_or_create_serie(name)
         serie.add_sample(sample)
 
-    def add_samples(self, name, samples):
+    def add_samples(self, name: str, samples):
         """ Add samples to the given series. """
         serie = self.get_or_create_serie(name)
         serie.add_samples(samples)
 
-    def query_len(self, name):
+    def query_len(self, name: str) -> int:
         """ Get the length of a given series. """
         serie = self.get_or_create_serie(name)
         return len(serie)
 
-    def query_summary(self, name):
+    def query_summary(self, name: str, timespan=None) -> Aggregation:
         serie = self.get_or_create_serie(name)
-        return serie.metrics
+        return serie.query_summary(selection_timespan=timespan)
 
-    def query(self, name, timespan, count):
+    def query(self, name: str, timespan: TimeSpan, count: int):
         """ Query the database on the given signal.
         """
         serie = self.get_or_create_serie(name)
         return serie.query(timespan, count)
-
-    def query_metrics(self, name, timespan):
-        serie = self.get_or_create_serie(name)
-        return serie.query_metrics(timespan)

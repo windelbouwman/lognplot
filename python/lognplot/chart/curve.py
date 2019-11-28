@@ -1,3 +1,6 @@
+from ..tsdb.aggregation import Aggregation
+
+
 class Curve:
     """ A curve is a view onto a signal in the database.
 
@@ -18,12 +21,9 @@ class Curve:
     def __len__(self):
         return self._db.query_len(self.name)
 
-    def query_summary(self):
-        return self._db.query_summary(self.name)
+    def query_summary(self, timespan=None) -> Aggregation:
+        return self._db.query_summary(self.name, timespan=timespan)
 
     def query(self, selection_timespan, min_count):
         # TODO: cache calls here?
         return self._db.query(self.name, selection_timespan, min_count)
-
-    def query_metrics(self, selection_timespan):
-        return self._db.query_metrics(self.name, selection_timespan)

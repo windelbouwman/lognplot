@@ -3,7 +3,7 @@ from PyQt5.QtGui import QPainter, QPen, QPolygon, QBrush, QColor
 from PyQt5.QtCore import QRect, Qt, QPoint
 from ...chart import Chart
 from ...utils import bench_it, clip
-from ...tsdb.metrics import Metrics
+from ...tsdb import Metrics, TimeSpan, Aggregation
 from .layout import ChartLayout
 
 
@@ -160,7 +160,7 @@ class ChartRenderer:
         begin = self.chart.x_axis.minimum
         end = self.chart.x_axis.maximum
         assert begin <= end
-        timespan = (begin, end)
+        timespan = TimeSpan(begin, end)
         # Determine how many data points we wish to visualize
         # This greatly determines drawing performance.
         min_count = int(self._layout.chart_width / 40)
@@ -169,9 +169,9 @@ class ChartRenderer:
         curve_color = QColor(curve.color)
 
         if data:
-            if isinstance(data[0], Metrics):
+            if isinstance(data[0], Aggregation):
                 # self._draw_metrics_as_blocks(data)
-                self._draw_metrics_as_shape(data, curve_color)
+                self._draw_aggregations_as_shape(data, curve_color)
             else:
                 self._draw_samples_as_lines(data, curve_color)
 
@@ -209,7 +209,9 @@ class ChartRenderer:
             min_max_rect = QRect(x1, y1, width, height)
             self.painter.fillRect(min_max_rect, brush)
 
-    def _draw_metrics_as_shape(self, metrics, curve_color: QColor):
+    def _draw_aggregations_as_shape(
+        self, aggregations: Aggregation, curve_color: QColor
+    ):
         """ Draw aggregates as polygon shapes.
 
         This works by creating a contour around the min / max values.
@@ -224,22 +226,22 @@ class ChartRenderer:
         stddev_down_points = []
 
         # Forward sweep:
-        for metric in metrics:
-            x1 = self._to_x_pixel(metric.x1)
+        for aggregation in aggregations:
+            x1 = self._to_x_pixel(aggregation.timespan.central_timestamp())
             # x2 = self._to_x_pixel(metric.x2)
 
             # max line:
-            y_max = self._to_y_pixel(metric.maximum)
+            y_max = self._to_y_pixel(aggregation.metrics.maximum)
             max_points.append(QPoint(x1, y_max))
             # max_points.append(QPoint(x2, y_max))
 
             # min line:
-            y_min = self._to_y_pixel(metric.minimum)
+            y_min = self._to_y_pixel(aggregation.metrics.minimum)
             min_points.append(QPoint(x1, y_min))
             # min_points.append(QPoint(x2, y_min))
 
-            mean = metric.mean
-            stddev = metric.stddev
+            mean = aggregation.metrics.mean
+            stddev = aggregation.metrics.stddev
 
             # Mean line:
             y_mean = self._to_y_pixel(mean)

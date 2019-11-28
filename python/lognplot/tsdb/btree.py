@@ -4,7 +4,9 @@ Idea is to create summary levels on top of chunks of data.
 """
 
 import abc
-from .metrics import Metrics, sample_to_metric, merge_metrics, samples_to_metric
+from .metrics import Metrics
+from .aggregation import Aggregation
+from .timespan import TimeSpan
 
 
 class Btree:
@@ -14,8 +16,8 @@ class Btree:
         self.root_node = BtreeLeaveNode(self._leave_max)
 
     @property
-    def metrics(self):
-        return self.root_node.metrics
+    def aggregation(self):
+        return self.root_node.aggregation
 
     def append(self, sample):
         """ Append a single sample. """
@@ -43,31 +45,35 @@ class Btree:
 
     def __len__(self):
         # Return total number of samples!
-        return self.metrics.count
+        return self.aggregation.metrics.count
 
     def __iter__(self):
         for sample in self.root_node:
             yield sample
 
-    def query(self, selection_timespan, min_count):
+    def query(self, selection_timespan: TimeSpan, min_count):
         """ Query this tree for some data between the given points.
         """
 
         # Initial query result:
-        nodes = self.root_node.select_range(selection_timespan)
+        selection = self.root_node.select_range(selection_timespan)
 
         # Enhance resolution, while not enough samples.
-        while nodes and len(nodes) < min_count and isinstance(nodes[0], BtreeNode):
-            nodes = enhance(nodes, selection_timespan)
+        while (
+            selection
+            and len(selection) < min_count
+            and isinstance(selection[0], BtreeNode)
+        ):
+            selection = enhance(selection, selection_timespan)
 
         # Take metrics from internal nodes:
-        if nodes and isinstance(nodes[0], BtreeNode):
-            nodes = [n.metrics for n in nodes]
+        if selection and isinstance(selection[0], BtreeNode):
+            selection = [n.aggregation for n in selection]
 
-        return nodes
+        return selection
 
-    def query_metrics(self, selection_timespan):
-        """ Retrieve metrics from a given range. """
+    def query_metrics(self, selection_timespan: TimeSpan) -> Aggregation:
+        """ Retrieve aggregation from a given range. """
 
         partially_selected = [self.root_node]
         selected_aggregations = []
@@ -79,8 +85,8 @@ class Btree:
             if selection:
                 if isinstance(selection[0], BtreeNode):
                     for node in selection:
-                        aggregation = node.metrics
-                        if covers(selection_timespan, (aggregation.x1, aggregation.x2)):
+                        aggregation = node.aggregation
+                        if selection_timespan.covers(aggregation.timespan):
                             selected_aggregations.append(aggregation)
                         else:
                             partially_selected.append(node)
@@ -90,15 +96,10 @@ class Btree:
         # print(len(selected_aggregations), len(selected_samples))
 
         if selected_samples:
-            selected_aggregations.append(samples_to_metric(selected_samples))
+            selected_aggregations.append(Aggregation.from_samples(selected_samples))
 
         if selected_aggregations:
-            return merge_metrics(selected_aggregations)
-
-
-def covers(span1, span2):
-    """ Test if timespan covers span2 fully. """
-    return (span1[0] <= span2[0]) and (span2[1] <= span1[1])
+            return Aggregation.from_aggregations(selected_aggregations)
 
 
 def enhance(nodes, selection_span):
@@ -109,23 +110,13 @@ def enhance(nodes, selection_span):
     if len(nodes) == 1:
         new_nodes.extend(nodes[0].select_range(selection_span))
     else:
+        # Assume here first and last selected node overlap partially.
         assert len(nodes) > 1
         new_nodes.extend(nodes[0].select_range(selection_span))
         for node in nodes[1:-1]:
             new_nodes.extend(node.select_all())
         new_nodes.extend(nodes[-1].select_range(selection_span))
     return new_nodes
-
-
-def overlap(span1, span2):
-    """ Test if two spans overlap.
-
-    Parameters are two spans, which are tuples of (begin, end).
-    """
-    assert span1[0] <= span1[1]
-    assert span2[0] <= span2[1]
-
-    return span1[0] <= span2[1] and span2[0] <= span1[1]
 
 
 class BtreeNode(metaclass=abc.ABCMeta):
@@ -147,7 +138,7 @@ class BtreeNode(metaclass=abc.ABCMeta):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def select_range(self, selection_span):
+    def select_range(self, selection_span: TimeSpan):
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -164,21 +155,19 @@ class BtreeInternalNode(BtreeNode):
     def __init__(self, max_children):
         self._children = []
         self.max_children = max_children
-        self._metrics = None
+        self._aggregation = None
 
     @property
-    def metrics(self):
-        if self._metrics is None:
-            return self.calculate_metrics_from_children()
+    def aggregation(self) -> Aggregation:
+        if self._aggregation is None:
+            return self.calculate_aggregation_from_children()
         else:
-            assert self._metrics
-            return self._metrics
+            assert self._aggregation
+            return self._aggregation
 
-    def calculate_metrics_from_children(self):
-        # print(self._children)
-        child_metrics = [c.metrics for c in self._children]
-        # print(child_metrics)
-        return merge_metrics(child_metrics)
+    def calculate_aggregation_from_children(self) -> Aggregation:
+        child_aggregations = [c.aggregation for c in self._children]
+        return Aggregation.from_aggregations(child_aggregations)
 
     def add_child(self, child_node):
         self._children.append(child_node)
@@ -205,7 +194,7 @@ class BtreeInternalNode(BtreeNode):
             self.add_child(child_node)
         else:
             # We are full, calculate metrics!
-            self._metrics = self.calculate_metrics_from_children()
+            self._aggregation = self.calculate_aggregation_from_children()
             new_sibling = BtreeInternalNode(self.max_children)
             new_sibling.add_child(child_node)
             return new_sibling
@@ -217,23 +206,19 @@ class BtreeInternalNode(BtreeNode):
             for sample in child:
                 yield sample
 
-    def select_range(self, selection_span):
+    def select_range(self, selection_span: TimeSpan):
         """ Select a range of nodes falling between `begin` and `end` """
         assert self._children
 
         in_range_children = []
-        full_span = (self.metrics.x1, self.metrics.x2)
-        if overlap(full_span, selection_span):
+        full_span = self.aggregation.timespan
+        if selection_span.overlaps(full_span):
             # In range, so:
             # Some overlap!
             # Find first node:
             for node in self._children:
-                node_span = (node.metrics.x1, node.metrics.x2)
-                if overlap(selection_span, node_span):
+                if selection_span.overlaps(node.aggregation.timespan):
                     in_range_children.append(node)
-        else:
-            # out of range
-            pass
 
         return in_range_children
 
@@ -250,11 +235,11 @@ class BtreeLeaveNode(BtreeNode):
     def __init__(self, max_samples):
         self.samples = []
         self.max_samples = max_samples
-        self._metrics = None
+        self._aggregation = None
 
     @property
-    def metrics(self):
-        return self._metrics
+    def aggregation(self) -> Aggregation:
+        return self._aggregation
 
     @property
     def full(self):
@@ -264,11 +249,11 @@ class BtreeLeaveNode(BtreeNode):
         self.samples.append(sample)
 
         # Update metrics:
-        metric = sample_to_metric(sample)
-        if self._metrics:
-            self._metrics = self._metrics + metric
+        aggregation = Aggregation.from_sample(sample)
+        if self._aggregation:
+            self._aggregation += aggregation
         else:
-            self._metrics = metric
+            self._aggregation = aggregation
 
     def append(self, sample):
         if len(self.samples) < self.max_samples:
@@ -287,19 +272,19 @@ class BtreeLeaveNode(BtreeNode):
         for sample in self.samples:
             yield sample
 
-    def select_range(self, selection_span):
+    def select_range(self, selection_span: TimeSpan):
         """ Select a range of samples falling between `begin` and `end` """
         if not self.samples:
             return []
 
+        full_span = self.aggregation.timespan
         in_range_samples = []
-        full_span = (self.metrics.x1, self.metrics.x2)
-        if overlap(full_span, selection_span):
+        if selection_span.overlaps(full_span):
             # In range, so:
             # Some overlap!
             # Find first node:
             for sample in self.samples:
-                if selection_span[0] <= sample[0] <= selection_span[1]:
+                if selection_span.contains_timestamp(sample[0]):
                     in_range_samples.append(sample)
         else:
             # out of range
