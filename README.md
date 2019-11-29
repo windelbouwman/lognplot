@@ -20,6 +20,25 @@ Plan:
 - PyQt5 implementation
 - gtk-rs implementation
 
+# Usage
+
+To use the python side of this code, start as a demo the softscope:
+
+    $ cd python
+    $ python softscope.py
+
+This will popup a plot window. Zooming and panning can be done with the keyboard
+keys w,a,s,d and i,j,k,l.
+
+Another demo is the rust side of the code. Start the GUI like this:
+
+    $ cargo run
+
+Next, start the demo datasource, which will send data via TCP to this GUI:
+
+    $ cd demo
+    $ python noize_source.py
+
 # Documentation
 
 Documentation for python users can be found here: https://lognplot.readthedocs.io/en/latest/
