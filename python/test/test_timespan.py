@@ -1,5 +1,5 @@
 import unittest
-from lognplot.tsdb.timespan import TimeSpan
+from lognplot.time import TimeSpan
 
 
 class OverlapTestCase(unittest.TestCase):

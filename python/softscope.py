@@ -7,12 +7,12 @@ import math
 import time
 import random
 import threading
-from PyQt5.QtWidgets import QApplication
+from lognplot.qt.qtapi import QtWidgets
 from lognplot.qt.widgets import SoftScope
 
 
 def main():
-    app = QApplication([])
+    app = QtWidgets.QApplication([])
     scope = SoftScope()
     t1 = threading.Thread(target=gen_data, args=(scope.add_samples,), daemon=True)
     t1.start()

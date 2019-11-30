@@ -1,7 +1,6 @@
 """ Render a graph on a QPainter. """
 import contextlib
-from PyQt5.QtGui import QPainter, QPen, QPolygon, QBrush, QColor
-from PyQt5.QtCore import QRect, Qt, QPoint
+from ..qtapi import QtGui, QtCore, Qt
 from ...chart import Chart
 from ...utils import bench_it, clip
 from ...tsdb.metrics import Metrics
@@ -22,11 +21,11 @@ class Renderer:
     Optionally include a minimap?
     """
 
-    def __init__(self, painter: QPainter, chart: Chart):
+    def __init__(self, painter: QtGui.QPainter, chart: Chart):
         self.painter = painter
         self.chart = chart
 
-    def render(self, rect: QRect):
+    def render(self, rect: QtCore.QRect):
         options1 = ChartOptions()
         chart_renderer = ChartRenderer(self.painter, rect, self.chart, options1)
         chart_renderer.render()
@@ -41,7 +40,7 @@ class Renderer:
         minimap_options = ChartOptions()
         minimap_options.padding = 2
         minimap_options.show_axis = False
-        minimap_rect = QRect(rect.x() + 40, rect.y() + 40, 120, 80)
+        minimap_rect = QtCore.QRect(rect.x() + 40, rect.y() + 40, 120, 80)
         self.painter.fillRect(minimap_rect, Qt.yellow)
         minimap_chart_renderer = ChartRenderer(
             self.painter, minimap_rect, minimap_chart, minimap_options

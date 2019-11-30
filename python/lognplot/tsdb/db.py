@@ -3,7 +3,7 @@
 
 from .series import ZoomSerie
 from .aggregation import Aggregation
-from .timespan import TimeSpan
+from ..time import TimeSpan
 
 
 class TsDb:

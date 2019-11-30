@@ -28,5 +28,8 @@ Reference
 .. automodule:: lognplot.tsdb.metrics
     :members:
 
-.. automodule:: lognplot.tsdb.timespan
+.. automodule:: lognplot.time.timespan
+    :members:
+
+.. automodule:: lognplot.time.duration
     :members:

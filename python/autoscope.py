@@ -2,13 +2,13 @@
 """
 
 import time
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout
+from lognplot.qt.qtapi import QtWidgets
 from lognplot.tsdb import TsDb
 from lognplot.qt.widgets import ChartWidget
 
 
 def main():
-    app = QApplication([])
+    app = QtWidgets.QApplication([])
     w = AutoScopeGraphWidget()
     w.show()
     app.exec()
@@ -27,7 +27,7 @@ class BenchmarkedChartWidget(ChartWidget):
         self._callback(t1, duration)
 
 
-class AutoScopeGraphWidget(QWidget):
+class AutoScopeGraphWidget(QtWidgets.QWidget):
     def __init__(self):
         super().__init__()
         self._db = TsDb()
@@ -38,7 +38,7 @@ class AutoScopeGraphWidget(QWidget):
         self._chart_widget = BenchmarkedChartWidget(self._db, append_measurement)
         self._chart_widget.add_curve("S1", "red")
 
-        l = QVBoxLayout()
+        l = QtWidgets.QVBoxLayout()
         l.addWidget(self._chart_widget)
         self.setLayout(l)
 

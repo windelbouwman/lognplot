@@ -5,15 +5,14 @@ Include this into your application to view signals.
 
 import queue
 
-from PyQt5.QtWidgets import QWidget, QHBoxLayout, QListView, QSplitter
-from PyQt5.QtCore import QTimer
-
+from ..qtapi import QtWidgets, QtCore
 from ...tsdb import TsDb
 from .chartwidget import ChartWidget
 from .signal_list import SignalListModel
+from .timespan_toolbutton import DurationToolButton
 
 
-class SoftScope(QWidget):
+class SoftScope(QtWidgets.QWidget):
     """ A complete softscope widget.
 
     Include this into your application to view signals.
@@ -24,22 +23,33 @@ class SoftScope(QWidget):
         self.db = TsDb()
 
         # Child widgets:
-        self._signal_view = QListView()
+        self._signal_view = QtWidgets.QListView()
+
         self._chart_widget = ChartWidget(self.db)
         self._signal_list_model = SignalListModel(self.db)
         self._signal_view.setModel(self._signal_list_model)
         self._signal_view.setDragEnabled(True)
 
+        toolbar = QtWidgets.QToolBar()
+        self._span_selector = DurationToolButton()
+        toolbar.addWidget(self._span_selector)
+        self._span_selector.duration_selected.connect(self._enable_tailing)
+
         # Layouting:
-        splitter = QSplitter()
+        l = QtWidgets.QVBoxLayout()
+        # l3 = QtWidgets.QHBoxLayout()
+        # l3.addWidget(toolbar)
+        l.addWidget(toolbar)
+        splitter = QtWidgets.QSplitter()
         splitter.addWidget(self._signal_view)
         splitter.addWidget(self._chart_widget)
-        l = QHBoxLayout()
-        l.addWidget(splitter)
+        l2 = QtWidgets.QHBoxLayout()
+        l2.addWidget(splitter)
+        l.addLayout(l2)
         self.setLayout(l)
 
         self._rx_queue = queue.Queue()
-        self._timer = QTimer()
+        self._timer = QtCore.QTimer()
         self._timer.timeout.connect(self._on_timeout)
         self._timer.start(50)
 
@@ -53,6 +63,9 @@ class SoftScope(QWidget):
     def add_curve(self, name, color):
         self._chart_widget.add_curve(name, color)
 
+    def _enable_tailing(self, timespan):
+        self._last_span = timespan
+
     def _on_timeout(self):
         if not self._rx_queue.empty():
             while not self._rx_queue.empty():
@@ -61,6 +74,10 @@ class SoftScope(QWidget):
                 self.db.add_samples(name, samples)
                 self._rx_queue.task_done()
             self._chart_widget.update()
+
+        # Follow last x seconds:
+        if hasattr(self, "_last_span"):
+            self._chart_widget.zoom_to_last(self._last_span)
 
         # Hmm, ugly polling?
         self._signal_list_model.update()

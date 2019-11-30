@@ -1,6 +1,6 @@
 import unittest
-from lognplot.tsdb.btree import Btree
-from lognplot.tsdb.timespan import TimeSpan
+from lognplot.tsdb import Btree
+from lognplot.time import TimeSpan
 
 
 class BtreeTestCase(unittest.TestCase):

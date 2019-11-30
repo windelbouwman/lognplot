@@ -3,10 +3,7 @@
 Include this widget into your application to plot data.
 """
 from itertools import cycle
-from PyQt5.QtWidgets import QWidget
-from PyQt5.QtGui import QPainter, QPen
-from PyQt5.QtCore import Qt
-
+from ..qtapi import QtCore, QtWidgets, QtGui, Qt, pyqtSignal
 from ...utils import bench_it
 from ...chart import Chart
 from ..render import render_chart_on_qpainter
@@ -14,7 +11,7 @@ from ..render import render_chart_on_qpainter
 color_wheel = ["blue", "red", "green", "black", "yellow"]
 
 
-class ChartWidget(QWidget):
+class ChartWidget(QtWidgets.QWidget):
     """ Charting widget.
     """
 
@@ -30,20 +27,22 @@ class ChartWidget(QWidget):
         self.setAcceptDrops(True)
 
     def dragEnterEvent(self, event):
-        print("drag enter!")
+        # print("drag enter!")
         if event.mimeData().hasFormat("text/plain"):
-            print("accept drag")
+            # print("accept drag")
             event.acceptProposedAction()
 
     def dragMoveEvent(self, event):
-        print("drag move event!")
+        # print("drag move event!")
+        pass
 
     def dragLeaveEvent(self, event):
-        print("drag leave!")
+        # print("drag leave!")
+        pass
 
     def dropEvent(self, event):
         names = event.mimeData().text()
-        print("Mime data text", names, type(names))
+        # print("Mime data text", names, type(names))
         for name in names.split(":"):
             self.add_curve(name)
 
@@ -55,13 +54,13 @@ class ChartWidget(QWidget):
         super().paintEvent(e)
 
         # Contrapt graph via QPainter!
-        painter = QPainter(self)
+        painter = QtGui.QPainter(self)
         # with bench_it("render"):
         render_chart_on_qpainter(self.chart, painter, self.rect())
 
         # Draw focus indicator:
         if self.hasFocus():
-            pen = QPen(Qt.red)
+            pen = QtGui.QPen(Qt.red)
             pen.setWidth(4)
             painter.setPen(pen)
             painter.drawRect(self.rect())
@@ -118,6 +117,12 @@ class ChartWidget(QWidget):
 
     def zoom_fit(self):
         self.chart.zoom_fit()
+        self.update()
+
+    def zoom_to_last(self, span):
+        """ Zoom to fit the last x time in view.
+        """
+        self.chart.zoom_to_last(span)
         self.update()
 
     def keyPressEvent(self, e):

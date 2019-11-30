@@ -1,9 +1,9 @@
 import contextlib
-from PyQt5.QtGui import QPainter, QPen, QPolygon, QBrush, QColor
-from PyQt5.QtCore import QRect, Qt, QPoint
+from ..qtapi import QtGui, QtCore, Qt
 from ...chart import Chart
 from ...utils import bench_it, clip
-from ...tsdb import Metrics, TimeSpan, Aggregation
+from ...tsdb import Metrics, Aggregation
+from ...time import TimeSpan
 from .layout import ChartLayout
 
 
@@ -11,7 +11,9 @@ class ChartRenderer:
     """ This class can render a chart onto a painter.
     """
 
-    def __init__(self, painter: QPainter, rect: QRect, chart: Chart, options):
+    def __init__(
+        self, painter: QtGui.QPainter, rect: QtCore.QRect, chart: Chart, options
+    ):
         self.painter = painter
         # self._rect = rect
         self.chart = chart
@@ -48,7 +50,7 @@ class ChartRenderer:
 
         This is handy for the minimap.
         """
-        color = QColor(Qt.gray)
+        color = QtGui.QColor(Qt.gray)
         color.setAlphaF(0.7)
         # shade_brush = QBrush(color)
         # self.painter.setBrush(shade_brush)
@@ -65,7 +67,7 @@ class ChartRenderer:
 
     def _draw_bouding_rect(self):
         """ Draw a bounding box around the plotting area. """
-        pen = QPen(Qt.black)
+        pen = QtGui.QPen(Qt.black)
         pen.setWidth(2)
         self.painter.setPen(pen)
         self.painter.setBrush(Qt.NoBrush)
@@ -79,7 +81,7 @@ class ChartRenderer:
 
     def _draw_grid(self, x_ticks, y_ticks):
         """ Render a grid on the given x and y tick markers. """
-        pen = QPen(Qt.gray)
+        pen = QtGui.QPen(Qt.gray)
         pen.setWidth(1)
         self.painter.setPen(pen)
 
@@ -97,7 +99,7 @@ class ChartRenderer:
 
     def _draw_x_axis(self, x_ticks):
         """ Draw the X-axis. """
-        pen = QPen(Qt.black)
+        pen = QtGui.QPen(Qt.black)
         pen.setWidth(2)
         self.painter.setPen(pen)
         margin = 5
@@ -117,7 +119,7 @@ class ChartRenderer:
 
     def _draw_y_axis(self, y_ticks):
         """ Draw the Y-axis. """
-        pen = QPen(Qt.black)
+        pen = QtGui.QPen(Qt.black)
         pen.setWidth(2)
         self.painter.setPen(pen)
         x = self._layout.chart_right + 5
@@ -166,7 +168,7 @@ class ChartRenderer:
         min_count = int(self._layout.chart_width / 40)
         data = curve.query(timespan, min_count)
         # print("query result", type(data), len(data))
-        curve_color = QColor(curve.color)
+        curve_color = QtGui.QColor(curve.color)
 
         if data:
             if isinstance(data[0], Aggregation):
@@ -175,20 +177,21 @@ class ChartRenderer:
             else:
                 self._draw_samples_as_lines(data, curve_color)
 
-    def _draw_samples_as_lines(self, samples, curve_color: QColor):
+    def _draw_samples_as_lines(self, samples, curve_color: QtGui.QColor):
         """ Draw raw samples as lines! """
-        pen = QPen(curve_color)
+        pen = QtGui.QPen(curve_color)
         pen.setWidth(2)
         self.painter.setPen(pen)
         points = [
-            QPoint(self._to_x_pixel(x), self._to_y_pixel(y)) for (x, y) in samples
+            QtCore.QPoint(self._to_x_pixel(x), self._to_y_pixel(y))
+            for (x, y) in samples
         ]
-        line = QPolygon(points)
+        line = QtGui.QPolygon(points)
         self.painter.drawPolyline(line)
 
         # Draw markers:
         for point in points:
-            rect = QRect(point.x() - 3, point.y() - 3, 6, 6)
+            rect = QtCore.QRect(point.x() - 3, point.y() - 3, 6, 6)
             self.painter.drawEllipse(rect)
 
     def _draw_metrics_as_blocks(self, metrics):
@@ -196,7 +199,7 @@ class ChartRenderer:
 
         This is alternative 1 to draw metrics.
         """
-        brush = QBrush(Qt.lightGray)
+        brush = QtGui.QBrush(Qt.lightGray)
         # Draw a series of min/max rectangles.
         for compaction in metrics:
             x1 = self._to_x_pixel(compaction.x1)
@@ -206,11 +209,11 @@ class ChartRenderer:
             height = max(y2 - y1, 1)  # minimal 1 pixel
             width = max(x2 - x1, 1)  # minimal 1 pixel
             # print(f'{width}x{height}')
-            min_max_rect = QRect(x1, y1, width, height)
+            min_max_rect = QtCore.QRect(x1, y1, width, height)
             self.painter.fillRect(min_max_rect, brush)
 
     def _draw_aggregations_as_shape(
-        self, aggregations: Aggregation, curve_color: QColor
+        self, aggregations: Aggregation, curve_color: QtGui.QColor
     ):
         """ Draw aggregates as polygon shapes.
 
@@ -232,72 +235,72 @@ class ChartRenderer:
 
             # max line:
             y_max = self._to_y_pixel(aggregation.metrics.maximum)
-            max_points.append(QPoint(x1, y_max))
-            # max_points.append(QPoint(x2, y_max))
+            max_points.append(QtCore.QPoint(x1, y_max))
+            # max_points.append(QtCore.QPoint(x2, y_max))
 
             # min line:
             y_min = self._to_y_pixel(aggregation.metrics.minimum)
-            min_points.append(QPoint(x1, y_min))
-            # min_points.append(QPoint(x2, y_min))
+            min_points.append(QtCore.QPoint(x1, y_min))
+            # min_points.append(QtCore.QPoint(x2, y_min))
 
             mean = aggregation.metrics.mean
             stddev = aggregation.metrics.stddev
 
             # Mean line:
             y_mean = self._to_y_pixel(mean)
-            mean_points.append(QPoint(x1, y_mean))
-            # mean_points.append(QPoint(x2, y_mean))
+            mean_points.append(QtCore.QPoint(x1, y_mean))
+            # mean_points.append(QtCore.QPoint(x2, y_mean))
 
             # stddev up line:
             y_stddev_up = self._to_y_pixel(mean + stddev)
-            stddev_up_points.append(QPoint(x1, y_stddev_up))
-            # stddev_up_points.append(QPoint(x2, y_stddev_up))
+            stddev_up_points.append(QtCore.QPoint(x1, y_stddev_up))
+            # stddev_up_points.append(QtCore.QPoint(x2, y_stddev_up))
 
             # stddev down line:
             y_stddev_down = self._to_y_pixel(mean - stddev)
-            stddev_down_points.append(QPoint(x1, y_stddev_down))
-            # stddev_down_points.append(QPoint(x2, y_stddev_down))
+            stddev_down_points.append(QtCore.QPoint(x1, y_stddev_down))
+            # stddev_down_points.append(QtCore.QPoint(x2, y_stddev_down))
 
         # Create contours:
         min_max_points = max_points + list(reversed(min_points))
         stddev_points = stddev_up_points + list(reversed(stddev_down_points))
 
         # Determine colors:
-        stddev_color = QColor(curve_color)
+        stddev_color = QtGui.QColor(curve_color)
         stddev_color.setAlphaF(0.3)
-        min_max_color = QColor(curve_color)
+        min_max_color = QtGui.QColor(curve_color)
         min_max_color.setAlphaF(0.1)
 
         self.painter.setPen(Qt.NoPen)
 
         # Min/max shape:
-        min_max_shape = QPolygon(min_max_points)
-        brush = QBrush(min_max_color)
+        min_max_shape = QtGui.QPolygon(min_max_points)
+        brush = QtGui.QBrush(min_max_color)
         self.painter.setBrush(brush)
         self.painter.drawPolygon(min_max_shape)
 
         # stddev shape:
-        stddev_shape = QPolygon(stddev_points)
-        brush = QBrush(stddev_color)
+        stddev_shape = QtGui.QPolygon(stddev_points)
+        brush = QtGui.QBrush(stddev_color)
         self.painter.setBrush(brush)
         self.painter.drawPolygon(stddev_shape)
 
         # Mean line:
-        pen = QPen(curve_color)
+        pen = QtGui.QPen(curve_color)
         pen.setWidth(2)
         self.painter.setPen(pen)
-        mean_line = QPolygon(mean_points)
+        mean_line = QtGui.QPolygon(mean_points)
         self.painter.drawPolyline(mean_line)
 
         # min/max lines:
         if False:
             # This is a bit ugly:
-            pen = QPen(curve_color)
+            pen = QtGui.QPen(curve_color)
             pen.setWidth(1)
             self.painter.setPen(pen)
-            max_line = QPolygon(max_points)
+            max_line = QtGui.QPolygon(max_points)
             self.painter.drawPolyline(max_line)
-            min_line = QPolygon(min_points)
+            min_line = QtGui.QPolygon(min_points)
             self.painter.drawPolyline(min_line)
 
     def _to_x_pixel(self, value):

@@ -1,8 +1,8 @@
-from PyQt5.QtCore import QRect
+from ..qtapi import QtCore
 
 
 class ChartLayout:
-    def __init__(self, rect: QRect, options):
+    def __init__(self, rect: QtCore.QRect, options):
         # Parameters:
         self.axis_width = 40
         self.axis_height = 40

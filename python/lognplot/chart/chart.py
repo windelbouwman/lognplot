@@ -2,7 +2,8 @@ import math
 from .axis import Axis
 from .curve import Curve
 from ..utils import bench_it
-from ..tsdb import TimeSpan, Aggregation, Metrics
+from ..time import TimeSpan
+from ..tsdb import Aggregation, Metrics
 
 
 class Chart:
@@ -102,6 +103,16 @@ class Chart:
         if summary:
             self.fit_timespan_on_x_axis(summary.timespan)
             self.fit_metrics_y_axis(summary.metrics)
+
+    def zoom_to_last(self, duration):
+        """ To to the last duration in view. """
+        summary = self.data_summary()
+        if summary:
+            end = summary.timespan.end
+            begin = end - duration
+            timespan = TimeSpan(begin, end)
+            self.fit_timespan_on_x_axis(timespan)
+            self.autoscale_y()
 
     def data_summary(self, timespan=None) -> Aggregation:
         """ Metrics of all signals in the plot. """

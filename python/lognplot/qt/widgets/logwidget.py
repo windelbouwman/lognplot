@@ -1,10 +1,8 @@
-from PyQt5.QtWidgets import QWidget
-from PyQt5.QtGui import QPainter
-
+from ..qtapi import QtWidgets, QtGui
 from ..render_log import render_logs_on_qpainter
 
 
-class LogWidget(QWidget):
+class LogWidget(QtWidgets.QWidget):
     """ Visualize log records in chronological order.
     """
 
@@ -16,5 +14,5 @@ class LogWidget(QWidget):
         super().paintEvent(e)
 
         # Contrapt graph via QPainter!
-        painter = QPainter(self)
+        painter = QtGui.QPainter(self)
         render_logs_on_qpainter(self.logs, painter, self.rect())

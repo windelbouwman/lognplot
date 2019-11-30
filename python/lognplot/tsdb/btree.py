@@ -6,7 +6,7 @@ Idea is to create summary levels on top of chunks of data.
 import abc
 from .metrics import Metrics
 from .aggregation import Aggregation
-from .timespan import TimeSpan
+from ..time import TimeSpan
 
 
 class Btree:

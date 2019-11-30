@@ -1,6 +1,6 @@
 import operator
 from functools import reduce
-from .timespan import TimeSpan
+from ..time import TimeSpan
 from .metrics import Metrics
 
 

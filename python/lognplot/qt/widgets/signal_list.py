@@ -1,10 +1,10 @@
 """ Implement a signal list of a time series database.
 """
 
-from PyQt5.QtCore import QAbstractListModel, Qt, QMimeData
+from ..qtapi import QtCore, Qt
 
 
-class SignalListModel(QAbstractListModel):
+class SignalListModel(QtCore.QAbstractListModel):
     def __init__(self, db):
         super().__init__()
         self.db = db
@@ -33,7 +33,7 @@ class SignalListModel(QAbstractListModel):
         return ["text/plain"]
 
     def mimeData(self, indexes):
-        mimeData = QMimeData()
+        mimeData = QtCore.QMimeData()
 
         signal_names = []
         for index in indexes:

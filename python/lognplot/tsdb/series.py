@@ -1,7 +1,7 @@
 import abc
 from .btree import Btree
 from .aggregation import Aggregation
-from .timespan import TimeSpan
+from ..time import TimeSpan
 
 
 class Serie(metaclass=abc.ABCMeta):
