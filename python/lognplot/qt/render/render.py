@@ -30,6 +30,10 @@ class Renderer:
         chart_renderer = ChartRenderer(self.painter, rect, self.chart, options1)
         chart_renderer.render()
 
+        # self.render_minimap(rect)
+
+    def render_minimap(self, rect: QtCore.QRect):
+        """ Render a minimap in the top corner, with an overview where the viewport is. """
         # Create a new chart with the whole thing zoomed
         minimap_chart = Chart(self.chart.db)
         for curve in self.chart.curves:

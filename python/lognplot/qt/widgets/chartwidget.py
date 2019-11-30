@@ -15,6 +15,8 @@ class ChartWidget(QtWidgets.QWidget):
     """ Charting widget.
     """
 
+    manually_zoomed = pyqtSignal()
+
     def __init__(self, db):
         super().__init__()
         self.chart = Chart(db)
@@ -26,6 +28,9 @@ class ChartWidget(QtWidgets.QWidget):
         # Accept drop of signal names
         self.setAcceptDrops(True)
 
+        self._mouse_drag_source = None
+
+    # Drag drop events:
     def dragEnterEvent(self, event):
         # print("drag enter!")
         if event.mimeData().hasFormat("text/plain"):
@@ -46,9 +51,41 @@ class ChartWidget(QtWidgets.QWidget):
         for name in names.split(":"):
             self.add_curve(name)
 
+    # Mouse interactions:
+    def mousePressEvent(self, event):
+        super().mousePressEvent(event)
+        self.manually_zoomed.emit()
+        self._mouse_drag_source = event.x(), event.y()
+        self.update()
+
+    def mouseMoveEvent(self, event):
+        super().mouseMoveEvent(event)
+        self._update_mouse_pan(event.x(), event.y())
+
+    def mouseReleaseEvent(self, event):
+        super().mouseReleaseEvent(event)
+        self._update_mouse_pan(event.x(), event.y())
+        self._mouse_drag_source = None
+
+    def _update_mouse_pan(self, x, y):
+        if self._mouse_drag_source:
+            x0, y0 = self._mouse_drag_source
+            if x != x0 or y != y0:
+                dy = y - y0
+                dx = x - x0
+                self.pan(dx, dy)
+                self._mouse_drag_source = (x, y)
+                self.update()
+
+    def pan(self, dx, dy):
+        print("pan", dx, dy)
+
     def add_curve(self, name, color=None):
         color = color or next(self._colors)
         self.chart.add_curve(name, color)
+
+        # When adding a curve, autozoom is the first thing:
+        self.zoom_fit()
 
     def paintEvent(self, e):
         super().paintEvent(e)
@@ -127,6 +164,7 @@ class ChartWidget(QtWidgets.QWidget):
 
     def keyPressEvent(self, e):
         super().keyPressEvent(e)
+        self.manually_zoomed.emit()
         key = e.key()
         if key == Qt.Key_D or key == Qt.Key_Right:
             self.pan_right()

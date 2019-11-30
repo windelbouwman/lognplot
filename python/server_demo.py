@@ -1,13 +1,13 @@
 """ Demo on how to receive data via TCP/IP. """
 
 import threading
-from PyQt5.QtWidgets import QApplication
+from lognplot.qt.qtapi import QtWidgets
 from lognplot.qt.widgets import SoftScope
 from lognplot.server import run_server
 
 
 def main():
-    app = QApplication([])
+    app = QtWidgets.QApplication([])
     scope = SoftScope()
     t1 = threading.Thread(
         target=run_server, args=(DataSink(scope.add_samples),), daemon=True

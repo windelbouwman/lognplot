@@ -23,9 +23,22 @@ class Duration:
 
     @classmethod
     def from_seconds(cls, seconds):
+        """ Create a duration with the given amount of seconds. """
         return cls(seconds)
 
+    @classmethod
+    def from_milli_seconds(cls, millis):
+        """ Create a duration with the given amount of milli-seconds. """
+        return cls.from_seconds(millis * 1.0e-3)
+
+    @classmethod
+    def from_nano_seconds(cls, nanos):
+        """ Create a duration with the given amount of nano-seconds. """
+        return cls.from_seconds(nanos * 1.0e-9)
+
     def to_seconds(self) -> float:
+        """ Return the amount of seconds in this duration.
+        """
         return self.attos
 
     def __add__(self, other):

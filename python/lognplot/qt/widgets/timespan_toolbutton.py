@@ -13,7 +13,7 @@ class DurationToolButton(QtWidgets.QToolButton):
     def __init__(self):
         super().__init__()
         self.setPopupMode(QtWidgets.QToolButton.InstantPopup)
-        self.setText("Zoom to..")
+        self.setText("Zoom to last ...")
         range_menu = QtWidgets.QMenu()
         for name, duration in RANGES:
             self._make_range_handler(range_menu, name, duration)
@@ -29,6 +29,10 @@ class DurationToolButton(QtWidgets.QToolButton):
 
 # Selectable ranges:
 RANGES = [
+    ("nanosecond", Duration.from_nano_seconds(1)),
+    ("microsecond", Duration.from_nano_seconds(1000)),
+    ("millisecond", Duration.from_milli_seconds(1)),
+    ("100 milliseconds", Duration.from_milli_seconds(100)),
     ("5 seconds", Duration.from_seconds(5)),
     ("10 seconds", Duration.from_seconds(10)),
     ("15 seconds", Duration.from_seconds(15)),
@@ -38,7 +42,7 @@ RANGES = [
     ("10 minutes", Duration.from_minutes(10)),
     ("15 minutes", Duration.from_minutes(15)),
     ("30 minutes", Duration.from_minutes(30)),
-    ("hour", Duration.from_minutes(60)),
+    ("hour", Duration.from_hours(1)),
     ("day", Duration.from_days(1)),
     ("week", Duration.from_days(7)),
     ("month", Duration.from_days(30)),

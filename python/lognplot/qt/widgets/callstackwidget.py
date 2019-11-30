@@ -1,8 +1,7 @@
-from PyQt5.QtWidgets import QWidget
-from PyQt5.QtGui import QPainter
+from ..qtapi import QtWidgets
 
 
-class CallStackWidget(QWidget):
+class CallStackWidget(QtWidgets.QWidget):
     """ Visualize a program callstack. """
 
     def __init__(self):

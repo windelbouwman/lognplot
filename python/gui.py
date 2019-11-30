@@ -1,8 +1,5 @@
 import math
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout
-from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtGui import QPainter
-
+from lognplot.qt.qtapi import QtWidgets
 from lognplot.tsdb import TsDb
 from lognplot.utils import bench_it
 from lognplot.qt.widgets import ChartWidget
@@ -11,7 +8,7 @@ from lognplot.callstackbar import CallStackBar
 
 
 def main():
-    app = QApplication([])
+    app = QtWidgets.QApplication([])
     w = DemoGraphWidget()
     # w = LogWidget()
     # w = CallStackWidget()
@@ -19,12 +16,12 @@ def main():
     app.exec()
 
 
-class DemoGraphWidget(QWidget):
+class DemoGraphWidget(QtWidgets.QWidget):
     def __init__(self):
         super().__init__()
         self._db = TsDb()
         self._chart_widget = ChartWidget(self._db)
-        l = QVBoxLayout()
+        l = QtWidgets.QVBoxLayout()
         l.addWidget(self._chart_widget)
         self.setLayout(l)
         self.resize(600, 400)
@@ -35,7 +32,7 @@ class DemoGraphWidget(QWidget):
         with bench_it(f"create {num_points} demo samples"):
             samples = demo_samples(num_points)
 
-        with bench_it("create zoom series"):
+        with bench_it(f"create zoom series with {len(samples)} samples"):
             self._db.add_samples("S1", samples)
 
         self._chart_widget.add_curve("S1", "blue")
