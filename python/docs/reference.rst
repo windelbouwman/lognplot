@@ -7,15 +7,26 @@ Reference
     :members:
 
 
-.. automodule:: lognplot.chart
+.. automodule:: lognplot.chart.curve
     :members:
 
-.. automodule:: lognplot.axis
+.. automodule:: lognplot.chart.chart
     :members:
 
-.. automodule:: lognplot.btree
+.. automodule:: lognplot.chart.axis
     :members:
 
-.. automodule:: lognplot.metrics
+.. automodule:: lognplot.tsdb.db
     :members:
 
+.. automodule:: lognplot.tsdb.aggregation
+    :members:
+
+.. automodule:: lognplot.tsdb.btree
+    :members:
+
+.. automodule:: lognplot.tsdb.metrics
+    :members:
+
+.. automodule:: lognplot.tsdb.timespan
+    :members:
