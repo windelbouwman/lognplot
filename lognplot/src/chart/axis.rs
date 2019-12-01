@@ -77,6 +77,8 @@ impl ValueAxis {
 /// Given the current axis, calculate sensible
 /// tick spacing.
 fn calc_tick_spacing(domain: f64, n_ticks: usize) -> (i32, f64) {
+    assert!(n_ticks >= 2);
+
     let scale = domain.log10().floor();
     let approx = (10.0_f64).powf(-scale) * domain / (n_ticks as f64);
 

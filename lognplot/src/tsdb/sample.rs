@@ -26,56 +26,81 @@ pub struct SampleMetrics {
     /// The maximum value of all samples
     pub max: f64,
 
-    /// The sum of all values. Together with the count, this
-    /// allows to calculate the average value.
-    pub sum: f64,
+    /// The mean of all values.
+    mean: f64,
 
     /// This value allows for calculation of the variance of the
     /// signal.
-    /// TODO: this value will be insanely large at some point
-    /// in time.
-    pub sum_squared: f64,
+    /// This variable should be private, to hide this weird math from the outside world.
+    /// See also: https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Welford's_online_algorithm
+    m2: f64,
 
     /// The total number of samples
     pub count: usize,
 }
 
 impl SampleMetrics {
-    pub fn new(min: f64, max: f64, sum: f64, sum_squared: f64, count: usize) -> Self {
+    /// Create metrics from a single value!
+    fn from_value(value: f64) -> Self {
         SampleMetrics {
-            min,
-            max,
-            sum,
-            sum_squared,
-            count,
+            min: value,
+            max: value,
+            mean: value,
+            m2: 0.0,
+            count: 1,
+        }
+    }
+
+    /// Include a single observation into the mix:
+    fn inject_value(&mut self, value: f64) {
+        // These updates are trivial:
+        self.min = self.min.min(value);
+        self.max = self.max.max(value);
+        self.count += 1;
+
+        // Less trivial update below.. statistical stuff!
+
+        // Welford online algorithm:
+        let new_mean = self.mean + (value - self.mean) / self.count as f64;
+        let delta = (value - self.mean) * (value - new_mean);
+        self.m2 += delta;
+        self.mean = new_mean;
+    }
+
+    /// Create new metrics from a given series of values.
+    pub fn from_values(values: &[f64]) -> Option<Self> {
+        if values.is_empty() {
+            None
+        } else {
+            let (first, rest) = values.split_first().unwrap();
+            let mut metrics = SampleMetrics::from_value(*first);
+            for value in rest {
+                metrics.inject_value(*value);
+            }
+            Some(metrics)
         }
     }
 
     /// Calculate the mean value of this metrics.
     pub fn mean(&self) -> f64 {
-        self.sum / (self.count as f64)
+        self.mean
+    }
+
+    /// Retrieve the variance
+    pub fn variance(&self) -> f64 {
+        // Use population variance, since we have all samples!
+        self.m2 / self.count as f64
     }
 
     /// Calculate the standard deviation
     pub fn stddev(&self) -> f64 {
-        let variance: f64 = if self.count > 1 {
-            (self.sum_squared - self.sum * self.sum) / self.count as f64
-        } else {
-            0.0
-        };
-        variance.sqrt()
+        self.variance().sqrt()
     }
 }
 
 impl From<Sample> for SampleMetrics {
     fn from(sample: Sample) -> Self {
-        SampleMetrics {
-            min: sample.value,
-            max: sample.value,
-            sum: sample.value,
-            sum_squared: sample.value * sample.value,
-            count: 1,
-        }
+        SampleMetrics::from_value(sample.value)
     }
 }
 
@@ -84,20 +109,66 @@ impl Metrics<Sample> for SampleMetrics {
     /// This involves updating the min and max values
     /// as well as the count and the sum.
     fn update(&mut self, sample: &Sample) {
-        self.min = self.min.min(sample.value);
-        self.max = self.max.max(sample.value);
-
-        self.sum += sample.value;
-        self.sum_squared += sample.value * sample.value;
-        self.count += 1;
+        self.inject_value(sample.value);
     }
 
     /// Include other metrics into this metrics.
     fn include(&mut self, metrics: &SampleMetrics) {
         self.min = self.min.min(metrics.min);
         self.max = self.max.max(metrics.max);
-        self.count += metrics.count;
-        self.sum += metrics.sum;
-        self.sum_squared += metrics.sum_squared;
+
+        let delta = metrics.mean - self.mean;
+        let new_count = self.count + metrics.count;
+        let new_mean = ((self.mean * self.count as f64) + (metrics.mean * metrics.count as f64))
+            / (new_count as f64);
+        let new_m2 = self.m2
+            + metrics.m2
+            + delta * delta * (self.count as f64 * metrics.count as f64) / new_count as f64;
+
+        self.count = new_count;
+        self.mean = new_mean;
+        self.m2 = new_m2;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Metrics;
+    use super::{Sample, SampleMetrics};
+
+    fn almost_equal(v1: f64, v2: f64, tolerance: f64) {
+        assert!((v1 - v2).abs() < tolerance);
+    }
+
+    #[test]
+    fn metric_updates() {
+        // Create test samples:
+        let sample1 = Sample::new(1.0);
+        let sample2 = Sample::new(2.0);
+        let sample3 = Sample::new(3.0);
+        let sample4 = Sample::new(4.0);
+        let sample5 = Sample::new(5.0);
+
+        let mut metrics = SampleMetrics::from(sample1);
+        metrics.update(&sample2);
+        metrics.update(&sample3);
+        metrics.update(&sample4);
+        metrics.update(&sample5);
+
+        assert_eq!(metrics.min, 1.0);
+        assert_eq!(metrics.max, 5.0);
+        assert_eq!(metrics.count, 5);
+        assert_eq!(metrics.mean(), 3.0);
+        assert_eq!(metrics.variance(), 2.0);
+        almost_equal(metrics.stddev(), 1.414213562373, 1.0e-9);
+
+        metrics.include(&metrics.clone());
+
+        assert_eq!(metrics.min, 1.0);
+        assert_eq!(metrics.max, 5.0);
+        assert_eq!(metrics.count, 10);
+        assert_eq!(metrics.mean(), 3.0);
+        assert_eq!(metrics.variance(), 2.0);
+        almost_equal(metrics.stddev(), 1.414213562373, 1.0e-9);
     }
 }

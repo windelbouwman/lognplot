@@ -51,7 +51,7 @@ impl CurveData {
         &self,
         timespan: &TimeSpan,
         amount: usize,
-    ) -> RangeQueryResult<Sample, SampleMetrics> {
+    ) -> Option<RangeQueryResult<Sample, SampleMetrics>> {
         match self {
             // In case of raw data, just return them all.
             CurveData::Points(points) => {
@@ -59,7 +59,7 @@ impl CurveData {
                     .iter()
                     .map(|p| Observation::new(TimeStamp::new(p.x()), Sample::new(p.y())))
                     .collect();
-                RangeQueryResult::Observations(observations)
+                Some(RangeQueryResult::Observations(observations))
             }
 
             // In case of a trace, query database for points.
@@ -92,14 +92,11 @@ fn point_summary(points: &[Point]) -> Option<Aggregation<Sample, SampleMetrics>>
     if points.is_empty() {
         None
     } else {
-        let count = points.len();
-        let (first, rest) = points.split_first().unwrap();
+        let (first, rest) = points
+            .split_first()
+            .expect("At least a single point at this point.");
         let mut xmin = first.x();
         let mut xmax = xmin;
-        let mut ymin = first.y();
-        let mut ymax = ymin;
-        let mut ysum = ymin;
-        let mut ysum_squared = ymin * ymin;
         for p in rest {
             if p.x() > xmax {
                 xmax = p.x();
@@ -108,21 +105,13 @@ fn point_summary(points: &[Point]) -> Option<Aggregation<Sample, SampleMetrics>>
             if p.x() < xmin {
                 xmin = p.x();
             }
-
-            if p.y() > ymax {
-                ymax = p.y();
-            }
-
-            if p.y() < ymin {
-                ymin = p.y();
-            }
-
-            ysum += p.y();
-            ysum_squared += p.y() * p.y();
         }
-
         let timespan = TimeSpan::new(TimeStamp::new(xmin), TimeStamp::new(xmax));
-        let metrics = SampleMetrics::new(ymin, ymax, ysum, ysum_squared, count);
+
+        let y_values: Vec<f64> = points.iter().map(|p| p.y()).collect();
+        let metrics = SampleMetrics::from_values(&y_values).unwrap();
+
+        let count = points.len();
         let aggregation = Aggregation::new(timespan, metrics, count);
         Some(aggregation)
     }
@@ -157,7 +146,7 @@ impl Curve {
         &self,
         timespan: &TimeSpan,
         amount: usize,
-    ) -> RangeQueryResult<Sample, SampleMetrics> {
+    ) -> Option<RangeQueryResult<Sample, SampleMetrics>> {
         self.data.query(timespan, amount)
     }
 }

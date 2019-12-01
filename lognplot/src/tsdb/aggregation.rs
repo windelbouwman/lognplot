@@ -131,7 +131,7 @@ mod tests {
     use crate::time::{TimeSpan, TimeStamp};
 
     #[test]
-    fn metric_updates() {
+    fn aggregation_updates() {
         // Create test samples:
         let t1 = TimeStamp::from_seconds(3);
         let t2 = TimeStamp::from_seconds(8);

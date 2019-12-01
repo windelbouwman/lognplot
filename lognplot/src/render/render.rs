@@ -81,7 +81,7 @@ where
 
     /// Draw x and y axis with tick markers.
     fn draw_axis(&mut self) {
-        let n_x_ticks = self.layout.plot_width as usize / PIXELS_PER_X_TICK;
+        let n_x_ticks = (self.layout.plot_width as usize / PIXELS_PER_X_TICK).max(2);
         let x_ticks: Vec<(TimeStamp, String)> = self
             .chart
             .x_axis
@@ -91,7 +91,7 @@ where
             .collect();
         self.draw_x_axis(&x_ticks);
 
-        let n_y_ticks = self.layout.plot_height as usize / PIXELS_PER_Y_TICK;
+        let n_y_ticks = (self.layout.plot_height as usize / PIXELS_PER_Y_TICK).max(2);
         let y_ticks = self.chart.y_axis.calc_tiks(n_y_ticks);
 
         self.draw_y_axis(&y_ticks);
@@ -210,13 +210,14 @@ where
             // trace!("Plotting curve {:?}", curve);
 
             let color = curve.color();
-            let curve_data = curve.query(&timespan, point_count);
-            match curve_data {
-                RangeQueryResult::Aggregations(aggregations) => {
-                    self.draw_aggregations(aggregations, color);
-                }
-                RangeQueryResult::Observations(observations) => {
-                    self.draw_observations(observations, color);
+            if let Some(curve_data) = curve.query(&timespan, point_count) {
+                match curve_data {
+                    RangeQueryResult::Aggregations(aggregations) => {
+                        self.draw_aggregations(aggregations, color);
+                    }
+                    RangeQueryResult::Observations(observations) => {
+                        self.draw_observations(observations, color);
+                    }
                 }
             }
         }

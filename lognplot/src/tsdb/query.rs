@@ -3,7 +3,6 @@
 //! The database can be queried, and will give a `QueryResult` back.
 
 use super::sample::{Sample, SampleMetrics};
-// use super::{Aggregation, Observation};
 use super::RangeQueryResult;
 use crate::time::{Resolution, TimeSpan, TimeStamp};
 
@@ -84,11 +83,11 @@ impl QueryBuilder {
 #[derive(Debug)]
 pub struct QueryResult {
     pub query: Query,
-    pub inner: RangeQueryResult<Sample, SampleMetrics>,
+    pub inner: Option<RangeQueryResult<Sample, SampleMetrics>>,
 }
 
 impl QueryResult {
     pub fn len(&self) -> usize {
-        self.inner.len()
+        self.inner.as_ref().map(|r| r.len()).unwrap_or(0)
     }
 }

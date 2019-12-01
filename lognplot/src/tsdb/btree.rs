@@ -100,7 +100,9 @@ where
         // let mut selection = root_node.select_range(timespan);
 
         while !partially_selected_nodes.is_empty() {
-            let partial_node = partially_selected_nodes.pop().unwrap();
+            let partial_node = partially_selected_nodes
+                .pop()
+                .expect("Selected nodes must not be empty here!");
             let selection = partial_node.select_range(timespan);
             match selection {
                 RangeSelectionResult::Nodes(nodes) => {
@@ -348,12 +350,12 @@ where
 
                 if nodes.len() == 1 {
                     // Special case of a single node.
-                    nodes.first().unwrap().select_range(timespan)
+                    nodes.first().expect("A single item").select_range(timespan)
                 } else {
                     // perform select range on first and last node, select all on the middle nodes.
                     assert!(nodes.len() > 1);
-                    let (first, tail) = nodes.split_first().unwrap();
-                    let (last, middle) = tail.split_last().unwrap();
+                    let (first, tail) = nodes.split_first().expect("At least a two items");
+                    let (last, middle) = tail.split_last().expect("At least a single item.");
 
                     let mut result = first.select_range(timespan); // first
                     for node in middle {

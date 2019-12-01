@@ -55,7 +55,11 @@ impl TsDb {
 
     /// Query the given trace for data.
     pub fn query(&self, name: &str, query: Query) -> QueryResult {
-        self.data.get(name).unwrap().query(query)
+        if let Some(trace) = self.data.get(name) {
+            trace.query(query)
+        } else {
+            QueryResult { query, inner: None }
+        }
     }
 
     /// Get a summary for a certain timerange (or all time) the given trace.
@@ -64,6 +68,6 @@ impl TsDb {
         name: &str,
         timespan: Option<&TimeSpan>,
     ) -> Option<Aggregation<Sample, SampleMetrics>> {
-        self.data.get(name).unwrap().summary(timespan)
+        self.data.get(name)?.summary(timespan)
     }
 }

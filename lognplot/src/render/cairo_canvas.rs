@@ -15,7 +15,9 @@ impl<'a> CairoCanvas<'a> {
 
 impl<'a> CairoCanvas<'a> {
     fn make_path(&self, points: &[Point]) {
-        let (first, rest) = points.split_first().unwrap();
+        let (first, rest) = points
+            .split_first()
+            .expect("At least two points to make a line");
         self.cr.move_to(first.x(), first.y());
         for p in rest {
             self.cr.line_to(p.x(), p.y());

@@ -37,7 +37,7 @@ impl Trace {
 
         QueryResult {
             query,
-            inner: samples,
+            inner: Some(samples),
         }
     }
 
