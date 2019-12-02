@@ -24,19 +24,23 @@ def main():
     n_samples = 2000
     while True:
         samples = []
+        samples2 = []
         t0 = t
         # Generate samples:
         for _ in range(n_samples):
             omega = 2 * math.pi * F
             omega2 = 2 * math.pi * F2
             sample = A * math.sin(omega * t) + B + A2 * math.cos(omega2 * t)
+            sample2 = A * math.sin(omega * t) + B + A2 * math.cos(omega2 * t) + 9
             samples.append(sample)
+            samples2.append(sample2)
 
             # Increment time:
             t += dt
         
         print(f'Sending {len(samples)} samples')
-        client.send_samples(t0, dt, samples)
+        client.send_samples('Trace1', t0, dt, samples)
+        client.send_samples('Trace2', t0, dt, samples2)
 
         time.sleep(n_samples * dt)
 

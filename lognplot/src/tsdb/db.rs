@@ -37,9 +37,16 @@ impl TsDb {
         make_handle(self)
     }
 
+    fn get_or_create_trace(&mut self, name: &str) -> &mut Trace {
+        if !self.data.contains_key(name) {
+            self.new_trace(name);
+        }
+        self.data.get_mut(name).unwrap()
+    }
+
     /// Add a batch of values
     pub fn add_values(&mut self, name: &str, samples: Vec<Observation<Sample>>) {
-        let trace = self.data.get_mut(name).unwrap();
+        let trace = self.get_or_create_trace(name);
         trace.add_values(samples);
     }
 
@@ -50,7 +57,8 @@ impl TsDb {
     }
 
     pub fn add_value(&mut self, name: &str, observation: Observation<Sample>) {
-        self.data.get_mut(name).unwrap().add_sample(observation);
+        let trace = self.get_or_create_trace(name);
+        trace.add_sample(observation);
     }
 
     /// Query the given trace for data.

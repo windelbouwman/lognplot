@@ -22,11 +22,11 @@ class LognplotTcpClient:
         self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._sock.connect((self._hostname, self._port))
 
-    def send_sample(self, timestamp, value):
-        self.send_samples(timestamp, 1.0, [value])
+    def send_sample(self, name: str, timestamp, value: float):
+        self.send_samples(name, timestamp, 1.0, [value])
 
-    def send_samples(self, t0, dt, samples):
-        data2 = cbor.dumps({"t0": t0, "dt": dt, "data": samples})
+    def send_samples(self, name: str, t0, dt, samples):
+        data2 = cbor.dumps({"name": name, "t0": t0, "dt": dt, "data": samples})
         self.send_message(data2)
 
     def send_message(self, msg_data):

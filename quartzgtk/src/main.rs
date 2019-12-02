@@ -1,7 +1,9 @@
 #[macro_use]
 extern crate log;
 
+mod chart_widget;
 mod mainwindow;
+mod signal_repository;
 mod state;
 
 use lognplot::server::run_server;

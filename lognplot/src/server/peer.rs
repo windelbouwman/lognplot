@@ -23,6 +23,9 @@ impl PeerHandle {
 /// A chunk of data at fixed sample rate.
 #[derive(Deserialize, Debug)]
 struct SampleBatch {
+    /// The name of the signal.
+    name: String,
+
     /// Timestamp of the first sample
     t0: f64,
 
@@ -58,10 +61,6 @@ impl SampleBatch {
 pub fn process_client(_counter: usize, socket: TcpStream, db: TsDbHandle) -> PeerHandle {
     info!("Got incoming socket! {:?}", socket);
 
-    // let trace_name = format!("Client{}", counter);
-    let trace_name = "Trace0";
-    // let trace = db.get_trace(&trace_name);
-
     let (_framed_sink, framed_stream) = Framed::new(socket, LengthDelimitedCodec::new()).split();
     // TODO: use two way communication to give feedback?
 
@@ -79,7 +78,7 @@ pub fn process_client(_counter: usize, socket: TcpStream, db: TsDbHandle) -> Pee
             // }).collect();
             // TODO: instead of direct database access
             // get access to a queue which is processed elsewhere into the database.
-            db.add_values(trace_name, batch.to_samples());
+            db.add_values(&batch.name, batch.to_samples());
             Ok(())
         })
         .map_err(|err| println!("Failed: {:?}", err));

@@ -52,6 +52,11 @@ impl Chart {
         self.curves.push(curve);
     }
 
+    /// Remove all curves from this plot.
+    pub fn clear_curves(&mut self) {
+        self.curves.clear();
+    }
+
     /// Zoom horizontally.
     pub fn zoom_horizontal(&mut self, amount: f64) {
         self.x_axis.zoom(amount);
@@ -79,6 +84,16 @@ impl Chart {
 
         if let Some(summary) = self.data_summary(Some(&timespan)) {
             self.fit_y_axis_to_metrics(summary.metrics());
+        }
+    }
+
+    /// Zoom to the last x time
+    pub fn zoom_to_last(&mut self, tail_duration: f64) {
+        if let Some(summary) = self.data_summary(None) {
+            let end = summary.timespan.end;
+            let begin = end.clone() - tail_duration;
+            let timespan = TimeSpan::new(begin, end);
+            self.fit_x_axis_to_timespan(&timespan);
         }
     }
 

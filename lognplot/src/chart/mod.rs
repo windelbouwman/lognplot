@@ -27,7 +27,7 @@ where
     chart.set_ylabel("Value");
     chart.set_title("W00tie");
     let curve_data = CurveData::points(x, y);
-    let curve = Curve::new(curve_data);
+    let curve = Curve::new(curve_data, "red");
     chart.add_curve(curve);
     chart.autoscale();
     draw_chart(&chart, canvas, size);

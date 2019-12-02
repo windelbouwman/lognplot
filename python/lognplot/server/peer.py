@@ -22,8 +22,9 @@ class Peer:
     async def _handle_msg(self, data):
         msg = cbor.loads(data)
         samples = []
+        name = msg["name"]
         t, dt = msg["t0"], msg["dt"]
         for value in msg["data"]:
             samples.append((t, value))
             t += dt
-        self.data_sink.add_samples("C3", samples)
+        self.data_sink.add_samples(name, samples)

@@ -118,8 +118,8 @@ fn point_summary(points: &[Point]) -> Option<Aggregation<Sample, SampleMetrics>>
 }
 
 impl Curve {
-    pub fn new(data: CurveData) -> Self {
-        let stroke = Stroke::from_str("blue").unwrap();
+    pub fn new(data: CurveData, color: &str) -> Self {
+        let stroke = Stroke::from_str(color).unwrap();
         let legend = None;
 
         Self {

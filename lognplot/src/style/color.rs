@@ -46,6 +46,7 @@ impl FromStr for Color {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let (r, g, b) = match s {
             "red" => (255, 0, 0),
+            "green" => (0, 255, 0),
             "blue" => (0, 0, 255),
             "black" => (0, 0, 0),
             other => {

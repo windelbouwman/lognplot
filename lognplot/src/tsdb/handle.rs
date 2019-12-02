@@ -48,3 +48,9 @@ impl LockedTsDb {
         self.db.lock().unwrap().summary(name, timespan)
     }
 }
+
+impl std::fmt::Display for LockedTsDb {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}", self.db.lock().unwrap())
+    }
+}

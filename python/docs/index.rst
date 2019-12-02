@@ -1,7 +1,3 @@
-.. lognplot documentation master file, created by
-   sphinx-quickstart on Tue Nov 26 19:31:22 2019.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
 
 Welcome to lognplot's documentation!
 ====================================
@@ -18,15 +14,6 @@ The project contains:
 
 - Time series database like structures
 - PyQt5 widgets for chart rendering
-
-Installation
-------------
-
-Install the lognplot library with pip like this:
-
-.. code:: bash
-
-    $ pip install lognplot
 
 Basic example
 -------------
@@ -60,6 +47,8 @@ Table of Contents
     :maxdepth: 2
     :caption: Contents:
 
+    installation
+    howto
     motivation
     reference
 

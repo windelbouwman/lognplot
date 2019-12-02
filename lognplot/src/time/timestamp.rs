@@ -37,3 +37,11 @@ impl PartialOrd for TimeStamp {
         self.amount.partial_cmp(&other.amount)
     }
 }
+
+impl std::ops::Sub<f64> for TimeStamp {
+    type Output = TimeStamp;
+
+    fn sub(self, other: f64) -> TimeStamp {
+        TimeStamp::new(self.amount - other)
+    }
+}
