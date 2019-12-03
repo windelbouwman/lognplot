@@ -6,7 +6,7 @@ from itertools import cycle
 from ..qtapi import QtCore, QtWidgets, QtGui, Qt, pyqtSignal
 from ...utils import bench_it
 from ...chart import Chart
-from ..render import render_chart_on_qpainter
+from ..render import render_chart_on_qpainter, ChartLayout, ChartOptions
 
 color_wheel = ["blue", "red", "green", "black", "yellow"]
 
@@ -79,6 +79,8 @@ class ChartWidget(QtWidgets.QWidget):
 
     def pan(self, dx, dy):
         print("pan", dx, dy)
+        options1 = ChartOptions()
+        layout = ChartLayout(self.rect(), options1)
 
     def add_curve(self, name, color=None):
         color = color or next(self._colors)

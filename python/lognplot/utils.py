@@ -17,7 +17,7 @@ def chunk(sequence, chunk_size):
 
 def clip(value, minimum, maximum):
     """ Clip a value between two other values. """
-    assert minimum <= maximum
+    # assert minimum <= maximum
     if value < minimum:
         return minimum
     elif value > maximum:

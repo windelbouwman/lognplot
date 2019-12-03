@@ -42,7 +42,16 @@ To use the python side of this code, start as a demo the softscope:
     $ python softscope.py
 
 This will popup a plot window. Zooming and panning can be done with the keyboard
-keys w,a,s,d and i,j,k,l. Press space or enter to autofit. The softscope is now
+keys w,a,s,d and i,j,k,l. Press space or enter to autofit. The data is
+a 10 kHz generated signal.
+
+Another demo is the softscope server. This will open a TCP/IP port
+which can receive data.
+
+    $ cd python
+    $ python server_demo.py
+
+The softscope is now
 ready to receive streaming data via network.
 
 Next, start the demo datasource, which will send data via TCP to this GUI:
@@ -50,9 +59,11 @@ Next, start the demo datasource, which will send data via TCP to this GUI:
     $ cd demo
     $ python noize_source.py
 
-Another demo is the rust side of the code. Start the GUI like this:
+Another server demo is the rust side of the code. Start the GUI like this:
 
     $ cargo run
+
+This application will be able to receive data via TCP/IP.
 
 # Documentation
 

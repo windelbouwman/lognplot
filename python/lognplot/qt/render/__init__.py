@@ -3,6 +3,8 @@ import contextlib
 from ..qtapi import QtCore, QtGui
 from ...chart import Chart
 from .render import Renderer
+from .layout import ChartLayout
+from .options import ChartOptions
 
 
 def render_chart_on_qpainter(chart: Chart, painter: QtGui.QPainter, rect: QtCore.QRect):

@@ -12,13 +12,12 @@ class ChartRenderer:
     """
 
     def __init__(
-        self, painter: QtGui.QPainter, rect: QtCore.QRect, chart: Chart, options
+        self, painter: QtGui.QPainter, chart: Chart, layout: ChartLayout, options
     ):
         self.painter = painter
-        # self._rect = rect
         self.chart = chart
         self.options = options
-        self._layout = ChartLayout(rect, self.options)
+        self._layout = layout
 
     def render(self):
         """ Main entry point to start rendering a graph. """
@@ -320,3 +319,8 @@ class ChartRenderer:
         a = self._layout.chart_height / domain
         y = self._layout.chart_bottom - a * (value - axis.minimum)
         return clip(y, self._layout.chart_top, self._layout.chart_bottom)
+
+    def x_pixel_to_domain(self, pixel):
+        axis = self.chart.x_axis
+        domain = axis.domain
+        # a = self.

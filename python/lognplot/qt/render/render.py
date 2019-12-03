@@ -6,13 +6,7 @@ from ...utils import bench_it, clip
 from ...tsdb.metrics import Metrics
 from .layout import ChartLayout
 from .chart import ChartRenderer
-
-
-class ChartOptions:
-    def __init__(self):
-        self.show_axis = True
-        self.show_grid = True
-        self.padding = 10
+from .options import ChartOptions
 
 
 class Renderer:
@@ -27,7 +21,8 @@ class Renderer:
 
     def render(self, rect: QtCore.QRect):
         options1 = ChartOptions()
-        chart_renderer = ChartRenderer(self.painter, rect, self.chart, options1)
+        layout = ChartLayout(rect, options1)
+        chart_renderer = ChartRenderer(self.painter, self.chart, layout, options1)
         chart_renderer.render()
 
         # self.render_minimap(rect)
@@ -45,9 +40,10 @@ class Renderer:
         minimap_options.padding = 2
         minimap_options.show_axis = False
         minimap_rect = QtCore.QRect(rect.x() + 40, rect.y() + 40, 120, 80)
+        minimap_layout = ChartLayout(minimap_rect, minimap_options)
         self.painter.fillRect(minimap_rect, Qt.yellow)
         minimap_chart_renderer = ChartRenderer(
-            self.painter, minimap_rect, minimap_chart, minimap_options
+            self.painter, minimap_chart, minimap_layout, minimap_options
         )
         minimap_chart_renderer.render()
         region = self.chart.get_region()

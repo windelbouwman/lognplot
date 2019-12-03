@@ -12,19 +12,26 @@ class Metrics:
     maximum values.
     """
 
-    def __init__(self, count, minimum, maximum, value_sum, value_squared_sum):
+    def __init__(self, count, minimum, maximum, mean, m2):
         self.count = count
         self.minimum = minimum
         self.maximum = maximum
-        self.value_sum = value_sum
-        self.value_squared_sum = value_squared_sum
-        # TODO:
-        # mean/stddev/median other statistics??
+        self._mean = mean
+        # The M2 value is a handy value for calculating the
+        # variance online. See welford method on wikipedia.
+        # https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Welford's_online_algorithm
+        self._m2 = m2
 
     @classmethod
     def from_value(cls, value):
         """ Convert a single sample into metrics. """
-        return cls(1, value, value, value, value * value)
+        return cls(1, value, value, value, 0.0)
+
+    @classmethod
+    def from_values(cls, values):
+        """ Convert a single sample into metrics. """
+        metrics = [cls.from_value(v) for v in values]
+        return cls.from_metrics(metrics)
 
     @staticmethod
     def from_metrics(metrics):
@@ -37,12 +44,20 @@ class Metrics:
     def __add__(self, other):
         if isinstance(other, Metrics):
             count = self.count + other.count
+            assert count > 0
+            mean = (self._mean * self.count + other._mean * other.count) / count
+            delta = self._mean - other._mean
+            m2 = (
+                self._m2
+                + other._m2
+                + delta * delta * (self.count * other.count) / count
+            )
             return Metrics(
                 count=count,
                 minimum=min(self.minimum, other.minimum),
                 maximum=max(self.maximum, other.maximum),
-                value_sum=self.value_sum + other.value_sum,
-                value_squared_sum=self.value_squared_sum + other.value_squared_sum,
+                mean=mean,
+                m2=m2,
             )
         else:  # pragma: no cover
             return NotImplemented
@@ -55,19 +70,19 @@ class Metrics:
     @property
     def mean(self):
         """ Mean value of this data chunk """
-        return self.value_sum / self.count
+        return self._mean
+
+    def variance(self):
+        """ Calculate the variance of this aggregation """
+        if self.count > 0:
+            return self._m2 / self.count
+        else:
+            return 0.0
 
     @property
     def stddev(self):
         """ Calculate standard deviation. """
-        if self.count > 1:
-            variance = (
-                self.value_squared_sum
-                - ((self.value_sum * self.value_sum) / self.count)
-            ) / (self.count - 1)
-        else:
-            variance = 0.0
-
+        variance = self.variance()
         stddev = math.sqrt(variance)
         assert stddev >= 0
         return stddev

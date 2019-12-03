@@ -31,5 +31,5 @@ while True:
     for i in range(buf_size):
         (v,) = struct.unpack(fmt, data[i * sample_size : i * sample_size + sample_size])
         samples.append(v)
-    lpc.send_samples(t, ts, samples)
+    lpc.send_samples('AUDIO', t, ts, samples)
     t += buf_size * ts
