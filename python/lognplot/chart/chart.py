@@ -24,6 +24,9 @@ class Chart:
         curve = Curve(self.db, name, color)
         self.curves.append(curve)
 
+    def clear_curves(self):
+        self.curves.clear()
+
     def info(self):
         print(f"Chart with {len(self.curves)} series")
         for index, curve in enumerate(self.curves):

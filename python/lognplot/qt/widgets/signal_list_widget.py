@@ -16,3 +16,11 @@ class SignalListWidget(QtWidgets.QWidget):
         l = QtWidgets.QVBoxLayout()
         l.addWidget(self._signal_view)
         self.setLayout(l)
+
+        self._timer = QtCore.QTimer()
+        self._timer.timeout.connect(self._on_timeout)
+        self._timer.start(500)
+
+    def _on_timeout(self):
+        # Hmm, ugly polling?
+        self._signal_list_model.update()

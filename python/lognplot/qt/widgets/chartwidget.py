@@ -15,8 +15,6 @@ class ChartWidget(QtWidgets.QWidget):
     """ Charting widget.
     """
 
-    manually_zoomed = pyqtSignal()
-
     def __init__(self, db):
         super().__init__()
         self.chart = Chart(db)
@@ -29,6 +27,12 @@ class ChartWidget(QtWidgets.QWidget):
         self.setAcceptDrops(True)
 
         self._mouse_drag_source = None
+
+        # Tailing mode, select last t seconds
+        self._last_span = None
+        self._tailing_timer = QtCore.QTimer()
+        self._tailing_timer.timeout.connect(self._on_tailing_timeout)
+        self._tailing_timer.start(100)
 
     # Drag drop events:
     def dragEnterEvent(self, event):
@@ -54,7 +58,7 @@ class ChartWidget(QtWidgets.QWidget):
     # Mouse interactions:
     def mousePressEvent(self, event):
         super().mousePressEvent(event)
-        self.manually_zoomed.emit()
+        self.disable_tailing()
         self._mouse_drag_source = event.x(), event.y()
         self.update()
 
@@ -164,9 +168,26 @@ class ChartWidget(QtWidgets.QWidget):
         self.chart.zoom_to_last(span)
         self.update()
 
+    def enable_tailing(self, timespan):
+        """ Slot to enable tailing the last timespan of the signals. """
+        self._last_span = timespan
+
+    def disable_tailing(self):
+        """ Stop tailing the signals in view. """
+        self._last_span = None
+
+    def _on_tailing_timeout(self):
+        # Follow last x seconds:
+        if self._last_span:
+            self.zoom_to_last(self._last_span)
+
+    def clear_curves(self):
+        self.chart.clear_curves()
+        self.update()
+
     def keyPressEvent(self, e):
         super().keyPressEvent(e)
-        self.manually_zoomed.emit()
+        self.disable_tailing()
         key = e.key()
         if key == Qt.Key_D or key == Qt.Key_Right:
             self.pan_right()
@@ -187,5 +208,8 @@ class ChartWidget(QtWidgets.QWidget):
         elif key == Qt.Key_Space:
             # Autoscale all in fit!
             self.zoom_fit()
+        elif key == Qt.Key_Backspace:
+            # Clear all curves
+            self.clear_curves()
         else:
             print("press key", e)

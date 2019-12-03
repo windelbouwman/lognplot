@@ -46,8 +46,7 @@ class SoftScope(QtWidgets.QWidget):
         self.setLayout(l)
 
         # Connect signals:
-        self._chart_widget.manually_zoomed.connect(self._disable_tailing)
-        self._span_selector.duration_selected.connect(self._enable_tailing)
+        self._span_selector.duration_selected.connect(self._chart_widget.enable_tailing)
 
         self._rx_queue = queue.Queue()
         self._timer = QtCore.QTimer()
@@ -64,14 +63,6 @@ class SoftScope(QtWidgets.QWidget):
     def add_curve(self, name, color):
         self._chart_widget.add_curve(name, color)
 
-    def _enable_tailing(self, timespan):
-        """ Slot to enable tailing the last timespan of the signals. """
-        self._last_span = timespan
-
-    def _disable_tailing(self):
-        """ Stop tailing the signals in view. """
-        self._last_span = None
-
     def _on_timeout(self):
         if not self._rx_queue.empty():
             while not self._rx_queue.empty():
@@ -80,10 +71,3 @@ class SoftScope(QtWidgets.QWidget):
                 self.db.add_samples(name, samples)
                 self._rx_queue.task_done()
             self._chart_widget.update()
-
-        # Follow last x seconds:
-        if self._last_span:
-            self._chart_widget.zoom_to_last(self._last_span)
-
-        # Hmm, ugly polling?
-        self._signal_view._signal_list_model.update()

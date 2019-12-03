@@ -49,7 +49,7 @@ Another demo is the softscope server. This will open a TCP/IP port
 which can receive data.
 
     $ cd python
-    $ python server_demo.py
+    $ python -m lognplot
 
 The softscope is now
 ready to receive streaming data via network.
@@ -83,6 +83,7 @@ This is a list of things to do:
 There is an interesting list of similar projects. Do you know of another
 project? Please submit a pull request or an issue!
 
+- getcurve.io (https://getcurve.io/)
 - grafana (https://grafana.com/)
 - KST plot (https://kst-plot.kde.org/)
 - plot juggler https://github.com/facontidavide/PlotJuggler
