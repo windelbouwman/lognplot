@@ -10,8 +10,13 @@ class SignalListModel(QtCore.QAbstractListModel):
         self.db = db
         self.names = []
 
-    def update(self):
-        """ Refresh the list content! """
+        # Do a polling on the model...
+        # TODO: how to prevent polling?
+        self._timer = QtCore.QTimer()
+        self._timer.timeout.connect(self._on_timeout)
+        self._timer.start(500)
+
+    def _on_timeout(self):
         new_names = list(sorted(self.db.signal_names()))
         if new_names != self.names:
             self.names = new_names

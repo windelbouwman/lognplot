@@ -2,8 +2,9 @@
 and enable the plotting of this data.
 """
 import threading
+import base64
 
-from ..qtapi import QtWidgets, Qt
+from ..qtapi import QtWidgets, Qt, QtGui
 from ..widgets import SoftScope, Dashboard, SignalListWidget
 from ..widgets.timespan_toolbutton import DurationToolButton
 from ...server import run_server
@@ -32,13 +33,19 @@ class ServerGuiMainWindow(QtWidgets.QMainWindow):
         )
         t1.start()
 
+        self.setWindowTitle("lognplot")
+        icon_data = base64.decodebytes(icon_png_base64.encode("ascii"))
+        icon_pixmap = QtGui.QPixmap()
+        icon_pixmap.loadFromData(icon_data)
+        icon = QtGui.QIcon(icon_pixmap)
+        self.setWindowIcon(icon)
+
         # Central widget:
         self._dashboard = Dashboard(self.db)
         self.setCentralWidget(self._dashboard)
 
         # Data trace view side panel:
         self.signal_selector = SignalListWidget(self.db)
-        self.signal_selector._signal_list_model.update()
         self.signal_dock_widget = QtWidgets.QDockWidget("Signals")
         self.signal_dock_widget.setWidget(self.signal_selector)
         self.addDockWidget(Qt.LeftDockWidgetArea, self.signal_dock_widget)
@@ -56,3 +63,12 @@ class DatabaseSink:
 
     def add_samples(self, name, samples):
         self.db.add_samples(name, samples)
+
+
+# Icon as base64 text:
+icon_png_base64 = """
+iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAABGdBTUEAALGPC/xhBQAAAAlwSFlz
+AAAe4AAAHuABgwaXIwAAAFBJREFUaN7t17ENACAMA0GH/XcOFSsQIe4qSl40OGFWnUOn+62LVyXJ
+ev0FBAgQIEAAAFhkY4vsLCt/IQECBAgQAAAW2e1F5S8kQIAAAXxtA1YXCTJthdYIAAAAAElFTkSu
+QmCC
+"""

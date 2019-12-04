@@ -101,6 +101,10 @@ class Btree:
         if selected_aggregations:
             return Aggregation.from_aggregations(selected_aggregations)
 
+    def last_value(self):
+        """ Get last item in the collection """
+        return self.root_node.last_value()
+
 
 def enhance(nodes, selection_span):
     """ Enhance resolution by descending into child nodes in the selected time span.
@@ -143,6 +147,10 @@ class BtreeNode(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def select_all(self):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def last_value(self):
         raise NotImplementedError()
 
 
@@ -225,6 +233,9 @@ class BtreeInternalNode(BtreeNode):
     def select_all(self):
         return self._children
 
+    def last_value(self):
+        return self._children[-1].last_value()
+
 
 class BtreeLeaveNode(BtreeNode):
     """ A leave node in the B-tree.
@@ -296,3 +307,6 @@ class BtreeLeaveNode(BtreeNode):
         """ Retrieve all samples in this node.
         """
         return self.samples
+
+    def last_value(self):
+        return self.samples[-1]

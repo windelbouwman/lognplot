@@ -55,3 +55,6 @@ class ZoomSerie(Serie):
             return self._tree.query_metrics(selection_timespan)
         else:
             return self._tree.aggregation
+
+    def last_value(self):
+        return self._tree.last_value()

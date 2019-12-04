@@ -20,9 +20,16 @@ class Chart:
         self.curves = []
         self.db = db
 
+    def has_curve(self, name):
+        for curve in self.curves:
+            if curve.name == name:
+                return True
+        return False
+
     def add_curve(self, name, color):
-        curve = Curve(self.db, name, color)
-        self.curves.append(curve)
+        if not self.has_curve(name):
+            curve = Curve(self.db, name, color)
+            self.curves.append(curve)
 
     def clear_curves(self):
         self.curves.clear()

@@ -43,6 +43,7 @@ class ChartRenderer:
             self._draw_y_axis(y_ticks)
 
         self._draw_curves()
+        self._draw_legend()
 
     def shade_region(self, region):
         """ Draw a shaded box in some region.
@@ -301,6 +302,31 @@ class ChartRenderer:
             self.painter.drawPolyline(max_line)
             min_line = QtGui.QPolygon(min_points)
             self.painter.drawPolyline(min_line)
+
+    def _draw_legend(self):
+        """ Draw names / color of the curve next to eachother.
+        """
+        font_metrics = self.painter.fontMetrics()
+        x = self._layout.chart_left + 10
+        y = self._layout.chart_top + 10
+        text_height = font_metrics.height()
+        color_block_size = text_height * 0.8
+        for index, curve in enumerate(self.chart.curves):
+            color = QtGui.QColor(curve.color)
+            text = curve.name
+            text_rect = font_metrics.boundingRect(text)
+            legend_x = x
+            legend_y = y + index * text_height
+            text_x = legend_x + color_block_size + 3 - text_rect.x()
+            text_y = legend_y - text_rect.y() - text_rect.height() / 2
+            self.painter.drawText(text_x, text_y, text)
+            self.painter.fillRect(
+                x,
+                legend_y - color_block_size / 2,
+                color_block_size,
+                color_block_size,
+                color,
+            )
 
     def _to_x_pixel(self, value):
         """ Transform the given X value to a pixel position.

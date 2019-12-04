@@ -1,6 +1,7 @@
 """ Implements a sort of dashboard like
 area where user can drag-drop stuf onto.
 """
+import logging
 
 from ..qtapi import QtWidgets, Qt
 from .chartwidget import ChartWidget
@@ -43,6 +44,8 @@ class DashboardPlaceHolder(QtWidgets.QFrame):
     """ Placeholder which supports dropping stuff onto.
     """
 
+    logger = logging.getLogger("dashboard")
+
     def __init__(self, db):
         super().__init__()
         self._db = db
@@ -69,6 +72,7 @@ class DashboardPlaceHolder(QtWidgets.QFrame):
 
     def dropEvent(self, event):
         # Hide place holder:
+        self.logger.debug("Filling placeholder")
         self._layout.removeWidget(self.placeholder_label)
         self.placeholder_label.hide()
 
@@ -81,6 +85,7 @@ class DashboardPlaceHolder(QtWidgets.QFrame):
         names = event.mimeData().text()
         # print("Mime data text", names, type(names))
         for name in names.split(":"):
+            self.logger.debug(f"Adding curve {name}")
             self._chart_widget.add_curve(name)
 
         self.update()

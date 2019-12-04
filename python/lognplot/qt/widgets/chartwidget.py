@@ -3,6 +3,8 @@
 Include this widget into your application to plot data.
 """
 from itertools import cycle
+import logging
+
 from ..qtapi import QtCore, QtWidgets, QtGui, Qt, pyqtSignal
 from ...utils import bench_it
 from ...chart import Chart
@@ -14,6 +16,8 @@ color_wheel = ["blue", "red", "green", "black", "yellow"]
 class ChartWidget(QtWidgets.QWidget):
     """ Charting widget.
     """
+
+    logger = logging.getLogger("chart-widget")
 
     def __init__(self, db):
         super().__init__()
@@ -53,6 +57,7 @@ class ChartWidget(QtWidgets.QWidget):
         names = event.mimeData().text()
         # print("Mime data text", names, type(names))
         for name in names.split(":"):
+            self.logger.debug(f"Add curve {name}")
             self.add_curve(name)
 
     # Mouse interactions:
@@ -87,11 +92,12 @@ class ChartWidget(QtWidgets.QWidget):
         layout = ChartLayout(self.rect(), options1)
 
     def add_curve(self, name, color=None):
-        color = color or next(self._colors)
-        self.chart.add_curve(name, color)
+        if not self.chart.has_curve(name):
+            color = color or next(self._colors)
+            self.chart.add_curve(name, color)
 
-        # When adding a curve, autozoom is the first thing:
-        self.zoom_fit()
+            # When adding a curve, autozoom is the first thing:
+            self.zoom_fit()
 
     def paintEvent(self, e):
         super().paintEvent(e)
@@ -159,6 +165,7 @@ class ChartWidget(QtWidgets.QWidget):
         self.update()
 
     def zoom_fit(self):
+        """ Autoscale all in fit! """
         self.chart.zoom_fit()
         self.update()
 
@@ -182,6 +189,7 @@ class ChartWidget(QtWidgets.QWidget):
             self.zoom_to_last(self._last_span)
 
     def clear_curves(self):
+        """ Clear all curves """
         self.chart.clear_curves()
         self.update()
 
@@ -205,11 +213,9 @@ class ChartWidget(QtWidgets.QWidget):
             self.zoom_out_vertical()
         elif key == Qt.Key_I:
             self.zoom_in_vertical()
-        elif key == Qt.Key_Space:
-            # Autoscale all in fit!
+        elif key == Qt.Key_Space or key == Qt.Key_Return:
             self.zoom_fit()
-        elif key == Qt.Key_Backspace:
-            # Clear all curves
+        elif key == Qt.Key_Backspace or key == Qt.Key_Delete:
             self.clear_curves()
         else:
             print("press key", e)

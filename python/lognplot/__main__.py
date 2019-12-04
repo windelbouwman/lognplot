@@ -4,9 +4,13 @@
 
 """
 
+import logging
+
 
 def main():
     # TODO: use argparse to enable more apps.
+    logging.basicConfig(level=logging.DEBUG)
+
     from .qt.apps import run_server_gui
 
     run_server_gui()
