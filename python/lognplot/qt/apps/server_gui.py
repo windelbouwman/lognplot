@@ -56,6 +56,66 @@ class ServerGuiMainWindow(QtWidgets.QMainWindow):
         toolbar.addWidget(zoom_quick_select)
         zoom_quick_select.duration_selected.connect(self._dashboard.enable_tailing)
 
+        self.create_menus()
+
+    def create_menus(self):
+        # Menu
+        menu_bar = self.menuBar()
+        file_menu = menu_bar.addMenu("File")
+        quit_action = file_menu.addAction("Quit")
+        quit_action.triggered.connect(self.close)
+        help_menu = menu_bar.addMenu("Help")
+        usage_action = help_menu.addAction("Usage")
+        usage_action.triggered.connect(self.show_usage_dialog)
+        usage_action.setShortcut(QtGui.QKeySequence("F1"))
+        about_action = help_menu.addAction("About")
+        about_action.triggered.connect(self.show_about_dialog)
+
+    def show_usage_dialog(self):
+        QtWidgets.QMessageBox.information(self, "Usage", help_text)
+
+    def show_about_dialog(self):
+        QtWidgets.QMessageBox.about(self, "About lognplot", about_text)
+
+
+about_text = """
+<h1>About lognplot</h1>
+
+<p>
+Lognplot is a tool to log and visualize data while the data
+is being recorded.
+</p>
+
+<p>
+Please report bugs / submit changes if you have any improvements!
+</p>
+
+Website:
+<a href="https://github.com/windelbouwman/lognplot">
+https://github.com/windelbouwman/lognplot
+</a>
+"""
+
+help_text = """
+<h1>Usage</h1>
+
+You can view signals in the left panel, and drag them onto
+the dashboard. Then, to clear signals, select a plot and press
+delete / backspace.
+
+<h2>Keys</h2>
+
+<ul>
+<li> <b>w,a,s,d</b> panning a plot </li>
+<li> <b>up,left,down,right</b> panning a plot </li>
+<li> <b>i,j,k,l</b> zooming a plot </li>
+<li> <b>+,-</b> zooming horizontally</li>
+<li> <b>space/enter</b> zoom to fit</li>
+<li> <b>delete/backspace</b> delete all curves</li>
+</ul>
+
+"""
+
 
 class DatabaseSink:
     def __init__(self, db):

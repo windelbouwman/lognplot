@@ -37,10 +37,10 @@ def main():
 
             # Increment time:
             t += dt
-        
-        print(f'Sending {len(samples)} samples')
-        client.send_samples('Trace1', t0, dt, samples)
-        client.send_samples('Trace2', t0, dt, samples2)
+
+        print(f"Sending {len(samples)} samples")
+        client.send_samples("Trace1", t0, dt, samples)
+        client.send_samples("Trace2", t0, dt, samples2)
 
         time.sleep(n_samples * dt)
 

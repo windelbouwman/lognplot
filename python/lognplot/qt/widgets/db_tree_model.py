@@ -24,6 +24,7 @@ class TsDbTreeModel(QtCore.QAbstractItemModel):
         self.names = []
         self._column_names = ["Name", "Datasize", "Last value"]
         self._last_values = {}  # Keep track of last value
+        self._last_times = {}
         self._last_active = {}
 
         # Do a polling on the model...
@@ -50,13 +51,19 @@ class TsDbTreeModel(QtCore.QAbstractItemModel):
     def _update_color(self):
         parent = QtCore.QModelIndex()
         for row, name in enumerate(self.names):
-            last_value = self.db.last_value(name)[1]
+            last_time, last_value = self.db.last_value(name)
+
             previous_last_value = self._last_values.get(name, None)
             if last_value != previous_last_value:
-                # We have a new value!
                 self._last_values[name] = last_value
+                # We have a new value!
+
                 roles = [Qt.DisplayRole]
                 self.row_changed(row, parent, roles)
+
+            previous_last_time = self._last_times.get(name, None)
+            if last_time != previous_last_time:
+                self._last_times[name] = last_time
                 self._last_active[name] = time.time()
 
             # Color the row based on age:
