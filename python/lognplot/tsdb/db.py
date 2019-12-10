@@ -14,9 +14,14 @@ class TsDb:
         # TODO: load / store data in file!
         self._traces = {}  # The internal trace data.
 
-    def signal_names(self):
+    def signal_names_and_types(self):
         """ Get a sorted list of signal names. """
-        return list(sorted(self._traces))
+        names_and_types = [(name, self.get_serie_type(name)) for name in self._traces]
+        return list(sorted(names_and_types))
+
+    def get_serie_type(self, name):
+        serie = self.get_or_create_serie(name)
+        return serie.get_type()
 
     def get_or_create_serie(self, name):
         if name in self._traces:

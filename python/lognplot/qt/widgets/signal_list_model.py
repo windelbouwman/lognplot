@@ -35,7 +35,7 @@ class SignalListModel(QtCore.QAbstractListModel):
             return default_flags | Qt.ItemIsDragEnabled
 
     def mimeTypes(self):
-        return ["text/plain"]
+        return ["application/x.lognplot.signalnames"]
 
     def mimeData(self, indexes):
         mimeData = QtCore.QMimeData()
@@ -47,7 +47,7 @@ class SignalListModel(QtCore.QAbstractListModel):
                 signal_names.append(text)
 
         payload = ":".join(signal_names).encode("utf8")
-        mimeData.setData("text/plain", payload)
+        mimeData.setData("application/x.lognplot.signalnames", payload)
         return mimeData
 
     def data(self, index, role):

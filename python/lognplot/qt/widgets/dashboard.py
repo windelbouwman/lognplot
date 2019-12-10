@@ -5,6 +5,8 @@ import logging
 
 from ..qtapi import QtWidgets, Qt
 from .chartwidget import ChartWidget
+from .logwidget import LogBarWidget
+from . import mime
 
 
 class Dashboard(QtWidgets.QWidget):
@@ -59,15 +61,17 @@ class DashboardPlaceHolder(QtWidgets.QFrame):
         self._layout.addWidget(self.placeholder_label)
         self.setLayout(self._layout)
         self._chart_widget = None
+        self._log_widget = None
 
     def enable_tailing(self, duration):
         if self._chart_widget:
             self._chart_widget.enable_tailing(duration)
 
     def dragEnterEvent(self, event):
-        # print("drag enter!")
-        if event.mimeData().hasFormat("text/plain"):
-            # print("accept drag")
+        mime_data = event.mimeData()
+        if mime_data.hasFormat(mime.signal_names_mime_type) or mime_data.hasFormat(
+            mime.logger_names_mime_type
+        ):
             event.acceptProposedAction()
 
     def dropEvent(self, event):
@@ -79,13 +83,28 @@ class DashboardPlaceHolder(QtWidgets.QFrame):
         # Do not accept new drops:
         self.setAcceptDrops(False)
 
-        # Create new chart widget:
-        self._chart_widget = ChartWidget(self._db)
-        self._layout.addWidget(self._chart_widget)
-        names = event.mimeData().text()
-        # print("Mime data text", names, type(names))
-        for name in names.split(":"):
-            self.logger.debug(f"Adding curve {name}")
-            self._chart_widget.add_curve(name)
+        mime_data = event.mimeData()
+        if mime_data.hasFormat(mime.signal_names_mime_type):
+            names = bytes(mime_data.data(mime.signal_names_mime_type)).decode("ascii")
+
+            # Create new chart widget:
+            self._chart_widget = ChartWidget(self._db)
+            self._layout.addWidget(self._chart_widget)
+
+            # print("Mime data text", names, type(names))
+            for name in names.split(":"):
+                self.logger.debug(f"Adding curve |{name}|")
+                self._chart_widget.add_curve(name)
+        elif mime_data.hasFormat(mime.logger_names_mime_type):
+            names = bytes(mime_data.data(mime.logger_names_mime_type)).decode("ascii")
+
+            # Create log bar chart:
+            self._log_widget = LogBarWidget(self._db)
+            self._layout.addWidget(self._log_widget)
+
+            # Add loggers:
+            for name in names.split(":"):
+                self.logger.debug(f"Adding log track {name}")
+                self._log_widget.log_bar.add_track(name)
 
         self.update()

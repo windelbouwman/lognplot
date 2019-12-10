@@ -1,8 +1,7 @@
 from ..qtapi import QtGui, QtCore, Qt
 from ...chart import Chart
-from ...utils import bench_it, clip
-from ...tsdb import Metrics, Aggregation
-from ...time import TimeSpan
+from ...utils import bench_it
+from ...tsdb import Aggregation
 from .layout import ChartLayout
 from . import transform
 from .base import BaseRenderer
@@ -67,10 +66,7 @@ class ChartRenderer(BaseRenderer):
     def _draw_curve(self, curve):
         """ Draw a single time series. """
         # with bench_it("series query"):
-        begin = self.chart.x_axis.minimum
-        end = self.chart.x_axis.maximum
-        assert begin <= end
-        timespan = TimeSpan(begin, end)
+        timespan = self.chart.x_axis.get_timespan()
         # Determine how many data points we wish to visualize
         # This greatly determines drawing performance.
         min_count = int(self.layout.chart_width / 40)

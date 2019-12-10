@@ -9,6 +9,7 @@ from ..qtapi import QtCore, QtWidgets, QtGui, Qt, pyqtSignal
 from ...utils import bench_it
 from ...chart import Chart
 from ..render import render_chart_on_qpainter, ChartLayout, ChartOptions
+from . import mime
 
 color_wheel = ["blue", "red", "green", "black", "yellow"]
 
@@ -40,22 +41,13 @@ class ChartWidget(QtWidgets.QWidget):
 
     # Drag drop events:
     def dragEnterEvent(self, event):
-        # print("drag enter!")
-        if event.mimeData().hasFormat("text/plain"):
-            # print("accept drag")
+        if event.mimeData().hasFormat(mime.signal_names_mime_type):
             event.acceptProposedAction()
 
-    def dragMoveEvent(self, event):
-        # print("drag move event!")
-        pass
-
-    def dragLeaveEvent(self, event):
-        # print("drag leave!")
-        pass
-
     def dropEvent(self, event):
-        names = event.mimeData().text()
-        # print("Mime data text", names, type(names))
+        names = bytes(event.mimeData().data(mime.signal_names_mime_type)).decode(
+            "ascii"
+        )
         for name in names.split(":"):
             self.logger.debug(f"Add curve {name}")
             self.add_curve(name)

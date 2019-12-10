@@ -13,7 +13,8 @@ class Aggregation:
     def from_sample(cls, sample):
         timestamp, value = sample
         timespan = TimeSpan(timestamp, timestamp)
-        return cls(timespan, Metrics.from_value(value))
+        metrics = Metrics.from_value(value)
+        return cls(timespan, metrics)
 
     @staticmethod
     def from_samples(samples):

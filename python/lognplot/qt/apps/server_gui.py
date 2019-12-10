@@ -9,7 +9,7 @@ from ..widgets import SoftScope, Dashboard, SignalListWidget
 from ..widgets.timespan_toolbutton import DurationToolButton
 from ...server import run_server
 from ...tsdb import TsDb
-from ...demo_data import create_demo_samples
+from ...demo_data import create_demo_samples, create_demo_log_messages
 
 
 def run_server_gui():
@@ -27,6 +27,8 @@ class ServerGuiMainWindow(QtWidgets.QMainWindow):
         self.db.add_samples("C2", create_demo_samples(1000, offset=60))
         self.db.add_samples("C3", create_demo_samples(2000, offset=20))
         self.db.add_samples("C5", create_demo_samples(5000, offset=-20))
+        self.db.add_samples("L1", create_demo_log_messages(5000))
+        self.db.add_samples("L2", create_demo_log_messages(50))
 
         t1 = threading.Thread(
             target=run_server, args=(DatabaseSink(self.db),), daemon=True

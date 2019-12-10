@@ -10,6 +10,7 @@ Ideas:
 
 import time
 from ..qtapi import QtCore, Qt, QtGui
+from . import mime
 
 
 class TsDbTreeModel(QtCore.QAbstractItemModel):
@@ -22,7 +23,7 @@ class TsDbTreeModel(QtCore.QAbstractItemModel):
         super().__init__()
         self.db = db
         self.names = []
-        self._column_names = ["Name", "Datasize", "Last value"]
+        self._column_names = ["Name", "Type", "Datasize", "Last value"]
         self._last_values = {}  # Keep track of last value
         self._last_times = {}
         self._last_active = {}
@@ -39,7 +40,7 @@ class TsDbTreeModel(QtCore.QAbstractItemModel):
         self._update_color()
 
     def _update_names(self):
-        new_names = list(sorted(self.db.signal_names()))
+        new_names = list(sorted(self.db.signal_names_and_types()))
         if new_names != self.names:
             self.names = new_names
             # TODO: finer grained change emission:
@@ -50,7 +51,8 @@ class TsDbTreeModel(QtCore.QAbstractItemModel):
 
     def _update_color(self):
         parent = QtCore.QModelIndex()
-        for row, name in enumerate(self.names):
+        for row, name_and_type in enumerate(self.names):
+            name, _ = name_and_type
             last_time, last_value = self.db.last_value(name)
 
             previous_last_value = self._last_values.get(name, None)
@@ -112,34 +114,47 @@ class TsDbTreeModel(QtCore.QAbstractItemModel):
             return default_flags
 
     def mimeTypes(self):
-        return ["text/plain"]
+        return [mime.signal_names_mime_type]
 
     def mimeData(self, indexes):
         mimeData = QtCore.QMimeData()
 
         signal_names = []
+        logger_names = []
         for index in indexes:
             if index.isValid():
                 row, column = index.row(), index.column()
-                # print(index.row(), index.column())
                 if column == 0:
-                    name = self.names[row]
-                    signal_names.append(name)
+                    name, typ = self.names[row]
+                    if typ == "signal":
+                        signal_names.append(name)
+                    elif typ == "logger":
+                        logger_names.append(name)
+                    else:
+                        raise NotImplementedError(f"Type name not implemented {typ}")
 
-        payload = ":".join(signal_names).encode("utf8")
-        mimeData.setData("text/plain", payload)
+        if signal_names:
+            payload = ":".join(signal_names).encode("utf8")
+            mimeData.setData(mime.signal_names_mime_type, payload)
+
+        if logger_names:
+            payload = ":".join(logger_names).encode("utf8")
+            mimeData.setData(mime.logger_names_mime_type, payload)
+
         return mimeData
 
     def data(self, index, role):
         if index.isValid():
             row, column = index.row(), index.column()
-            name = self.names[row]
+            name, typ = self.names[row]
             if role == Qt.DisplayRole:
                 if column == 0:
                     return name
                 elif column == 1:
-                    return str(self.db.query_len(name))
+                    return typ
                 elif column == 2:
+                    return str(self.db.query_len(name))
+                elif column == 3:
                     return str(self._last_values.get(name, "?"))
                 else:
                     return "?"

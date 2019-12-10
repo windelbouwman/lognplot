@@ -3,5 +3,3 @@
 Ideas:
 - Mimic graphite API, to enable consumption by grafana and other visualization tools.
 """
-
-

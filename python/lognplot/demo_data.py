@@ -1,7 +1,8 @@
-import math
-
 """ Create some random data for demo purposes.
 """
+
+import math
+from .tsdb import LogLevel, LogRecord
 
 
 def create_demo_samples(num_points, offset=0):
@@ -19,4 +20,14 @@ def create_demo_samples(num_points, offset=0):
         x = t * 0.001
         y = offset + A * math.sin(omega * x) + A2 * math.cos(omega2 * x)
         samples.append((x, y))
+    return samples
+
+
+def create_demo_log_messages(num_records):
+    samples = []
+    for i in range(num_records):
+        t = i * 3
+        record = LogRecord(LogLevel.WARNING, f"Warning {i}")
+        samples.append((t, record))
+
     return samples

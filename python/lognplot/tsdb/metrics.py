@@ -1,9 +1,40 @@
 import operator
 from functools import reduce
 import math
+from .log import LogRecord, LogLevel
 
 
 class Metrics:
+    """ Compaction metrics.
+
+    This is a base class for data summary.
+    """
+
+    @classmethod
+    def from_value(cls, value):
+        if isinstance(value, float):
+            return ValueMetrics.from_value(value)
+        elif isinstance(value, LogRecord):
+            return LogMetrics.from_record(value)
+        else:
+            raise ValueError(f"No metric for {type(value)}")
+
+    @classmethod
+    def from_values(cls, values):
+        """ Convert a single sample into metrics. """
+        metrics = [cls.from_value(v) for v in values]
+        return cls.from_metrics(metrics)
+
+    @staticmethod
+    def from_metrics(metrics):
+        """ Merge several metrics into a single metric.
+        """
+        assert metrics
+        assert all(isinstance(m, Metrics) for m in metrics)
+        return reduce(operator.add, metrics)
+
+
+class ValueMetrics(Metrics):
     """ Compaction range matrics.
 
     Idea is this is some sort of summary about data.
@@ -27,22 +58,8 @@ class Metrics:
         """ Convert a single sample into metrics. """
         return cls(1, value, value, value, 0.0)
 
-    @classmethod
-    def from_values(cls, values):
-        """ Convert a single sample into metrics. """
-        metrics = [cls.from_value(v) for v in values]
-        return cls.from_metrics(metrics)
-
-    @staticmethod
-    def from_metrics(metrics):
-        """ Merge several metrics into a single metric.
-        """
-        assert metrics
-        assert all(isinstance(m, Metrics) for m in metrics)
-        return reduce(operator.add, metrics)
-
     def __add__(self, other):
-        if isinstance(other, Metrics):
+        if isinstance(other, ValueMetrics):
             count = self.count + other.count
             assert count > 0
             mean = (self._mean * self.count + other._mean * other.count) / count
@@ -52,7 +69,7 @@ class Metrics:
                 + other._m2
                 + delta * delta * (self.count * other.count) / count
             )
-            return Metrics(
+            return ValueMetrics(
                 count=count,
                 minimum=min(self.minimum, other.minimum),
                 maximum=max(self.maximum, other.maximum),
@@ -86,3 +103,31 @@ class Metrics:
         stddev = math.sqrt(variance)
         assert stddev >= 0
         return stddev
+
+
+class LogMetrics(Metrics):
+    def __init__(self, count):
+        self.count = count
+        self.level_counters = {level: 0 for level in LogLevel.LEVELS}
+
+    @classmethod
+    def from_record(cls, record):
+        m = cls(0)
+        m.include(record)
+        return m
+
+    def include(self, record):
+        self.count += 1
+        self.level_counters[record.level] += 1
+
+    def __add__(self, other):
+        if isinstance(other, LogMetrics):
+            count = self.count + other.count
+            result = LogMetrics(count)
+            for level in LogLevel.LEVELS:
+                result.level_counters[level] = (
+                    self.level_counters[level] + other.level_counters[level]
+                )
+            return result
+        else:  # pragma: no cover
+            return NotImplemented

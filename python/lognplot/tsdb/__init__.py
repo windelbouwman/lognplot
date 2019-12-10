@@ -8,5 +8,6 @@ in a way that they can be queried easily.
 from .db import TsDb
 from .series import ZoomSerie
 from .aggregation import Aggregation
-from .metrics import Metrics
+from .metrics import Metrics, LogMetrics
 from .btree import Btree
+from .log import LogLevel, LogRecord

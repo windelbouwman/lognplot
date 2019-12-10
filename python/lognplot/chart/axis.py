@@ -1,4 +1,5 @@
 import math
+from ..time import TimeSpan
 
 
 class Axis:
@@ -11,6 +12,12 @@ class Axis:
         assert maximum > minimum
         self.minimum = minimum
         self.maximum = maximum
+
+    def get_timespan(self):
+        begin = self.minimum
+        end = self.maximum
+        assert begin <= end
+        return TimeSpan(begin, end)
 
     def get_ticks(self, n_ticks):
         domain = self.domain

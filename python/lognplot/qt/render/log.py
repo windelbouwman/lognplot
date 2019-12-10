@@ -11,7 +11,7 @@ from .layout import ChartLayout
 from .options import ChartOptions
 from .base import BaseRenderer
 from . import transform
-from ...logbar import LogLevel
+from ...tsdb import LogLevel, Aggregation
 
 
 def render_logs_on_qpainter(logbar, painter: QtGui.QPainter, rect: QtCore.QRect):
@@ -47,12 +47,29 @@ class LogBarRenderer(BaseRenderer):
         y = self.layout.chart_top + self.padding
         dy = self.painter.fontMetrics().height() + 3 * self.padding
 
-        with self.clip_chart_rect():
-            for log_track in self.logbar.log_tracks:
+        for log_track in self.logbar.log_tracks:
+            with self.clip_chart_rect():
                 self.draw_log_track(y, log_track)
                 y += dy
+            # Draw label on y axis:
+            legend_x = self.layout.chart_right + 5
+            legend_y = y
+            self.painter.drawText(legend_x, legend_y, log_track.name)
 
-    def draw_log_track(self, y, stamped_records):
+    def draw_log_track(self, y, log_track):
+        timespan = self.logbar.x_axis.get_timespan()
+        # Determine how many data points we wish to visualize
+        # This greatly determines drawing performance.
+        min_count = int(self.layout.chart_width / 40)
+        data = log_track.query(timespan, min_count)
+        if isinstance(data[0], Aggregation):
+            self.draw_message_bundles(y, data)
+        else:
+            self.draw_single_records(y, data)
+
+    def draw_single_records(self, y, stamped_records):
+        """ Draw individual log messages.
+        """
         color_map = {
             LogLevel.INFO: Qt.green,
             LogLevel.WARNING: Qt.yellow,
@@ -64,14 +81,12 @@ class LogBarRenderer(BaseRenderer):
 
             text_rect = self.painter.fontMetrics().boundingRect(log_text)
 
+            width = text_rect.width() + self.padding * 2
+            height = text_rect.height() + self.padding * 2
+            log_record_rect = QtCore.QRect(x, y, width, height,)
+
             # Draw background:
             fill_color = color_map[log_record.level]
-            log_record_rect = QtCore.QRect(
-                x,
-                y,
-                text_rect.width() + self.padding * 2,
-                text_rect.height() + self.padding * 2,
-            )
             self.painter.fillRect(log_record_rect, fill_color)
             self.painter.drawRect(log_record_rect)
 
@@ -79,6 +94,21 @@ class LogBarRenderer(BaseRenderer):
             text_x = x - text_rect.x() + self.padding
             text_y = y - text_rect.y() + self.padding
             self.painter.drawText(text_x, text_y, log_text)
+
+    def draw_message_bundles(self, y, aggregates):
+        """ Draw log message aggregations.
+        """
+        for aggregate in aggregates:
+            x1 = self.to_x_pixel(aggregate.timespan.begin)
+            x2 = self.to_x_pixel(aggregate.timespan.end)
+            width = x2 - x1
+            height = self.painter.fontMetrics().height() + self.padding * 2
+            log_record_rect = QtCore.QRect(x1, y, width, height,)
+            # TODO: do something smart with the color?
+            # Draw a color flag? Draw stats bar?
+            fill_color = Qt.cyan
+            self.painter.fillRect(log_record_rect, fill_color)
+            self.painter.drawRect(log_record_rect)
 
     def to_x_pixel(self, value):
         return transform.to_x_pixel(value, self.logbar.x_axis, self.layout)

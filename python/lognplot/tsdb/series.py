@@ -2,6 +2,7 @@ import abc
 from .btree import Btree
 from .aggregation import Aggregation
 from ..time import TimeSpan
+from .log import LogRecord
 
 
 class Serie(metaclass=abc.ABCMeta):
@@ -34,6 +35,19 @@ class ZoomSerie(Serie):
 
     def __repr__(self):
         return "ZoomSerie"
+
+    def get_type(self):
+        first = next(iter(self), None)
+        if first is None:
+            return "?"
+        else:
+            value = first[1]
+            if isinstance(value, float):
+                return "signal"
+            elif isinstance(value, LogRecord):
+                return "logger"
+            else:
+                raise NotImplementedError(f"Unknown signal type: {type(value)}")
 
     def add_sample(self, sample):
         self._tree.append(sample)
