@@ -46,6 +46,8 @@ class ZoomSerie(Serie):
                 return "signal"
             elif isinstance(value, LogRecord):
                 return "logger"
+            elif isinstance(value, dict):
+                return "event"
             else:
                 raise NotImplementedError(f"Unknown signal type: {type(value)}")
 

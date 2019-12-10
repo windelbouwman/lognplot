@@ -12,10 +12,12 @@ class Metrics:
 
     @classmethod
     def from_value(cls, value):
-        if isinstance(value, float):
+        if isinstance(value, (float, int)):
             return ValueMetrics.from_value(value)
         elif isinstance(value, LogRecord):
             return LogMetrics.from_record(value)
+        elif isinstance(value, dict):
+            return EventMetrics.from_event(value)
         else:
             raise ValueError(f"No metric for {type(value)}")
 
@@ -103,6 +105,25 @@ class ValueMetrics(Metrics):
         stddev = math.sqrt(variance)
         assert stddev >= 0
         return stddev
+
+
+class EventMetrics(Metrics):
+    """ Simplest metric, simply counting the events.
+    """
+
+    def __init__(self, count):
+        self.count = count
+
+    @classmethod
+    def from_event(cls, event):
+        return cls(1)
+
+    def __add__(self, other):
+        if isinstance(other, EventMetrics):
+            count = self.count + other.count
+            return EventMetrics(count)
+        else:  # pragma: no cover
+            return NotImplemented
 
 
 class LogMetrics(Metrics):

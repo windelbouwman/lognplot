@@ -3,9 +3,10 @@ from ..qtapi import QtWidgets, QtGui
 from ..render.log import render_logs_on_qpainter
 from ...chart import LogBar
 from . import mime
+from .basewidget import BaseWidget
 
 
-class LogBarWidget(QtWidgets.QWidget):
+class LogBarWidget(BaseWidget):
     """ Visualize log records in chronological order.
     """
 
@@ -22,6 +23,7 @@ class LogBarWidget(QtWidgets.QWidget):
         # Contrapt graph via QPainter!
         painter = QtGui.QPainter(self)
         render_logs_on_qpainter(self.log_bar, painter, self.rect())
+        self.draw_focus_indicator(painter, self.rect())
 
     # Drag-n-drop:
     def dragEnterEvent(self, event):
@@ -35,4 +37,17 @@ class LogBarWidget(QtWidgets.QWidget):
         for name in names.split(":"):
             self.logger.debug(f"Add logger {name}")
             self.log_bar.add_track(name)
+        self.update()
+
+    def clear_curves(self):
+        """ Clear all curves """
+        self.log_bar.clear_tracks()
+        self.update()
+
+    def horizontal_pan(self, amount):
+        self.log_bar.x_axis.pan(amount)
+        self.update()
+
+    def horizontal_zoom(self, amount):
+        self.log_bar.x_axis.zoom(amount)
         self.update()

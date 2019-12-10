@@ -121,6 +121,7 @@ class TsDbTreeModel(QtCore.QAbstractItemModel):
 
         signal_names = []
         logger_names = []
+        event_names = []
         for index in indexes:
             if index.isValid():
                 row, column = index.row(), index.column()
@@ -130,6 +131,8 @@ class TsDbTreeModel(QtCore.QAbstractItemModel):
                         signal_names.append(name)
                     elif typ == "logger":
                         logger_names.append(name)
+                    elif typ == "event":
+                        event_names.append(name)
                     else:
                         raise NotImplementedError(f"Type name not implemented {typ}")
 
@@ -140,6 +143,10 @@ class TsDbTreeModel(QtCore.QAbstractItemModel):
         if logger_names:
             payload = ":".join(logger_names).encode("utf8")
             mimeData.setData(mime.logger_names_mime_type, payload)
+
+        if event_names:
+            payload = ":".join(event_names).encode("utf8")
+            mimeData.setData(mime.event_names_mime_type, payload)
 
         return mimeData
 

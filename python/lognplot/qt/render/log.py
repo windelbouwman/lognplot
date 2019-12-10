@@ -60,12 +60,13 @@ class LogBarRenderer(BaseRenderer):
         timespan = self.logbar.x_axis.get_timespan()
         # Determine how many data points we wish to visualize
         # This greatly determines drawing performance.
-        min_count = int(self.layout.chart_width / 40)
+        min_count = int(self.layout.chart_width / 100)
         data = log_track.query(timespan, min_count)
-        if isinstance(data[0], Aggregation):
-            self.draw_message_bundles(y, data)
-        else:
-            self.draw_single_records(y, data)
+        if data:
+            if isinstance(data[0], Aggregation):
+                self.draw_message_bundles(y, data)
+            else:
+                self.draw_single_records(y, data)
 
     def draw_single_records(self, y, stamped_records):
         """ Draw individual log messages.

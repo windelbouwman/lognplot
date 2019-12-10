@@ -23,8 +23,22 @@ class Peer:
         msg = cbor.loads(data)
         samples = []
         name = msg["name"]
-        t, dt = msg["t0"], msg["dt"]
-        for value in msg["data"]:
-            samples.append((t, value))
-            t += dt
-        self.data_sink.add_samples(name, samples)
+        typ = msg["type"]
+        if typ == "samples":
+            t, dt = msg["t"], msg["dt"]
+            for value in msg["values"]:
+                value = float(value)
+                samples.append((t, value))
+                t += dt
+            self.data_sink.add_samples(name, samples)
+        elif typ == "sample":
+            t, value = msg["t"], msg["value"]
+            value = float(value)
+            samples = [(t, value)]
+            self.data_sink.add_samples(name, samples)
+        elif typ == "event":
+            t, attributes = msg["t"], msg["attributes"]
+            samples = [(t, attributes)]
+            self.data_sink.add_samples(name, samples)
+        else:
+            self.logger.error(f"Unknown event type {typ}")

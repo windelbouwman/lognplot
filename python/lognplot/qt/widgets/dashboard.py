@@ -23,16 +23,14 @@ class Dashboard(QtWidgets.QWidget):
     def __init__(self, db):
         super().__init__()
         self._db = db
+        rows = 2
+        columns = 2
 
-        self.ph1 = DashboardPlaceHolder(db)
-        self.ph2 = DashboardPlaceHolder(db)
-        self.ph3 = DashboardPlaceHolder(db)
-        self.ph4 = DashboardPlaceHolder(db)
         l = QtWidgets.QGridLayout()
-        l.addWidget(self.ph1, 0, 0)
-        l.addWidget(self.ph2, 0, 1)
-        l.addWidget(self.ph3, 1, 0)
-        l.addWidget(self.ph4, 1, 1)
+        for row in range(rows):
+            for column in range(columns):
+                dashboard_slot = DashboardSlot(db)
+                l.addWidget(dashboard_slot, row, column)
         self.setLayout(l)
 
     def enable_tailing(self, duration):
@@ -42,7 +40,7 @@ class Dashboard(QtWidgets.QWidget):
         self.ph4.enable_tailing(duration)
 
 
-class DashboardPlaceHolder(QtWidgets.QFrame):
+class DashboardSlot(QtWidgets.QFrame):
     """ Placeholder which supports dropping stuff onto.
     """
 
@@ -53,15 +51,35 @@ class DashboardPlaceHolder(QtWidgets.QFrame):
         self._db = db
         self.setAcceptDrops(True)
         self.setFrameStyle(QtWidgets.QFrame.Panel | QtWidgets.QFrame.Raised)
-        self.setLineWidth(4)
+        self.setLineWidth(2)
         self.placeholder_label = QtWidgets.QLabel()
         self.placeholder_label.setText("Drop data here!")
         self.placeholder_label.setAlignment(Qt.AlignCenter)
+        self._close_button = QtWidgets.QPushButton("Close")
+        self._close_button.hide()
         self._layout = QtWidgets.QVBoxLayout()
+        self._layout.addWidget(self._close_button)
         self._layout.addWidget(self.placeholder_label)
         self.setLayout(self._layout)
         self._chart_widget = None
         self._log_widget = None
+        self._close_button.clicked.connect(self._close_inner)
+
+    def _close_inner(self):
+        # Enable drops:
+        self._close_button.hide()
+        self.placeholder_label.show()
+        self.setAcceptDrops(True)
+
+        if self._chart_widget:
+            self._layout.removeWidget(self._chart_widget)
+            self._chart_widget.deleteLater()
+            self._chart_widget = None
+
+        if self._log_widget:
+            self._layout.removeWidget(self._log_widget)
+            self._log_widget.deleteLater()
+            self._log_widget = None
 
     def enable_tailing(self, duration):
         if self._chart_widget:
@@ -75,10 +93,11 @@ class DashboardPlaceHolder(QtWidgets.QFrame):
             event.acceptProposedAction()
 
     def dropEvent(self, event):
-        # Hide place holder:
         self.logger.debug("Filling placeholder")
-        self._layout.removeWidget(self.placeholder_label)
+
+        # Hide place holder:
         self.placeholder_label.hide()
+        self._close_button.show()
 
         # Do not accept new drops:
         self.setAcceptDrops(False)

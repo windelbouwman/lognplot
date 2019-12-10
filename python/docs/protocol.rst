@@ -25,21 +25,32 @@ as a 32 bit big endian integer length prefix, and then the data.
     +----------------+--------------+----------------+--------------+  
 
 This way, the tcp byte stream is used to transport a sequence of
-ordered chunks.
+chunks.
 
 Packet format
 -------------
 
 Each packet is `cbor <https://en.wikipedia.org/wiki/CBOR>`_ encoded binary data.
 
-The format of each transmitted sample is:
+The format of a transmitted sample is:
 
 .. code::
 
     {
         "name": name,     # The name of the sensor
-        "t0": t0,         # The timestamp of the first sample
+        "t": t0,          # The timestamp
+        "type": "samples" # Indicates the type of data, in this case a serie of equal spaced values.
         "dt": dt,         # The time delta between the samples
-        "data": samples   # The actual sample data as a list
+        "values": samples # The actual sample data as a list
     }
 
+Send a single value like this:
+
+.. code::
+
+    {
+        "name": name,     # The name of the sensor
+        "t": t0,          # The timestamp
+        "type": "sample"  # Indicates single value type
+        "value": 3.14     # The actual sample value
+    }

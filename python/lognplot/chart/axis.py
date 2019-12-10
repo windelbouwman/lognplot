@@ -7,6 +7,24 @@ class Axis:
         self.minimum = -30
         self.maximum = 130
 
+    def zoom(self, amount):
+        domain = self.domain
+        if domain < 1e-18 and amount < 0:
+            return
+
+        if domain > 1e18 and amount > 0:
+            return
+
+        step = domain * amount
+        self.minimum -= step
+        self.maximum += step
+
+    def pan(self, amount):
+        domain = self.domain
+        step = domain * amount
+        self.minimum += step
+        self.maximum += step
+
     def set_limits(self, minimum, maximum):
         """ Set the ends of the axis. """
         assert maximum > minimum

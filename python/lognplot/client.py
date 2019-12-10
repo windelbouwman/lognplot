@@ -23,10 +23,32 @@ class LognplotTcpClient:
         self._sock.connect((self._hostname, self._port))
 
     def send_sample(self, name: str, timestamp, value: float):
-        self.send_samples(name, timestamp, 1.0, [value])
+        self.send_dict({"name": name, "t": timestamp, "type": "sample", "value": value})
 
-    def send_samples(self, name: str, t0, dt, samples):
-        data2 = cbor.dumps({"name": name, "t0": t0, "dt": dt, "data": samples})
+    def send_samples(self, name: str, timestamp, dt, samples):
+        """ Send spaced samples.
+        """
+        self.send_dict(
+            {
+                "name": name,
+                "t": timestamp,
+                "type": "samples",
+                "dt": dt,
+                "values": samples,
+            }
+        )
+
+    def send_event(self, name, timestamp, attributes):
+        """ Emit an event.
+        
+        Attributes can be given as a dictionary of key/value strings.
+        """
+        self.send_dict(
+            {"name": name, "t": timestamp, "type": "event", "attributes": attributes}
+        )
+
+    def send_dict(self, data):
+        data2 = cbor.dumps(data)
         self.send_message(data2)
 
     def send_message(self, msg_data):

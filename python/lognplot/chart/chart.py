@@ -41,28 +41,16 @@ class Chart:
 
     def horizontal_zoom(self, amount):
         """ Zoom in horizontal manner. """
-        domain = self.x_axis.domain
-        step = domain * amount
-        self.x_axis.minimum -= step
-        self.x_axis.maximum += step
+        self.x_axis.zoom(amount)
 
     def vertical_zoom(self, amount):
-        domain = self.y_axis.domain
-        step = domain * amount
-        self.y_axis.minimum -= step
-        self.y_axis.maximum += step
+        self.y_axis.zoom(amount)
 
     def horizontal_pan(self, amount):
-        domain = self.x_axis.domain
-        step = domain * amount
-        self.x_axis.minimum += step
-        self.x_axis.maximum += step
+        self.x_axis.pan(amount)
 
     def vertical_pan(self, amount):
-        domain = self.y_axis.domain
-        step = domain * amount
-        self.y_axis.minimum += step
-        self.y_axis.maximum += step
+        self.y_axis.pan(amount)
 
     def autoscale_y(self):
         """ Automatically adjust the Y-axis to fit data in range. """
