@@ -50,6 +50,8 @@ Table of Contents
     installation
     howto
     motivation
+    architecture
+    protocol
     reference
 
 
