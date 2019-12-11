@@ -33,7 +33,7 @@ class ChartWidget(BaseWidget):
         self._last_span = None
         self._tailing_timer = QtCore.QTimer()
         self._tailing_timer.timeout.connect(self._on_tailing_timeout)
-        self._tailing_timer.start(100)
+        self._tailing_timer.start(50)
 
     # Drag drop events:
     def dragEnterEvent(self, event):

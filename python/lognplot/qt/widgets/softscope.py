@@ -49,7 +49,7 @@ class SoftScope(QtWidgets.QWidget):
         self._rx_queue = queue.Queue()
         self._timer = QtCore.QTimer()
         self._timer.timeout.connect(self._on_timeout)
-        self._timer.start(100)
+        self._timer.start(10)
 
     def add_samples(self, channel, samples):
         """ Call this function with new data.

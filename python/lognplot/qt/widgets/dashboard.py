@@ -6,6 +6,7 @@ import logging
 from ..qtapi import QtWidgets, Qt
 from .chartwidget import ChartWidget
 from .logwidget import LogBarWidget
+from .eventwidget import EventTracksWidget
 from . import mime
 
 
@@ -63,6 +64,7 @@ class DashboardSlot(QtWidgets.QFrame):
         self.setLayout(self._layout)
         self._chart_widget = None
         self._log_widget = None
+        self._event_widget = None
         self._close_button.clicked.connect(self._close_inner)
 
     def _close_inner(self):
@@ -81,14 +83,21 @@ class DashboardSlot(QtWidgets.QFrame):
             self._log_widget.deleteLater()
             self._log_widget = None
 
+        if self._event_widget:
+            self._layout.removeWidget(self._event_widget)
+            self._event_widget.deleteLater()
+            self._event_widget = None
+
     def enable_tailing(self, duration):
         if self._chart_widget:
             self._chart_widget.enable_tailing(duration)
 
     def dragEnterEvent(self, event):
         mime_data = event.mimeData()
-        if mime_data.hasFormat(mime.signal_names_mime_type) or mime_data.hasFormat(
-            mime.logger_names_mime_type
+        if (
+            mime_data.hasFormat(mime.signal_names_mime_type)
+            or mime_data.hasFormat(mime.logger_names_mime_type)
+            or mime_data.hasFormat(mime.event_names_mime_type)
         ):
             event.acceptProposedAction()
 
@@ -125,5 +134,16 @@ class DashboardSlot(QtWidgets.QFrame):
             for name in names.split(":"):
                 self.logger.debug(f"Adding log track {name}")
                 self._log_widget.log_bar.add_track(name)
+        elif mime_data.hasFormat(mime.event_names_mime_type):
+            names = bytes(mime_data.data(mime.event_names_mime_type)).decode("ascii")
+
+            # Create log bar chart:
+            self._event_widget = EventTracksWidget(self._db)
+            self._layout.addWidget(self._event_widget)
+
+            # Add loggers:
+            for name in names.split(":"):
+                self.logger.debug(f"Adding event track {name}")
+                self._event_widget.add_track(name)
 
         self.update()

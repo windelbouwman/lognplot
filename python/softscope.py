@@ -23,7 +23,7 @@ def main():
 def gen_data(add_samples):
     ts = 0.0001
     t = 0
-    dt = 0.2
+    dt = 0.02
     F = 400
     F2 = 3
     chunk_size = int(dt / ts)
