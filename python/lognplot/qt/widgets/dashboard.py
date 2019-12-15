@@ -28,17 +28,17 @@ class Dashboard(QtWidgets.QWidget):
         columns = 2
 
         l = QtWidgets.QGridLayout()
+        self._dashboard_slots = []
         for row in range(rows):
             for column in range(columns):
                 dashboard_slot = DashboardSlot(db)
                 l.addWidget(dashboard_slot, row, column)
+                self._dashboard_slots.append(dashboard_slot)
         self.setLayout(l)
 
     def enable_tailing(self, duration):
-        self.ph1.enable_tailing(duration)
-        self.ph2.enable_tailing(duration)
-        self.ph3.enable_tailing(duration)
-        self.ph4.enable_tailing(duration)
+        for dashboard_slot in self._dashboard_slots:
+            dashboard_slot.enable_tailing(duration)
 
 
 class DashboardSlot(QtWidgets.QFrame):
