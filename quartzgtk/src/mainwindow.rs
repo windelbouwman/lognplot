@@ -61,7 +61,7 @@ fn build_ui(app: &gtk::Application, app_state: GuiStateHandle) {
             tick_app_state.borrow_mut().zoom_to_last(tail_duration);
             tick_draw_area.queue_draw();
         }
-        gtk::Continue(true)
+        gtk::prelude::Continue(true)
     };
     gtk::timeout_add(100, tick);
 

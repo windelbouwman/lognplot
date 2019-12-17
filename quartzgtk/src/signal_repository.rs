@@ -42,7 +42,11 @@ pub fn setup_signal_repository(
     tree_view.connect_drag_data_get(|w, _dc, data, info, _time| {
         let selector = w.get_selection();
         let (tree_model, tree_iter) = selector.get_selected().expect("At least some selection");
-        let value = tree_model.get_value(&tree_iter, 0).get::<String>().unwrap();
+        let value = tree_model
+            .get_value(&tree_iter, 0)
+            .get::<String>()
+            .unwrap()
+            .unwrap();
         // let txt: String = value.downcast().expect("Must work").get_some();
         let signal_name = &value;
         let r = data.set_text(signal_name);
@@ -57,7 +61,7 @@ pub fn setup_signal_repository(
         // println!("App state: {}", app_state.borrow());
         // TODO: load traces from database.
         // app_state.borrow()
-        gtk::Continue(true)
+        gtk::prelude::Continue(true)
     };
     gtk::timeout_add(1000, tick);
 }
