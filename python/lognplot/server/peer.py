@@ -17,7 +17,10 @@ class Peer:
         self._running = True
         while self._running:
             msg = await self.connection.read_msg()
-            await self._handle_msg(msg)
+            if msg:
+                await self._handle_msg(msg)
+            else:
+                self._running = False
 
     async def _handle_msg(self, data):
         msg = cbor.loads(data)
@@ -35,6 +38,10 @@ class Peer:
             t, value = msg["t"], msg["value"]
             value = float(value)
             samples = [(t, value)]
+            self.data_sink.add_samples(name, samples)
+        elif typ == "batch":
+            samples = msg['batch']
+            samples = [(t, float(v)) for t,v in samples]
             self.data_sink.add_samples(name, samples)
         elif typ == "event":
             t, attributes = msg["t"], msg["attributes"]

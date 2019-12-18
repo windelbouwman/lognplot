@@ -6,6 +6,8 @@ Reference
 .. automodule:: lognplot
     :members:
 
+.. automodule:: lognplot.client
+    :members:
 
 .. automodule:: lognplot.chart.curve
     :members:

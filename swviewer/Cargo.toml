@@ -1,0 +1,12 @@
+[package]
+name = "swviewer"
+version = "0.1.0"
+authors = ["Windel Bouwman <windel@windel.nl>"]
+edition = "2018"
+description = "Connect to microcontroller via ST-link-v2 and read variable changes via serial wire (SWV)"
+
+[dependencies]
+bytes = "0.5.3"
+log = "0.4.8"
+rusb = "0.5.3"
+simple_logger = "1.3.0"

@@ -23,12 +23,28 @@ class LognplotTcpClient:
         self._sock.connect((self._hostname, self._port))
 
     def send_sample(self, name: str, timestamp, value: float):
-        self.send_dict({"name": name, "t": timestamp, "type": "sample", "value": value})
+        """ Send a single timestamp / value pair to the trace with the given name.
+        """
+        self._send_dict({"name": name, "t": timestamp, "type": "sample", "value": value})
+
+    def send_sample_batch(self, name: str, samples):
+        """ Send a batch of samples.
+
+        samples is a list of tuples of what you would pass to send_sample.
+
+        """
+        self._send_dict(
+            {
+                "type": "batch",
+                "name": name,
+                "batch": samples,
+            }
+        )
 
     def send_samples(self, name: str, timestamp, dt, samples):
-        """ Send spaced samples.
+        """ Send equidistant spaced samples.
         """
-        self.send_dict(
+        self._send_dict(
             {
                 "name": name,
                 "t": timestamp,
@@ -43,15 +59,15 @@ class LognplotTcpClient:
         
         Attributes can be given as a dictionary of key/value strings.
         """
-        self.send_dict(
+        self._send_dict(
             {"name": name, "t": timestamp, "type": "event", "attributes": attributes}
         )
 
-    def send_dict(self, data):
+    def _send_dict(self, data):
         data2 = cbor.dumps(data)
-        self.send_message(data2)
+        self._send_message(data2)
 
-    def send_message(self, msg_data):
+    def _send_message(self, msg_data):
         """ Transmit a whole message prefixed with a length.
         """
         data = bytearray()

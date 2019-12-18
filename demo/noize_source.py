@@ -4,8 +4,6 @@ over TCP/IP
 
 import math
 import time
-import socket
-import struct
 
 from lognplot.client import LognplotTcpClient
 

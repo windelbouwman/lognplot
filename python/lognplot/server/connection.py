@@ -2,6 +2,7 @@
 """
 
 import logging
+import asyncio
 import struct
 
 
@@ -24,14 +25,17 @@ class Connection:
         await self.writer.drain()
 
     async def read_msg(self):
-        header = await self.read_bytes(4)
-        assert len(header) == 4
-        (length,) = struct.unpack(">I", header)
-        self.logger.debug(f"Reading message of {length} bytes")
-        data = await self.read_bytes(length)
-        self.logger.debug(f"Read {len(data)} bytes")
-        assert len(data) == length
-        return data
+        try:
+            header = await self.read_bytes(4)
+            assert len(header) == 4
+            (length,) = struct.unpack(">I", header)
+            self.logger.debug(f"Reading message of {length} bytes")
+            data = await self.read_bytes(length)
+            self.logger.debug(f"Read {len(data)} bytes")
+            assert len(data) == length
+            return data
+        except asyncio.IncompleteReadError as ex:
+            self.logger.info("Incomplete data, assuming peer disconnect.")
 
     async def read_bytes(self, amount):
         return await self.reader.readexactly(amount)
