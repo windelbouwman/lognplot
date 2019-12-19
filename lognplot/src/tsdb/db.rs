@@ -37,6 +37,10 @@ impl TsDb {
         make_handle(self)
     }
 
+    pub fn get_signal_names(&self) -> Vec<String> {
+        self.data.keys().cloned().collect()
+    }
+
     fn get_or_create_trace(&mut self, name: &str) -> &mut Trace {
         if !self.data.contains_key(name) {
             self.new_trace(name);

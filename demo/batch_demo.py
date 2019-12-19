@@ -16,8 +16,8 @@ def main():
     N_batches = 1_000
     batch_size = 10_000
 
-    timestamp = 0
-    value = 0
+    timestamp = 0.0
+    value = 0.0
 
     for _ in range(N_batches):
         samples = []

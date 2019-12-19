@@ -8,18 +8,7 @@ pub fn setup_signal_repository(
     name_column: gtk::TreeViewColumn,
     app_state: GuiStateHandle,
 ) {
-    let model = gtk::TreeStore::new(&[
-        String::static_type(),
-        // String::static_type(),
-    ]);
-
-    let nodex = model.insert_with_values(None, None, &[0], &[&"Trace0".to_string()]);
-    model.insert_with_values(Some(&nodex), None, &[0], &[&"WOOT3".to_string()]);
-
-    // FIXME: this is a fixed list of signals. Grab from tsdb dynamically.
-    for i in 1..10 {
-        model.insert_with_values(None, None, &[0], &[&format!("Trace{}", i)]);
-    }
+    let model = gtk::TreeStore::new(&[String::static_type()]);
 
     let cell = gtk::CellRendererText::new();
     // name_column.set_renderer(&renderer);
@@ -57,10 +46,13 @@ pub fn setup_signal_repository(
 
     // Refreshing timer!
     let tick = move || {
-        // println!("TICK!!!");
-        // println!("App state: {}", app_state.borrow());
-        // TODO: load traces from database.
-        // app_state.borrow()
+        let new_signal_names = app_state.borrow_mut().get_new_signal_names();
+
+        for signal_name in new_signal_names {
+            let iter = model.append(None);
+            model.set(&iter, &[0], &[&signal_name]);
+        }
+
         gtk::prelude::Continue(true)
     };
     gtk::timeout_add(1000, tick);

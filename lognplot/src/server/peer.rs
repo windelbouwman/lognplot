@@ -1,14 +1,12 @@
 //! Handle a single peer via tcp socket.
 
 use futures::sync::oneshot;
-use serde::Deserialize;
-use std::collections::HashMap;
 use tokio::codec::{Framed, LengthDelimitedCodec};
 use tokio::net::TcpStream;
 use tokio::prelude::*;
 
-use crate::time::TimeStamp;
-use crate::tsdb::{Observation, Sample, TsDbHandle};
+use super::payload::SampleBatch;
+use crate::tsdb::TsDbHandle;
 
 /// A handle to a peer connection
 pub struct PeerHandle {
@@ -19,71 +17,6 @@ impl PeerHandle {
     pub fn stop(self) {
         self.kill_switch.send(()).unwrap();
     }
-}
-
-#[derive(Deserialize, Debug)]
-#[serde(tag = "type")]
-enum SamplePayload {
-    #[serde(alias = "samples")]
-    Batch {
-        /// Spacing in time of the samples.
-        dt: f64,
-
-        /// The data points
-        #[serde(alias = "values")]
-        data: Vec<f64>,
-    },
-
-    #[serde(alias = "sample")]
-    Single { value: f64 },
-
-    #[serde(alias = "event")]
-    Event { attributes: HashMap<String, String> },
-}
-
-/// A chunk of data at fixed sample rate.
-#[derive(Deserialize, Debug)]
-struct SampleBatch {
-    /// The name of the signal.
-    name: String,
-
-    /// Timestamp of the first sample
-    t: f64,
-
-    #[serde(flatten)]
-    payload: SamplePayload,
-}
-
-impl SampleBatch {
-    /// Convert a batch of samples received over the wire to
-    /// a vector of samples
-    fn to_samples(&self) -> Vec<Observation<Sample>> {
-        match &self.payload {
-            SamplePayload::Batch { dt, data } => {
-                // let start_time = self.t0;
-                data.iter()
-                    .enumerate()
-                    .map(|(index, value)| {
-                        let t = self.t + dt * index as f64;
-                        let timestamp = TimeStamp::new(t);
-                        Observation::new(timestamp, Sample::new(*value))
-                    })
-                    .collect()
-            }
-            SamplePayload::Single { value } => {
-                let timestamp = TimeStamp::new(self.t);
-                vec![Observation::new(timestamp, Sample::new(*value))]
-            }
-            SamplePayload::Event { .. } => vec![],
-        }
-    }
-    /*
-        fn size(&self) -> usize {
-            match &self.payload {
-                SamplePayload::Batch { dt: _, data} => { data.len() },
-            }
-        }
-    */
 }
 
 /// Handle a single client
@@ -126,5 +59,5 @@ fn process_packet(db: &TsDbHandle, packet: &[u8]) {
     // }).collect();
     // TODO: instead of direct database access
     // get access to a queue which is processed elsewhere into the database.
-    db.add_values(&batch.name, batch.to_samples());
+    db.add_values(batch.name(), batch.to_samples());
 }

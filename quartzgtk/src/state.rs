@@ -7,6 +7,7 @@ use lognplot::tsdb::TsDbHandle;
 /// Struct with some GUI state in it which will be shown in the GUI.
 pub struct GuiState {
     pub chart: Chart,
+    signal_names: Vec<String>,
     db: TsDbHandle,
     // TODO:
     color_wheel: Vec<String>,
@@ -28,6 +29,7 @@ impl GuiState {
         let color_wheel = vec!["blue".to_string(), "red".to_string(), "green".to_string()];
         GuiState {
             chart,
+            signal_names: vec![],
             db,
             color_wheel,
             color_index: 0,
@@ -37,6 +39,19 @@ impl GuiState {
 
     pub fn into_handle(self) -> GuiStateHandle {
         Rc::new(RefCell::new(self))
+    }
+
+    pub fn get_new_signal_names(&mut self) -> Vec<String> {
+        // Ugh, this function is wrong...
+        let all_names = self.db.get_signal_names();
+        let mut new_names = vec![];
+        for name in all_names {
+            if !self.signal_names.contains(&name) {
+                self.signal_names.push(name.clone());
+                new_names.push(name);
+            }
+        }
+        new_names
     }
 
     pub fn add_curve(&mut self, name: &str) {
@@ -58,36 +73,52 @@ impl GuiState {
         color
     }
 
+    pub fn zoom_fit(&mut self) {
+        self.disable_tailing();
+        self.chart.autoscale();
+    }
+
+    pub fn clear_curves(&mut self) {
+        self.disable_tailing();
+        self.chart.clear_curves();
+    }
+
     pub fn pan_left(&mut self) {
         info!("pan left!");
+        self.disable_tailing();
         self.chart.pan_horizontal(-0.1);
         self.chart.fit_y_axis();
     }
 
     pub fn pan_right(&mut self) {
         info!("Pan right!");
+        self.disable_tailing();
         self.chart.pan_horizontal(0.1);
         self.chart.fit_y_axis();
     }
 
     pub fn pan_up(&mut self) {
         info!("pan up!");
+        self.disable_tailing();
         self.chart.pan_vertical(-0.1);
     }
 
     pub fn pan_down(&mut self) {
         info!("pan down!");
+        self.disable_tailing();
         self.chart.pan_vertical(0.1);
     }
 
     pub fn zoom_in_horizontal(&mut self) {
         info!("Zoom in horizontal");
+        self.disable_tailing();
         self.chart.zoom_horizontal(-0.1);
         self.chart.fit_y_axis();
     }
 
     pub fn zoom_out_horizontal(&mut self) {
         info!("Zoom out horizontal");
+        self.disable_tailing();
         self.chart.zoom_horizontal(0.1);
         self.chart.fit_y_axis();
     }
@@ -105,8 +136,13 @@ impl GuiState {
         self.tailing = None;
     }
 
-    pub fn tail_duration(&self) -> Option<f64> {
-        self.tailing.clone()
+    pub fn do_tailing(&mut self) -> bool {
+        if let Some(x) = self.tailing {
+            self.zoom_to_last(x);
+            true
+        } else {
+            false
+        }
     }
 }
 

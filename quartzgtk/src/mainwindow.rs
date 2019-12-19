@@ -33,32 +33,86 @@ fn build_ui(app: &gtk::Application, app_state: GuiStateHandle) {
     let draw_area: gtk::DrawingArea = builder.get_object("chart_control").unwrap();
     setup_drawing_area(draw_area.clone(), app_state.clone());
 
-    let tb_clear_plot: gtk::ToolButton = builder.get_object("tb_clear_plot").unwrap();
-    let app_state_clear_button = app_state.clone();
-    let clear_button_draw_area = draw_area.clone();
-    tb_clear_plot.connect_clicked(move |_tb| {
-        println!("Clear plot!");
-        app_state_clear_button.borrow_mut().chart.clear_curves();
-        clear_button_draw_area.queue_draw();
-    });
+    // clear button:
+    {
+        let tb_clear_plot: gtk::ToolButton = builder.get_object("tb_clear_plot").unwrap();
+        let app_state_clear_button = app_state.clone();
+        let clear_button_draw_area = draw_area.clone();
+        tb_clear_plot.connect_clicked(move |_tb| {
+            info!("Clear plot!");
+            app_state_clear_button.borrow_mut().clear_curves();
+            clear_button_draw_area.queue_draw();
+        });
+    }
 
-    let tb_zoom_to: gtk::ToolButton = builder.get_object("tb_zoom_to").unwrap();
-    let app_state_tail_button = app_state.clone();
-    tb_zoom_to.connect_clicked(move |_tb| {
-        let tail_duration = 60.0;
-        println!("Zoom to last {} seconds", tail_duration);
-        app_state_tail_button
-            .borrow_mut()
-            .enable_tailing(tail_duration);
-    });
+    // zoom fit:
+    {
+        let tb_zoom_fit: gtk::ToolButton = builder.get_object("tb_zoom_fit").unwrap();
+        let app_state_zoom_fit = app_state.clone();
+        let zoom_fit_draw_area = draw_area.clone();
+        tb_zoom_fit.connect_clicked(move |_tb| {
+            info!("zoom fit!");
+            app_state_zoom_fit.borrow_mut().zoom_fit();
+            zoom_fit_draw_area.queue_draw();
+        });
+    }
+
+    // pan left:
+    {
+        let tb_pan_left: gtk::ToolButton = builder.get_object("tb_pan_left").unwrap();
+        let app_state_pan_left = app_state.clone();
+        let pan_left_draw_area = draw_area.clone();
+        tb_pan_left.connect_clicked(move |_tb| {
+            info!("Pan left!");
+            app_state_pan_left.borrow_mut().pan_left();
+            pan_left_draw_area.queue_draw();
+        });
+    }
+
+    // pan right:
+    {
+        let tb_pan_right: gtk::ToolButton = builder.get_object("tb_pan_right").unwrap();
+        let app_state_pan_right = app_state.clone();
+        let pan_right_draw_area = draw_area.clone();
+        tb_pan_right.connect_clicked(move |_tb| {
+            info!("Pan right!");
+            app_state_pan_right.borrow_mut().pan_right();
+            pan_right_draw_area.queue_draw();
+        });
+    }
+
+    // Zoom to button:
+    {
+        let tb_zoom_to: gtk::MenuToolButton = builder.get_object("tb_zoom_to").unwrap();
+        let tail_menu = gtk::Menu::new();
+
+        let menu_item = gtk::MenuItem::new();
+        menu_item.set_label("X bla dir");
+        tail_menu.append(&menu_item);
+
+        let menu_item2 = gtk::MenuItem::new();
+        menu_item2.set_label("X gompie");
+        tail_menu.append(&menu_item2);
+
+        // tail_menu.add
+        tb_zoom_to.set_menu(&tail_menu);
+        let app_state_tail_button = app_state.clone();
+        tb_zoom_to.connect_clicked(move |_tb| {
+            let tail_duration = 60.0;
+            info!("Zoom to last {} seconds", tail_duration);
+            app_state_tail_button
+                .borrow_mut()
+                .enable_tailing(tail_duration);
+        });
+    }
 
     // Refreshing timer!
     let tick_app_state = app_state.clone();
     let tick_draw_area = draw_area.clone();
     let tick = move || {
         // println!("TICK!!!");
-        if let Some(tail_duration) = tick_app_state.borrow().tail_duration() {
-            tick_app_state.borrow_mut().zoom_to_last(tail_duration);
+        let redraw = tick_app_state.borrow_mut().do_tailing();
+        if redraw {
             tick_draw_area.queue_draw();
         }
         gtk::prelude::Continue(true)

@@ -33,6 +33,10 @@ pub fn setup_drawing_area(draw_area: gtk::DrawingArea, app_state: GuiStateHandle
     // Connect key event:
     let key_handler_app_state = app_state.clone();
     draw_area.connect_key_press_event(move |a, k| on_key(a, k, key_handler_app_state.clone()));
+
+    // Click event:
+    // gtk::widget_set_focus_on_click();
+    // draw_area.set_focus_on_click(true);
 }
 
 fn draw_on_canvas<'t>(
@@ -54,6 +58,13 @@ fn draw_on_canvas<'t>(
     let t2 = Instant::now();
     let draw_duration = t2 - t1;
     info!("Drawing time: {:?}", draw_duration);
+
+    // Focus indicator!
+    let is_focus = drawing_area.is_focus();
+    if is_focus {
+        canvas.move_to(10.0, 10.0);
+        canvas.show_text("KEY FOCUS");
+    }
 
     Inhibit(false)
 }
@@ -89,11 +100,11 @@ fn on_key(draw_area: &gtk::DrawingArea, key: &gdk::EventKey, app_state: GuiState
         }
         gdk::enums::key::Return => {
             info!("Autoscale!");
-            app_state.borrow_mut().chart.autoscale();
+            app_state.borrow_mut().zoom_fit();
         }
         gdk::enums::key::BackSpace => {
             info!("Kill all signals!");
-            app_state.borrow_mut().chart.clear_curves();
+            app_state.borrow_mut().clear_curves();
         }
 
         x => {

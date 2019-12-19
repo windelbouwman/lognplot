@@ -5,6 +5,7 @@
 //! - Read data from file
 //! - Demo data (random values)
 
+mod payload;
 mod peer;
 mod server;
 

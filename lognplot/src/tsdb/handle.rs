@@ -20,6 +20,10 @@ impl LockedTsDb {
         LockedTsDb { db: Mutex::new(db) }
     }
 
+    pub fn get_signal_names(&self) -> Vec<String> {
+        self.db.lock().unwrap().get_signal_names()
+    }
+
     /// Create a new trace.
     pub fn new_trace(&self, name: &str) {
         self.db.lock().unwrap().new_trace(name)
