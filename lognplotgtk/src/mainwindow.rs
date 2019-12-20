@@ -32,6 +32,13 @@ fn build_ui(app: &gtk::Application, app_state: GuiStateHandle) {
 
     let draw_area: gtk::DrawingArea = builder.get_object("chart_control").unwrap();
     setup_drawing_area(draw_area.clone(), app_state.clone());
+    
+    let about_menu_item: gtk::MenuItem = builder.get_object("about_menu_item").unwrap();
+    let about_dialog: gtk::AboutDialog = builder.get_object("about_dialog").unwrap();
+
+    about_menu_item.connect_activate(move |_m| {
+        about_dialog.show();
+    });
 
     // clear button:
     {
@@ -86,7 +93,7 @@ fn build_ui(app: &gtk::Application, app_state: GuiStateHandle) {
         let tb_zoom_to: gtk::MenuToolButton = builder.get_object("tb_zoom_to").unwrap();
         let tail_menu = gtk::Menu::new();
 
-        let menu_item = gtk::MenuItem::new();
+        let menu_item = gtk::MenuItem::new_with_label("Bla1 1");
         menu_item.set_label("X bla dir");
         tail_menu.append(&menu_item);
 

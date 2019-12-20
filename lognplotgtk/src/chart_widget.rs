@@ -23,11 +23,17 @@ pub fn setup_drawing_area(draw_area: gtk::DrawingArea, app_state: GuiStateHandle
     let app_state_drag_data_received = app_state.clone();
     draw_area.connect_drag_data_received(move |w, _dc, _x, _y, data, _info, _time| {
         let signal_name: String = data.get_text().expect("Must work!!").to_string();
-        println!("DROP {}", signal_name);
+        info!("DROP {}", signal_name);
         app_state_drag_data_received
             .borrow_mut()
             .add_curve(&signal_name);
         w.queue_draw();
+        w.grab_focus();
+    });
+
+    draw_area.connect_button_press_event(move |w, _e| {
+        w.grab_focus();
+        Inhibit(false)
     });
 
     // Connect key event:
@@ -44,9 +50,9 @@ fn draw_on_canvas<'t>(
     canvas: &cairo::Context,
     app_state: GuiStateHandle,
 ) -> Inhibit {
-    let width = drawing_area.get_allocated_width();
-    let height = drawing_area.get_allocated_height();
-    let size = Size::new(width as f64, height as f64);
+    let width = drawing_area.get_allocated_width() as f64;
+    let height = drawing_area.get_allocated_height() as f64;
+    let size = Size::new(width, height);
     // println!("Draw, width = {:?}, height= {:?}", width, height);
     canvas.set_font_size(14.0);
     let mut canvas2 = CairoCanvas::new(&canvas);
@@ -62,8 +68,15 @@ fn draw_on_canvas<'t>(
     // Focus indicator!
     let is_focus = drawing_area.is_focus();
     if is_focus {
-        canvas.move_to(10.0, 10.0);
-        canvas.show_text("KEY FOCUS");
+        let padding = 1.0;
+        gtk::render_focus(
+            &drawing_area.get_style_context(),
+            &canvas,
+            padding,
+            padding,
+            width - 2.0 * padding,
+            height - 2.0 * padding,
+        );
     }
 
     Inhibit(false)

@@ -36,6 +36,41 @@
       </object>
     </child>
   </object>
+  <object class="GtkAboutDialog" id="about_dialog">
+    <property name="can_focus">False</property>
+    <property name="type_hint">dialog</property>
+    <property name="program_name">Lognplot GTK GUI</property>
+    <property name="comments" translatable="yes">Lognplot GTK gui. This tool can be used to visualize incoming data from a real-time system.</property>
+    <property name="website">https://github.com/windelbouwman/lognplot</property>
+    <property name="website_label" translatable="yes">Github website</property>
+    <property name="authors">Windel Bouwman</property>
+    <property name="logo">../../logo/icon.png</property>
+    <property name="license_type">gpl-3-0</property>
+    <child>
+      <placeholder/>
+    </child>
+    <child internal-child="vbox">
+      <object class="GtkBox">
+        <property name="can_focus">False</property>
+        <property name="orientation">vertical</property>
+        <property name="spacing">2</property>
+        <child internal-child="action_area">
+          <object class="GtkButtonBox">
+            <property name="can_focus">False</property>
+            <property name="layout_style">end</property>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">False</property>
+            <property name="position">0</property>
+          </packing>
+        </child>
+        <child>
+          <placeholder/>
+        </child>
+      </object>
+    </child>
+  </object>
   <object class="GtkPopover" id="popover1">
     <property name="can_focus">False</property>
     <child>
@@ -50,6 +85,7 @@
   </object>
   <object class="GtkWindow" id="top_unit">
     <property name="can_focus">False</property>
+    <property name="title" translatable="yes">Lognplot GTK GUI</property>
     <child>
       <placeholder/>
     </child>
@@ -196,7 +232,7 @@
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <child>
-                      <object class="GtkImageMenuItem">
+                      <object class="GtkImageMenuItem" id="about_menu_item">
                         <property name="label">gtk-about</property>
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
@@ -328,7 +364,7 @@
                 <property name="can_default">True</property>
                 <property name="has_default">True</property>
                 <property name="receives_default">True</property>
-                <property name="events">GDK_KEY_PRESS_MASK | GDK_STRUCTURE_MASK</property>
+                <property name="events">GDK_EXPOSURE_MASK | GDK_BUTTON_PRESS_MASK | GDK_KEY_PRESS_MASK | GDK_FOCUS_CHANGE_MASK | GDK_STRUCTURE_MASK</property>
               </object>
               <packing>
                 <property name="resize">True</property>
