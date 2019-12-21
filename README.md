@@ -1,6 +1,9 @@
 
 [![Build Status](https://travis-ci.org/windelbouwman/lognplot.svg?branch=master)](https://travis-ci.org/windelbouwman/lognplot)
 [![dependency status](https://deps.rs/repo/github/windelbouwman/lognplot/status.svg)](https://deps.rs/repo/github/windelbouwman/lognplot)
+[![Documentation Status](https://readthedocs.org/projects/lognplot/badge/?version=latest)](https://lognplot.readthedocs.io)
+[![docs.rs Documentation](https://docs.rs/lognplot/badge.svg)](https://docs.rs/lognplot)
+
 
 ![logo](logo/logo.png)
 
@@ -9,23 +12,33 @@ Live timeseries analysis on your desktop!
 # About
 
 Lognplot is a graphical viewer for time series data. Unlike many other
-projects in this area, lognplot is not a client server architecture.
-It is a single application which simply views your streaming data.
+projects in this area, lognplot is not a hosted web application.
+It is a desktop application which visualizes your streaming data.
 A primary usecase would be to visualize live data, coming from an
-arduino or a robotic system.
+embedded or a robotic system.
 
 Features:
 - Zoom levels
 - Fast query of data
-- python GUI implementation (based on pyqt5)
+- python GUI implementation (based on PyQt5)
 - rust GUI implementation (based on gtk-rs / cairo)
 - Send data over TCP/IP link to GUI.
 
 # Screenshots
 
+This is an example screenshot of the lognplot python application, visualizing
+10 million datapoints. Note that zooming is still smoothly performed.
+
+![screenshot3](screenshots/screenshot3.png)
+
+This is an example screenshot of the GTK gui implemented with rust, visualizing also 10 million
+datapoints.
+
+![screenshot4](screenshots/screenshot4.png)
+
 This is an example of the plot window, when zoomed out.
 Note that not all points are displayed, but aggregates
-of the data are visualized as min/max/mean lines.
+of the data are visualized as min/max/mean/stddev lines.
 
 ![screenshot1](screenshots/screenshot1.png)
 
@@ -33,6 +46,31 @@ When zooming into the data, the individual data points come
 into picture.
 
 ![screenshot2](screenshots/screenshot2.png)
+
+# Installation
+
+Note that at this moment, you will want to grab the latest
+git version from github.
+
+First clone this repository:
+    $ git clone https://github.com/windelbouwman/lognplot.git
+
+For python, follow this steps:
+
+    $ cd lognplot/python
+    $ pip install --editable .
+    $ python -m lognplot
+
+For rust, follow these steps:
+
+    $ cd lognplotgtk
+    $ cargo run --release
+
+Packages are release for rust and python
+
+Rust crate: https://crates.io/crates/lognplot
+
+Python package: https://pypi.org/project/lognplot/
 
 # Usage
 
@@ -61,6 +99,7 @@ Next, start the demo datasource, which will send data via TCP to this GUI:
 
 Another server demo is the rust side of the code. Start the GUI like this:
 
+    $ cd lognplotgtk
     $ cargo run
 
 This application will be able to receive data via TCP/IP.
@@ -68,15 +107,19 @@ This application will be able to receive data via TCP/IP.
 # Documentation
 
 Documentation for python users can be found here: https://lognplot.readthedocs.io/en/latest/
+Documentation for rust users can be found here: https://docs.rs/lognplot
 
 # Plan
 
 This is a list of things to do:
 
-- Float only
-- Demo log program
 - PyQt5 implementation
 - gtk-rs implementation
+
+# Requirements for live data visualization
+
+- Append data structure to enable appending new data
+- Data point aggregation for zooming out and showing min/max/mean lines
 
 # Similar projects
 
