@@ -33,6 +33,10 @@ impl<'a> Canvas for CairoCanvas<'a> {
             color.b() as f64 / 255.0,
             alpha,
         );
+        // TODO: using a different filter might give better performance?
+        // let pattern = self.cr.get_source();
+        // println!("Filter {:?}", pattern.get_filter());
+        // pattern.set_filter(cairo::Filter::Fast);
     }
 
     fn set_line_width(&mut self, width: f64) {

@@ -46,6 +46,13 @@ impl CurveData {
 }
 
 impl CurveData {
+    fn name(&self) -> String {
+        match self {
+            CurveData::Points(..) => "no-name".to_string(),
+            CurveData::Trace { name, .. } => name.clone(),
+        }
+    }
+
     /// Pull data in for drawing the graph.
     pub fn query(
         &self,
@@ -131,6 +138,10 @@ impl Curve {
 
     pub fn color(&self) -> Color {
         self.stroke.color.clone()
+    }
+
+    pub fn name(&self) -> String {
+        self.data.name()
     }
 
     /// Retrieve a data summary of this curve.

@@ -65,11 +65,31 @@ where
         self.draw_axis();
         self.draw_box();
         self.draw_curves();
+        self.draw_title();
+        self.draw_legend();
+    }
 
-        // Print title of chart:
-        self.canvas.set_pen(Color::black(), 1.0);
-        let top_center = Point::new(50.0, 0.0);
+    fn draw_legend(&mut self) {
+        let x = self.layout.plot_left + 10.0;
+        let mut y = self.layout.plot_top + 10.0;
+        for curve in &self.chart.curves {
+            let name = curve.name();
+            let color = curve.color();
+            self.canvas.set_pen(color, 1.0);
+            self.canvas.fill_rect(x, y - 5.0, 10.0, 10.0);
+            let p = Point::new(x + 15.0, y);
+            self.canvas.set_pen(Color::black(), 1.0);
+            self.canvas
+                .print_text(&p, HorizontalAnchor::Left, VerticalAnchor::Middle, &name);
+            y += 15.0;
+        }
+    }
+
+    /// Print title of chart
+    fn draw_title(&mut self) {
         if let Some(title) = &self.chart.title {
+            self.canvas.set_pen(Color::black(), 1.0);
+            let top_center = Point::new(50.0, 0.0);
             self.canvas.print_text(
                 &top_center,
                 HorizontalAnchor::Middle,

@@ -45,7 +45,7 @@ pub fn setup_drawing_area(draw_area: gtk::DrawingArea, app_state: GuiStateHandle
     // draw_area.set_focus_on_click(true);
 }
 
-fn draw_on_canvas<'t>(
+fn draw_on_canvas(
     drawing_area: &gtk::DrawingArea,
     canvas: &cairo::Context,
     app_state: GuiStateHandle,

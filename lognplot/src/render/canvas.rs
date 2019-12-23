@@ -29,4 +29,24 @@ pub trait Canvas {
     fn draw_polygon(&mut self, points: &[Point]);
     fn draw_circle(&mut self, center: &Point, radius: f64);
     fn fill_polygon(&mut self, points: &[Point]);
+
+    fn draw_rect(&mut self, x: f64, y: f64, width: f64, height: f64) {
+        let path = make_rect(x, y, width, height);
+        self.draw_polygon(&path);
+    }
+
+    fn fill_rect(&mut self, x: f64, y: f64, width: f64, height: f64) {
+        let path = make_rect(x, y, width, height);
+        self.fill_polygon(&path);
+    }
+}
+
+/// Create a path from a rectangle definition.
+fn make_rect(x: f64, y: f64, width: f64, height: f64) -> Vec<Point> {
+    let top_left = Point::new(x, y);
+    let bottom_left = Point::new(x, y + height);
+    let top_right = Point::new(x + width, y);
+    let bottom_right = Point::new(x + width, y + height);
+
+    vec![top_left, top_right, bottom_right, bottom_left]
 }

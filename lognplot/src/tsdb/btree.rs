@@ -138,11 +138,9 @@ where
         ];
         let all_aggregations: Vec<Aggregation<V, M>> =
             all_aggregations.into_iter().filter_map(|a| a).collect();
-        let summary = Aggregation::from_aggregations(&all_aggregations);
 
         // assert!(timespan.covers(summary.timespan));
-
-        summary
+        Aggregation::from_aggregations(&all_aggregations)
     }
 
     /// Get a summary about all data in this tree.
