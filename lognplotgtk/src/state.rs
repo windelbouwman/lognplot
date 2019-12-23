@@ -15,7 +15,7 @@ pub struct GuiState {
     tailing: Option<f64>,
 }
 
-fn new_chart(db: TsDbHandle) -> Chart {
+fn new_chart() -> Chart {
     let mut chart = Chart::default();
     chart.set_xlabel("Time");
     chart.set_ylabel("Value");
@@ -25,7 +25,7 @@ fn new_chart(db: TsDbHandle) -> Chart {
 
 impl GuiState {
     pub fn new(db: TsDbHandle) -> Self {
-        let chart = new_chart(db.clone());
+        let chart = new_chart();
         let color_wheel = vec!["blue".to_string(), "red".to_string(), "green".to_string()];
         GuiState {
             chart,

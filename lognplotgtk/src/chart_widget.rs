@@ -63,7 +63,7 @@ fn draw_on_canvas<'t>(
 
     let t2 = Instant::now();
     let draw_duration = t2 - t1;
-    info!("Drawing time: {:?}", draw_duration);
+    trace!("Drawing time: {:?}", draw_duration);
 
     // Focus indicator!
     let is_focus = drawing_area.is_focus();

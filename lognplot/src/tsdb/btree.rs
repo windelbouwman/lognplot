@@ -125,8 +125,8 @@ where
             };
         }
 
-        println!(
-            "Nodes: {:?}, observations: {:?}",
+        trace!(
+            "range summary, nodes: {:?}, observations: {:?}",
             selected_nodes.len(),
             selected_observations.len()
         );

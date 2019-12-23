@@ -13,7 +13,7 @@ pub use state::{GuiState, GuiStateHandle};
 
 /// Create database, start server, and open a GUI.
 fn main() {
-    simple_logger::init().unwrap();
+    env_logger::init();
     info!("BOOTING QUARTZ TOOL");
 
     let db = TsDb::default();

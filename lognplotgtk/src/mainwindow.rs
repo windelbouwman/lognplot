@@ -32,7 +32,7 @@ fn build_ui(app: &gtk::Application, app_state: GuiStateHandle) {
 
     let draw_area: gtk::DrawingArea = builder.get_object("chart_control").unwrap();
     setup_drawing_area(draw_area.clone(), app_state.clone());
-    
+
     let about_menu_item: gtk::MenuItem = builder.get_object("about_menu_item").unwrap();
     let about_dialog: gtk::AboutDialog = builder.get_object("about_dialog").unwrap();
 
@@ -40,6 +40,33 @@ fn build_ui(app: &gtk::Application, app_state: GuiStateHandle) {
         about_dialog.show();
     });
 
+    setup_toolbar_buttons(&builder, &draw_area, app_state.clone());
+
+    // Refreshing timer!
+    let tick_app_state = app_state.clone();
+    let tick_draw_area = draw_area.clone();
+    let tick = move || {
+        // println!("TICK!!!");
+        let redraw = tick_app_state.borrow_mut().do_tailing();
+        if redraw {
+            tick_draw_area.queue_draw();
+        }
+        gtk::prelude::Continue(true)
+    };
+    gtk::timeout_add(100, tick);
+
+    // Connect application to window:
+    let window: gtk::Window = builder.get_object("top_unit").unwrap();
+
+    window.set_application(Some(app));
+    window.show_all();
+}
+
+fn setup_toolbar_buttons(
+    builder: &gtk::Builder,
+    draw_area: &gtk::DrawingArea,
+    app_state: GuiStateHandle,
+) {
     // clear button:
     {
         let tb_clear_plot: gtk::ToolButton = builder.get_object("tb_clear_plot").unwrap();
@@ -112,25 +139,4 @@ fn build_ui(app: &gtk::Application, app_state: GuiStateHandle) {
                 .enable_tailing(tail_duration);
         });
     }
-
-    // Refreshing timer!
-    let tick_app_state = app_state.clone();
-    let tick_draw_area = draw_area.clone();
-    let tick = move || {
-        // println!("TICK!!!");
-        let redraw = tick_app_state.borrow_mut().do_tailing();
-        if redraw {
-            tick_draw_area.queue_draw();
-        }
-        gtk::prelude::Continue(true)
-    };
-    gtk::timeout_add(100, tick);
-
-    // Connect application to window:
-    let window: gtk::Window = builder.get_object("top_unit").unwrap();
-
-    window.set_application(Some(app));
-    window.show_all();
 }
-
-// fn setup_toolbar_buttons()

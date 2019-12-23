@@ -1,10 +1,10 @@
 //! TCP based server for data
 
-use futures::sync::oneshot;
+use futures::channel::oneshot;
+use futures::{FutureExt, StreamExt};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use tokio::net::TcpListener;
-use tokio::prelude::*;
 
 use super::peer::{process_client, PeerHandle};
 use crate::tsdb::TsDbHandle;
@@ -17,63 +17,79 @@ pub struct ServerHandle {
 
     // This switch can be used to trigger shutdown of the server.
     kill_switch: oneshot::Sender<()>,
-
-    // A list of active peers
-    peers: Arc<Mutex<Vec<PeerHandle>>>,
 }
 
 impl ServerHandle {
     pub fn stop(self) {
         self.kill_switch.send(()).unwrap();
-
-        for peer in self.peers.lock().unwrap().drain(..) {
-            peer.stop();
-        }
-
         self.thread.join().unwrap();
     }
 }
 
 pub fn run_server(db: TsDbHandle) -> ServerHandle {
-    let port = 12345;
-    info!("Starting up server at port {} with db {:?}!", port, db);
-
-    let addr = format!("127.0.0.1:{}", port);
-    let addr = addr.parse().unwrap();
-    let listener = TcpListener::bind(&addr).unwrap();
-
-    let peers: Arc<Mutex<Vec<PeerHandle>>> = Arc::new(Mutex::new(vec![]));
-
-    let server_peers = peers.clone();
-    let server_task = listener
-        .incoming()
-        .for_each(move |socket| {
-            let peer = process_client(0, socket, db.clone());
-            server_peers.lock().unwrap().push(peer);
-            Ok(())
-        })
-        .map_err(|err| {
-            println!("Error in accept: {:?}", err);
-        });
-
-    // Construct contraption which enabled the graceful quit of the server.
-    let (kill_switch, c) = futures::sync::oneshot::channel::<()>();
-    let c = c.map_err(|_| ());
-
-    // let oneshot::
-    let task = server_task.select(c).map(|_| ()).map_err(|_| ());
+    let (kill_switch, kill_switch_receiver) = oneshot::channel::<()>();
 
     let thread = thread::spawn(move || {
         info!("Server thread begun!!!");
-        tokio::run(task);
+        let mut runtime = tokio::runtime::Builder::new()
+            .basic_scheduler()
+            .enable_all()
+            .thread_name("Tokio-server-thread")
+            .build()
+            .unwrap();
+
+        runtime.block_on(async {
+            server_prog(db, kill_switch_receiver).await.unwrap();
+        });
+
         info!("Server finished!!!");
     });
-
-    info!("Server listening on {:?}", addr);
 
     ServerHandle {
         thread,
         kill_switch,
-        peers,
     }
+}
+
+async fn server_prog(
+    db: TsDbHandle,
+    kill_switch_receiver: oneshot::Receiver<()>,
+) -> std::io::Result<()> {
+    let peers: Arc<Mutex<Vec<PeerHandle>>> = Arc::new(Mutex::new(vec![]));
+    let port: u16 = 12345;
+    info!("Starting up server at port {} with db {:?}!", port, db);
+    let addr = format!("127.0.0.1:{}", port);
+    let addr: std::net::SocketAddr = addr.parse().unwrap();
+    let mut listener = TcpListener::bind(&addr).await?;
+    info!("Server listening on {:?}", addr);
+    let mut kill_switch_receiver = kill_switch_receiver.fuse();
+    let mut incoming = listener.incoming().fuse();
+
+    loop {
+        futures::select! {
+            x = kill_switch_receiver => {
+                println!("GOO");
+                break;
+            },
+            optional_new_client = incoming.next() => {
+                if let Some(new_client) = optional_new_client {
+                    let peer_socket = new_client?;
+                    info!("Client connected!");
+                    let peer = process_client(peer_socket, db.clone());
+                    peers.lock().unwrap().push(peer);
+                } else {
+                    info!("No more incoming connections.");
+                    break;
+                }
+            },
+        };
+    }
+
+    info!("Shutting down peer connections");
+
+    for peer in peers.lock().unwrap().drain(..) {
+        peer.stop().await?;
+    }
+
+    Ok(())
 }
