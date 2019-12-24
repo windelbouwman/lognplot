@@ -2,6 +2,8 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use lognplot::chart::{Chart, Curve, CurveData};
+use lognplot::geometry::Size;
+use lognplot::render::x_pixels_to_domain;
 use lognplot::tsdb::TsDbHandle;
 
 /// Struct with some GUI state in it which will be shown in the GUI.
@@ -13,6 +15,8 @@ pub struct GuiState {
     color_wheel: Vec<String>,
     color_index: usize,
     tailing: Option<f64>,
+
+    drag: Option<(f64, f64)>,
 }
 
 fn new_chart() -> Chart {
@@ -34,6 +38,7 @@ impl GuiState {
             color_wheel,
             color_index: 0,
             tailing: None,
+            drag: None,
         }
     }
 
@@ -73,12 +78,45 @@ impl GuiState {
         color
     }
 
+    /// Initial drag action of the mouse
+    pub fn start_drag(&mut self, x: f64, y: f64) {
+        debug!("Drag start! {}, {} ", x, y);
+        self.disable_tailing();
+        self.drag = Some((x, y));
+    }
+
+    /// Update drag of the mouse
+    pub fn move_drag(&mut self, size: Size, x: f64, y: f64) {
+        self.disable_tailing();
+        if let Some((prev_x, prev_y)) = self.drag {
+            let dx = x - prev_x;
+            let dy = y - prev_y;
+            self.do_drag(size, dx, dy);
+        }
+        self.drag = Some((x, y));
+    }
+
+    /// Drag the plot by the given amount.
+    fn do_drag(&mut self, size: Size, dx: f64, dy: f64) {
+        debug!("Drag! {}, {} ", dx, dy);
+
+        let amount = x_pixels_to_domain(size, &self.chart.x_axis, dx);
+
+        self.chart.pan_horizontal_absolute(-amount);
+        // TODO: pan vertical as well?
+        // TODO: idea: auto fit vertically?
+        self.chart.fit_y_axis();
+        // self.chart.pan_vertical(dy* 0.001);
+    }
+
     pub fn zoom_fit(&mut self) {
+        info!("Autoscale!");
         self.disable_tailing();
         self.chart.autoscale();
     }
 
     pub fn clear_curves(&mut self) {
+        info!("Kill all signals!");
         self.disable_tailing();
         self.chart.clear_curves();
     }
@@ -86,14 +124,14 @@ impl GuiState {
     pub fn pan_left(&mut self) {
         info!("pan left!");
         self.disable_tailing();
-        self.chart.pan_horizontal(-0.1);
+        self.chart.pan_horizontal_relative(-0.1);
         self.chart.fit_y_axis();
     }
 
     pub fn pan_right(&mut self) {
         info!("Pan right!");
         self.disable_tailing();
-        self.chart.pan_horizontal(0.1);
+        self.chart.pan_horizontal_relative(0.1);
         self.chart.fit_y_axis();
     }
 
@@ -107,6 +145,18 @@ impl GuiState {
         info!("pan down!");
         self.disable_tailing();
         self.chart.pan_vertical(0.1);
+    }
+
+    pub fn zoom_in_vertical(&mut self) {
+        info!("Zoom in vertical");
+        self.disable_tailing();
+        self.chart.zoom_vertical(0.1);
+    }
+
+    pub fn zoom_out_vertical(&mut self) {
+        info!("Zoom out vertical");
+        self.disable_tailing();
+        self.chart.zoom_vertical(-0.1);
     }
 
     pub fn zoom_in_horizontal(&mut self) {

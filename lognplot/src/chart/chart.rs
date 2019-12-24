@@ -67,14 +67,18 @@ impl Chart {
         self.y_axis.zoom(amount);
     }
 
-    /// Perform a bit of horizontal panning
-    pub fn pan_horizontal(&mut self, amount: f64) {
-        self.x_axis.pan(amount);
+    /// Perform a bit of relative horizontal panning
+    pub fn pan_horizontal_relative(&mut self, amount: f64) {
+        self.x_axis.pan_relative(amount);
+    }
+
+    pub fn pan_horizontal_absolute(&mut self, amount: f64) {
+        self.x_axis.pan_absolute(amount);
     }
 
     /// Perform vertical pan motion on the plot.
     pub fn pan_vertical(&mut self, amount: f64) {
-        self.y_axis.pan(amount);
+        self.y_axis.pan_relative(amount);
     }
 
     /// Adjust Y axis to fit all data as selected on X-axis in view.

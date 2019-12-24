@@ -27,8 +27,9 @@ fn build_ui(app: &gtk::Application, app_state: GuiStateHandle) {
 
     // Connect the data set tree:
     let tree_view: gtk::TreeView = builder.get_object("signal_tree_view").unwrap();
+    let filter_edit: gtk::SearchEntry = builder.get_object("signal_search_entry").unwrap();
     let name_column: gtk::TreeViewColumn = builder.get_object("column_name").unwrap();
-    setup_signal_repository(tree_view, name_column, app_state.clone());
+    setup_signal_repository(tree_view, filter_edit, name_column, app_state.clone());
 
     let draw_area: gtk::DrawingArea = builder.get_object("chart_control").unwrap();
     setup_drawing_area(draw_area.clone(), app_state.clone());
@@ -43,16 +44,15 @@ fn build_ui(app: &gtk::Application, app_state: GuiStateHandle) {
     setup_toolbar_buttons(&builder, &draw_area, app_state.clone());
 
     // Refreshing timer!
-    let tick_app_state = app_state.clone();
-    let tick_draw_area = draw_area.clone();
-    let tick = move || {
+    let tick = clone!(@strong app_state, @strong draw_area => move || {
         // println!("TICK!!!");
-        let redraw = tick_app_state.borrow_mut().do_tailing();
-        if redraw {
-            tick_draw_area.queue_draw();
-        }
+        // let redraw =
+        app_state.borrow_mut().do_tailing();
+        // if redraw {
+        // }
+        draw_area.queue_draw();
         gtk::prelude::Continue(true)
-    };
+    });
     gtk::timeout_add(100, tick);
 
     // Connect application to window:
@@ -70,58 +70,49 @@ fn setup_toolbar_buttons(
     // clear button:
     {
         let tb_clear_plot: gtk::ToolButton = builder.get_object("tb_clear_plot").unwrap();
-        let app_state_clear_button = app_state.clone();
-        let clear_button_draw_area = draw_area.clone();
-        tb_clear_plot.connect_clicked(move |_tb| {
+        tb_clear_plot.connect_clicked(clone!(@strong app_state, @strong draw_area => move |_tb| {
             info!("Clear plot!");
-            app_state_clear_button.borrow_mut().clear_curves();
-            clear_button_draw_area.queue_draw();
-        });
+            app_state.borrow_mut().clear_curves();
+            draw_area.queue_draw();
+        }));
     }
 
     // zoom fit:
     {
         let tb_zoom_fit: gtk::ToolButton = builder.get_object("tb_zoom_fit").unwrap();
-        let app_state_zoom_fit = app_state.clone();
-        let zoom_fit_draw_area = draw_area.clone();
-        tb_zoom_fit.connect_clicked(move |_tb| {
+        tb_zoom_fit.connect_clicked(clone!(@strong app_state, @strong draw_area => move |_tb| {
             info!("zoom fit!");
-            app_state_zoom_fit.borrow_mut().zoom_fit();
-            zoom_fit_draw_area.queue_draw();
-        });
+            app_state.borrow_mut().zoom_fit();
+            draw_area.queue_draw();
+        }));
     }
 
     // pan left:
     {
         let tb_pan_left: gtk::ToolButton = builder.get_object("tb_pan_left").unwrap();
-        let app_state_pan_left = app_state.clone();
-        let pan_left_draw_area = draw_area.clone();
-        tb_pan_left.connect_clicked(move |_tb| {
+        tb_pan_left.connect_clicked(clone!(@strong app_state, @strong draw_area => move |_tb| {
             info!("Pan left!");
-            app_state_pan_left.borrow_mut().pan_left();
-            pan_left_draw_area.queue_draw();
-        });
+            app_state.borrow_mut().pan_left();
+            draw_area.queue_draw();
+        }));
     }
 
     // pan right:
     {
         let tb_pan_right: gtk::ToolButton = builder.get_object("tb_pan_right").unwrap();
-        let app_state_pan_right = app_state.clone();
-        let pan_right_draw_area = draw_area.clone();
-        tb_pan_right.connect_clicked(move |_tb| {
+        tb_pan_right.connect_clicked(clone!(@strong app_state, @strong draw_area => move |_tb| {
             info!("Pan right!");
-            app_state_pan_right.borrow_mut().pan_right();
-            pan_right_draw_area.queue_draw();
-        });
+            app_state.borrow_mut().pan_right();
+            draw_area.queue_draw();
+        }));
     }
 
     // Zoom to button:
     {
-        let tb_zoom_to: gtk::MenuToolButton = builder.get_object("tb_zoom_to").unwrap();
         let tail_menu = gtk::Menu::new();
 
         let menu_item = gtk::MenuItem::new_with_label("Bla1 1");
-        menu_item.set_label("X bla dir");
+        // menu_item.set_label("X bla dir");
         tail_menu.append(&menu_item);
 
         let menu_item2 = gtk::MenuItem::new();
@@ -129,7 +120,11 @@ fn setup_toolbar_buttons(
         tail_menu.append(&menu_item2);
 
         // tail_menu.add
-        tb_zoom_to.set_menu(&tail_menu);
+        let tb_zoom_to: gtk::MenuToolButton = builder.get_object("tb_zoom_to").unwrap();
+        let menu2: gtk::Menu = builder.get_object("my_menu1").unwrap();
+        // tb_zoom_to.set_menu(&tail_menu);
+        tb_zoom_to.set_menu(&menu2);
+
         let app_state_tail_button = app_state.clone();
         tb_zoom_to.connect_clicked(move |_tb| {
             let tail_duration = 60.0;

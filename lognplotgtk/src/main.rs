@@ -1,6 +1,9 @@
 #[macro_use]
 extern crate log;
 
+#[macro_use]
+extern crate glib;
+
 mod chart_widget;
 mod mainwindow;
 mod signal_repository;

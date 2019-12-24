@@ -8,6 +8,7 @@ mod axis_options;
 mod chart;
 mod curve;
 
+pub use axis::ValueAxis;
 pub use chart::Chart;
 pub use curve::{Curve, CurveData};
 

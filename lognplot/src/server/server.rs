@@ -68,7 +68,7 @@ async fn server_prog(
     loop {
         futures::select! {
             x = kill_switch_receiver => {
-                println!("GOO");
+                info!("Server shutdown by kill switch.");
                 break;
             },
             optional_new_client = incoming.next() => {

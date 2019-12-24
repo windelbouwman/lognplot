@@ -61,9 +61,15 @@ impl ValueAxis {
         self.set_limits(begin, end);
     }
 
-    pub fn pan(&mut self, amount: f64) {
+    /// Perform a relative panning based on the scale of the axis.
+    pub fn pan_relative(&mut self, amount: f64) {
         let domain = self.domain();
         let step = domain * amount;
+        self.pan_absolute(step);
+    }
+
+    /// Pan an absolute amount.
+    pub fn pan_absolute(&mut self, step: f64) {
         let begin = self.begin() + step;
         let end = self.end() + step;
         self.set_limits(begin, end);
