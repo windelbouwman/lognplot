@@ -3,7 +3,8 @@
 [![dependency status](https://deps.rs/repo/github/windelbouwman/lognplot/status.svg)](https://deps.rs/repo/github/windelbouwman/lognplot)
 [![Documentation Status](https://readthedocs.org/projects/lognplot/badge/?version=latest)](https://lognplot.readthedocs.io)
 [![docs.rs Documentation](https://docs.rs/lognplot/badge.svg)](https://docs.rs/lognplot)
-
+[![crates.io page](https://img.shields.io/crates/v/lognplot.svg)](https://crates.io/crates/lognplot)
+[![PyPI](https://img.shields.io/pypi/v/lognplot)](https://pypi.org/project/lognplot)
 
 ![logo](logo/logo.png)
 

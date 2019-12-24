@@ -8,8 +8,6 @@ mod render;
 mod svg_output;
 
 #[cfg(feature = "cairo")]
-mod cairo;
-#[cfg(feature = "cairo")]
 mod cairo_canvas;
 
 // re-exports

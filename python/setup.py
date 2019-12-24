@@ -2,10 +2,10 @@ from setuptools import setup, find_packages
 
 setup(
     name="lognplot",
-    version="0.1.0",
+    version="0.1.1",
     author="Windel Bouwman",
     description="Log and plot data. This project basically implements a software scope.",
-    url="https://github.com/windelbouwman/quartz",
+    url="https://github.com/windelbouwman/lognplot",
     packages=find_packages(),
     license="GPLv3",
     classifiers=[

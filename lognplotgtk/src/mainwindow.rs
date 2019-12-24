@@ -26,10 +26,8 @@ fn build_ui(app: &gtk::Application, app_state: GuiStateHandle) {
     let builder = gtk::Builder::new_from_string(glade_src);
 
     // Connect the data set tree:
-    let tree_view: gtk::TreeView = builder.get_object("signal_tree_view").unwrap();
-    let filter_edit: gtk::SearchEntry = builder.get_object("signal_search_entry").unwrap();
-    let name_column: gtk::TreeViewColumn = builder.get_object("column_name").unwrap();
-    setup_signal_repository(tree_view, filter_edit, name_column, app_state.clone());
+   
+    setup_signal_repository(&builder, app_state.clone());
 
     let draw_area: gtk::DrawingArea = builder.get_object("chart_control").unwrap();
     setup_drawing_area(draw_area.clone(), app_state.clone());
@@ -109,29 +107,29 @@ fn setup_toolbar_buttons(
 
     // Zoom to button:
     {
-        let tail_menu = gtk::Menu::new();
-
-        let menu_item = gtk::MenuItem::new_with_label("Bla1 1");
-        // menu_item.set_label("X bla dir");
-        tail_menu.append(&menu_item);
-
-        let menu_item2 = gtk::MenuItem::new();
-        menu_item2.set_label("X gompie");
-        tail_menu.append(&menu_item2);
-
-        // tail_menu.add
         let tb_zoom_to: gtk::MenuToolButton = builder.get_object("tb_zoom_to").unwrap();
         let menu2: gtk::Menu = builder.get_object("my_menu1").unwrap();
-        // tb_zoom_to.set_menu(&tail_menu);
         tb_zoom_to.set_menu(&menu2);
 
-        let app_state_tail_button = app_state.clone();
-        tb_zoom_to.connect_clicked(move |_tb| {
-            let tail_duration = 60.0;
-            info!("Zoom to last {} seconds", tail_duration);
-            app_state_tail_button
-                .borrow_mut()
-                .enable_tailing(tail_duration);
-        });
+        let menu_ids = vec![
+            ("menu_last_year", 365.0 * 24.0 * 60.0*60.0),
+            ("menu_last_day", 24.0 * 60.0*60.0),
+            ("menu_last_hour", 60.0*60.0),
+            ("menu_last_10_minutes", 10.0*60.0),
+            ("menu_last_minute", 60.0),
+            ("menu_last_30_seconds", 30.0),
+            ("menu_last_10_seconds", 10.0),
+            ("menu_last_second", 1.0),
+        ];
+        for (menu_id, tail_duration) in menu_ids {
+            let menu_item: gtk::MenuItem = builder.get_object(menu_id).unwrap();
+            menu_item.connect_activate(clone!(@strong app_state => move |_tb| {
+                info!("Zoom to last {} seconds", tail_duration);
+                app_state
+                    .borrow_mut()
+                    .enable_tailing(tail_duration);
+            }));
+    
+        }
     }
 }

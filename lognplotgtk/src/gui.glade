@@ -75,18 +75,66 @@
     <property name="visible">True</property>
     <property name="can_focus">False</property>
     <child>
-      <object class="GtkMenuItem">
+      <object class="GtkMenuItem" id="menu_last_year">
         <property name="visible">True</property>
         <property name="can_focus">False</property>
-        <property name="label" translatable="yes">Fu1</property>
+        <property name="label" translatable="yes">year</property>
         <property name="use_underline">True</property>
       </object>
     </child>
     <child>
-      <object class="GtkMenuItem">
+      <object class="GtkMenuItem" id="menu_last_day">
         <property name="visible">True</property>
         <property name="can_focus">False</property>
-        <property name="label" translatable="yes">Bar2</property>
+        <property name="label" translatable="yes">day</property>
+        <property name="use_underline">True</property>
+      </object>
+    </child>
+    <child>
+      <object class="GtkMenuItem" id="menu_last_hour">
+        <property name="visible">True</property>
+        <property name="can_focus">False</property>
+        <property name="label" translatable="yes">hour</property>
+        <property name="use_underline">True</property>
+      </object>
+    </child>
+    <child>
+      <object class="GtkMenuItem" id="menu_last_10_minutes">
+        <property name="visible">True</property>
+        <property name="can_focus">False</property>
+        <property name="label" translatable="yes">10 minutes</property>
+        <property name="use_underline">True</property>
+      </object>
+    </child>
+    <child>
+      <object class="GtkMenuItem" id="menu_last_minute">
+        <property name="visible">True</property>
+        <property name="can_focus">False</property>
+        <property name="label" translatable="yes">minute</property>
+        <property name="use_underline">True</property>
+      </object>
+    </child>
+    <child>
+      <object class="GtkMenuItem" id="menu_last_30_seconds">
+        <property name="visible">True</property>
+        <property name="can_focus">False</property>
+        <property name="label" translatable="yes">30 seconds</property>
+        <property name="use_underline">True</property>
+      </object>
+    </child>
+    <child>
+      <object class="GtkMenuItem" id="menu_last_10_seconds">
+        <property name="visible">True</property>
+        <property name="can_focus">False</property>
+        <property name="label" translatable="yes">10 seconds</property>
+        <property name="use_underline">True</property>
+      </object>
+    </child>
+    <child>
+      <object class="GtkMenuItem" id="menu_last_second">
+        <property name="visible">True</property>
+        <property name="can_focus">False</property>
+        <property name="label" translatable="yes">second</property>
         <property name="use_underline">True</property>
       </object>
     </child>
@@ -267,7 +315,7 @@
               <object class="GtkMenuToolButton" id="tb_zoom_to">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
-                <property name="label" translatable="yes">toolbutton</property>
+                <property name="label" translatable="yes">Zoom to last...</property>
                 <property name="use_underline">True</property>
               </object>
               <packing>
@@ -325,6 +373,16 @@
                         <child>
                           <object class="GtkTreeViewColumn" id="column_name">
                             <property name="title" translatable="yes">Name</property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkTreeViewColumn" id="column_size">
+                            <property name="title" translatable="yes">Size</property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkTreeViewColumn" id="column_last_value">
+                            <property name="title" translatable="yes">Last value</property>
                           </object>
                         </child>
                       </object>

@@ -59,6 +59,21 @@ impl GuiState {
         new_names
     }
 
+    pub fn get_signal_sizes(&self) -> Vec<(String, usize)> {
+        let all_names = self.db.get_signal_names();
+        let mut res = vec![];
+        for name in all_names {
+            let size: usize = if let Some(summary) = self.db.summary(&name, None) {
+                summary.count
+            } else {
+                0
+            };
+
+            res.push((name, size));
+        }
+        res
+    }
+
     pub fn add_curve(&mut self, name: &str) {
         // self.chart.add_curve(Curve::new());
         let tsdb_data = CurveData::trace(name, self.db.clone());
