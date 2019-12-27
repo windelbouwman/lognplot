@@ -26,7 +26,7 @@ fn build_ui(app: &gtk::Application, app_state: GuiStateHandle) {
     let builder = gtk::Builder::new_from_string(glade_src);
 
     // Connect the data set tree:
-   
+
     setup_signal_repository(&builder, app_state.clone());
 
     let draw_area: gtk::DrawingArea = builder.get_object("chart_control").unwrap();
@@ -38,6 +38,11 @@ fn build_ui(app: &gtk::Application, app_state: GuiStateHandle) {
     about_menu_item.connect_activate(move |_m| {
         about_dialog.show();
     });
+
+    let menu_save: gtk::MenuItem =  builder.get_object("menu_save").unwrap();
+    menu_save.connect_activate(clone!(@strong app_state => move |_m| {
+        app_state.borrow().save();
+    }));
 
     setup_toolbar_buttons(&builder, &draw_area, app_state.clone());
 
@@ -112,10 +117,10 @@ fn setup_toolbar_buttons(
         tb_zoom_to.set_menu(&menu2);
 
         let menu_ids = vec![
-            ("menu_last_year", 365.0 * 24.0 * 60.0*60.0),
-            ("menu_last_day", 24.0 * 60.0*60.0),
-            ("menu_last_hour", 60.0*60.0),
-            ("menu_last_10_minutes", 10.0*60.0),
+            ("menu_last_year", 365.0 * 24.0 * 60.0 * 60.0),
+            ("menu_last_day", 24.0 * 60.0 * 60.0),
+            ("menu_last_hour", 60.0 * 60.0),
+            ("menu_last_10_minutes", 10.0 * 60.0),
             ("menu_last_minute", 60.0),
             ("menu_last_30_seconds", 30.0),
             ("menu_last_10_seconds", 10.0),
@@ -129,7 +134,6 @@ fn setup_toolbar_buttons(
                     .borrow_mut()
                     .enable_tailing(tail_duration);
             }));
-    
         }
     }
 }

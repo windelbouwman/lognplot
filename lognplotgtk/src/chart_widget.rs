@@ -16,7 +16,7 @@ pub fn setup_drawing_area(draw_area: gtk::DrawingArea, app_state: GuiStateHandle
 
     // Connect drop event:
     let targets = vec![gtk::TargetEntry::new(
-        "text/plain",
+        super::mime_types::SIGNAL_NAMES_MIME_TYPE,
         gtk::TargetFlags::empty(),
         0,
     )];
@@ -24,11 +24,13 @@ pub fn setup_drawing_area(draw_area: gtk::DrawingArea, app_state: GuiStateHandle
 
     draw_area.connect_drag_data_received(
         clone!(@strong app_state => move |w, _dc, _x, _y, data, _info, _time| {
-            let signal_name: String = data.get_text().expect("Must work!!").to_string();
-            info!("DROP {}", signal_name);
-            app_state
+            let signal_names: String = data.get_text().expect("Must work!!").to_string();
+            info!("DROP {}", signal_names);
+            for signal_name in signal_names.split(":") {
+                app_state
                 .borrow_mut()
                 .add_curve(&signal_name);
+            }
             w.queue_draw();
             w.grab_focus();
         }),

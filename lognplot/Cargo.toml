@@ -5,7 +5,7 @@ authors = ["Windel Bouwman <windel@windel.nl>"]
 edition = "2018"
 description = "Log and plot data"
 license = "GPL-3.0-only"
-repository = "https://github.com/windelbouwman/quartz"
+repository = "https://github.com/windelbouwman/lognplot"
 categories = ["visualization", "development-tools::debugging"]
 
 [features]

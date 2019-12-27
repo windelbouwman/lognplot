@@ -6,6 +6,8 @@ extern crate glib;
 
 mod chart_widget;
 mod mainwindow;
+mod mime_types;
+mod io;
 mod signal_repository;
 mod state;
 

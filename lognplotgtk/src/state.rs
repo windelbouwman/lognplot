@@ -46,6 +46,18 @@ impl GuiState {
         Rc::new(RefCell::new(self))
     }
 
+    pub fn save(&self) {
+        info!("Save data to disk?");
+        match super::io::export_data(self.db.clone()) {
+            Err(e) => {
+                error!("Something happened during data save: {}", e);
+            }
+            Ok(_) => {
+                info!("Data saved success");
+            }
+        }
+    }
+
     pub fn get_new_signal_names(&mut self) -> Vec<String> {
         // Ugh, this function is wrong...
         let all_names = self.db.get_signal_names();
