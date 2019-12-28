@@ -205,6 +205,52 @@ impl StLink {
         Ok(())
     }
 
+    /// No clue what this command is. Required for tracing? Trace enable?
+    pub fn cmd_x40(&self) -> StLinkResult<()> {
+        let mut cmd = [0; 16];
+        cmd[0] = CMD_DEBUG_COMMAND;
+        cmd[1] = 0x40;
+        cmd[2] = 0x0;
+        cmd[3] = 0x10;
+        cmd[4] = 0x80;
+        cmd[5] = 0x84;
+        cmd[6] = 0x1e;
+
+        let _res = self.xfer_cmd(&cmd, 2)?;
+        // TODO: what does this response mean?
+
+        Ok(())
+    }
+
+    pub fn get_trace_count(&self) -> StLinkResult<usize> {
+        let mut cmd = [0; 16];
+        cmd[0] = CMD_DEBUG_COMMAND;
+        cmd[1] = 0x42;
+
+        let res = self.xfer_cmd(&cmd, 2)?.expect("two bytes");
+        // TODO: what does this response mean?
+
+        let trace_byte_count = get_u16(&res, 0);
+
+        Ok(trace_byte_count as usize)
+    }
+
+    pub fn read_trace_data(&self, trace_bytes_count: usize) -> StLinkResult<Vec<u8>> {
+        let timeout = std::time::Duration::from_millis(700);
+        let mut trace_data_buffer = vec![0; trace_bytes_count];
+        let bytes_received = self
+            .handle
+            .read_bulk(0x83, &mut trace_data_buffer, timeout)?;
+        if bytes_received != trace_bytes_count {
+            return Err(StLinkError::Other(format!(
+                "Mismatch in received bytes! (read {} bytes, but expected {} bytes)",
+                bytes_received, trace_bytes_count
+            )));
+        }
+        trace!("Got response: {:?}", trace_data_buffer);
+        Ok(trace_data_buffer)
+    }
+
     /// Read memory 32.
     pub fn read_mem32(&self, address: u32, data_length: usize) -> StLinkResult<Vec<u8>> {
         trace!(
@@ -293,6 +339,12 @@ fn put_u32(cmd: &mut [u8], offset: usize, value: u32) {
     cmd[offset + 3] = cmd2[3];
 }
 
+fn get_u32(buffer: &[u8], offset: usize) -> u32 {
+    let mut cursor = Cursor::new(buffer);
+    cursor.set_position(offset as u64);
+    cursor.get_u32_le()
+}
+
 fn put_u16(cmd: &mut [u8], offset: usize, value: u16) {
     // Ugh, this should be possible in a different manner.
     let mut cmd2 = vec![];
@@ -301,8 +353,8 @@ fn put_u16(cmd: &mut [u8], offset: usize, value: u16) {
     cmd[offset + 1] = cmd2[1];
 }
 
-fn get_u32(buffer: &[u8], offset: usize) -> u32 {
+fn get_u16(buffer: &[u8], offset: usize) -> u16 {
     let mut cursor = Cursor::new(buffer);
     cursor.set_position(offset as u64);
-    cursor.get_u32_le()
+    cursor.get_u16_le()
 }

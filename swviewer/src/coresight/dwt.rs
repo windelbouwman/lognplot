@@ -6,19 +6,18 @@
 //! See ARMv7-M architecture reference manual C1.8 for some additional
 //! info about this stuff.
 
+use super::Component;
 use super::CoreSightResult;
 use super::MemoryAccess;
+
+pub const DWT_PID: [u8; 8] = [0x2, 0xB0, 0x3b, 0x0, 0x4, 0x0, 0x0, 0x0];
 
 /// A struct representing a DWT unit on target.
 pub struct Dwt<'m, M>
 where
     M: MemoryAccess,
 {
-    /// The address where this debug block is located.
-    address: u32,
-
-    /// Memory access
-    access: &'m M,
+    component: Component<'m, M>,
 }
 
 const REG_OFFSET_DWT_CTRL: usize = 0;
@@ -27,12 +26,12 @@ impl<'m, M> Dwt<'m, M>
 where
     M: MemoryAccess,
 {
-    pub fn new(access: &'m M, address: u32) -> Self {
-        Dwt { address, access }
+    pub fn new(component: Component<'m, M>) -> Self {
+        Dwt { component }
     }
 
     pub fn info(&self) -> CoreSightResult<()> {
-        let ctrl = self.read_reg(REG_OFFSET_DWT_CTRL)?;
+        let ctrl = self.component.read_reg(REG_OFFSET_DWT_CTRL)?;
 
         let num_comparators_available: u8 = ((ctrl >> 28) & 0xf) as u8;
         let has_trace_sampling_support = ctrl & (1 << 27) == 0;
@@ -58,26 +57,21 @@ where
         let function = 3; // sample PC and data
 
         // entry 0:
-        self.write_reg(0x20, var_address)?; // COMp value
-        self.write_reg(0x24, mask)?; // mask
-        self.write_reg(0x28, function)?; // function
+        self.component.write_reg(0x20, var_address)?; // COMp value
+        self.component.write_reg(0x24, mask)?; // mask
+        self.component.write_reg(0x28, function)?; // function
+        Ok(())
+    }
+
+    pub fn disable_memory_watch(&self) -> CoreSightResult<()> {
+        self.component.write_reg(0x28, 0)?; // function, 0 is disabled.
         Ok(())
     }
 
     pub fn poll(&self) -> CoreSightResult<()> {
-        let status = self.read_reg(0x28)?;
+        let status = self.component.read_reg(0x28)?;
         let matched = status & (1 << 24) > 0;
         info!("DWT function0 State: matched={}", matched);
-        Ok(())
-    }
-
-    fn read_reg(&self, offset: usize) -> CoreSightResult<u32> {
-        let value = self.access.read_u32(self.address + offset as u32)?;
-        Ok(value)
-    }
-
-    fn write_reg(&self, offset: usize, value: u32) -> CoreSightResult<()> {
-        self.access.write_u32(self.address + offset as u32, value)?;
         Ok(())
     }
 }

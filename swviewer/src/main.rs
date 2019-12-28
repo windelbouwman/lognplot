@@ -2,12 +2,9 @@
 extern crate log;
 
 mod coresight;
-mod memory;
 mod stlink;
 
-use memory::{MemoryAccess, MemoryAddress};
-
-use coresight::Target;
+use coresight::{MemoryAccess, MemoryAddress, Target};
 use stlink::{StLink, StLinkMode, StLinkResult};
 
 fn main() {
@@ -37,10 +34,24 @@ fn do_magic() -> StLinkResult<()> {
     if let Some(st_link_device) = stlink::find_st_link()? {
         info!("ST link found!");
         let sl = stlink::open_st_link(st_link_device)?;
+        sl.cmd_x40();
         interact(&sl)?;
 
         if let Err(e) = interact2(&sl) {
             error!("Error: {:?}", e);
+        }
+
+        // Enter trace capture:
+        loop {
+            std::thread::sleep_ms(60);
+
+            let trace_byte_count = sl.get_trace_count()?;
+            info!("Trace bytes: {}", trace_byte_count);
+            if trace_byte_count > 0 {
+                info!("Reading trace data.");
+                let trace_data = sl.read_trace_data(trace_byte_count)?;
+                println!("Trace data: {:?}", trace_data);
+            }
         }
     } else {
         warn!("No ST link found, please connect it?");

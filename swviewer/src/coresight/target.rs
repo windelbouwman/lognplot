@@ -1,6 +1,7 @@
 use super::Dwt;
-use super::Itm;
 use super::MemoryAccess;
+use super::{Itm, Tpiu};
+use super::{DWT_PID, ITM_PID, TPIU_PID};
 
 use super::read_identification;
 use super::read_rom_table;
@@ -17,7 +18,7 @@ where
     // etm:
     itm: Option<Itm<'m, M>>,
 
-    tpiu: Option<i32>,
+    tpiu: Option<Tpiu<'m, M>>,
 
     /// Memory accessor
     access: &'m M,
@@ -53,20 +54,54 @@ where
         if rom_table_id.is_component(&component_id_rom_table) {
             info!("ROM TABLE DETECTED!");
             let rom_table = read_rom_table(self.access, rom_table_base)?;
-            info!("Rom table: {:?}", rom_table);
-            for entry in &rom_table.entries {
-                info!("Entry: {:?}", entry);
-            }
 
             let components = rom_table.read_components(self.access)?;
-            // TODO: assumption about dwt location:
-            let dwt = Dwt::new(self.access, 0xE000_1000);
-            dwt.info()?;
-            self.dwt = Some(dwt);
 
-            println!("Components: {}", components.len());
+            info!("Components: {}", components.len());
             for component in components {
-                println!(" - {:?}", component);
+                if component.is_peripheral(&DWT_PID) {
+                    info!(" - Detected DWT component! {:?}", component);
+                    // TODO: assumption about dwt location:
+                    // self.access, 0xE000_1000
+                    let dwt_expected_address = 0xE000_1000;
+                    if component.address() != dwt_expected_address {
+                        warn!(
+                            "DWT located at 0x{:08X} (usual address is 0x{:08X}",
+                            component.address(),
+                            dwt_expected_address
+                        )
+                    }
+
+                    if self.dwt.is_none() {
+                        let dwt = Dwt::new(component);
+                        dwt.info()?;
+                        self.dwt = Some(dwt);
+                    }
+                } else if component.is_peripheral(&ITM_PID) {
+                    info!(" - Detected ITM component! {:?}", component);
+
+                    if self.itm.is_none() {
+                        let itm = Itm::new(component);
+                        self.itm = Some(itm);
+                    }
+                } else if component.is_peripheral(&TPIU_PID) {
+                    info!(" - Detected TPIU component! {:?}", component);
+                    let tpiu_expected_address = 0xE004_0000;
+                    if component.address() != tpiu_expected_address {
+                        warn!(
+                            "TPIU located at 0x{:08X} (usual address is 0x{:08X}",
+                            component.address(),
+                            tpiu_expected_address
+                        )
+                    }
+
+                    if self.tpiu.is_none() {
+                        let tpiu = Tpiu::new(component);
+                        self.tpiu = Some(tpiu);
+                    }
+                } else {
+                    info!(" - Unknown {:?}", component);
+                }
             }
         } else {
             println!("No ROM table found!");
@@ -82,7 +117,31 @@ where
     }
 
     pub fn start_trace_memory_address(&self, addr: u32) -> CoreSightResult<()> {
-        self.grab_dwt().enable_trace(addr)
+        // stm32 specific reg (DBGMCU_CR):
+        self.access.write_u32(0xE004_2004, 0x27);
+
+        // Config tpiu:
+        let tpiu = self.grab_tpiu();
+        tpiu.set_port_size(1)?;
+        let uc_freq = 16; // MHz (HSI frequency)
+        let swo_freq = 2; // MHz
+        let prescaler = (uc_freq / swo_freq) - 1;
+        tpiu.set_prescaler(prescaler)?;
+        tpiu.set_pin_protocol(2)?;
+        tpiu.set_formatter(0x100)?;
+
+        // Config itm:
+        let itm = self.grab_itm();
+        itm.unlock()?;
+        itm.tx_enable()?;
+
+        // config dwt:
+        let dwt = self.grab_dwt();
+        // Future:
+        // self.grab_dwt().enable_trace(addr)?;
+        dwt.disable_memory_watch();
+
+        Ok(())
     }
 
     pub fn poll(&self) -> CoreSightResult<()> {
@@ -90,8 +149,14 @@ where
     }
 
     fn grab_dwt(&self) -> &Dwt<M> {
-        self.dwt
-            .as_ref()
-            .expect("DWT must be present before invoking this function.")
+        self.dwt.as_ref().expect("DWT must be present.")
+    }
+
+    fn grab_itm(&self) -> &Itm<M> {
+        self.itm.as_ref().expect("ITM must be present.")
+    }
+
+    fn grab_tpiu(&self) -> &Tpiu<M> {
+        self.tpiu.as_ref().expect("TPIU must be present.")
     }
 }

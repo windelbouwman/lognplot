@@ -1,11 +1,11 @@
-use super::super::memory::{MemoryAccess, MemoryAddress};
 use super::identification::read_identification;
 use super::CoreSightResult;
 use super::{add_offset, Component};
+use super::{MemoryAccess, MemoryAddress};
 
 pub struct RomTable {
     base: MemoryAddress,
-    pub entries: Vec<RomTableEntry>,
+    entries: Vec<RomTableEntry>,
 }
 
 impl std::fmt::Debug for RomTable {
@@ -35,7 +35,7 @@ impl std::fmt::Debug for RomTableEntry {
 }
 
 impl RomTable {
-    pub fn read_components<M>(&self, memory: &M) -> CoreSightResult<Vec<Component>>
+    pub fn read_components<'m, M>(&self, memory: &'m M) -> CoreSightResult<Vec<Component<'m, M>>>
     where
         M: MemoryAccess,
     {
@@ -43,17 +43,14 @@ impl RomTable {
         for entry in &self.entries {
             if entry.present {
                 let address: MemoryAddress = add_offset(self.base, entry.offset);
-
-                let identifation = read_identification(memory, address)?;
-
-                let component = Component {
-                    address,
-                    identifation,
-                };
-
-                info!("Component! offset=0x{:08X} {:?}", entry.offset, component);
-
-                components.push(component);
+                let identification = read_identification(memory, address)?;
+                if identification.is_valid() {
+                    let component = Component::new(memory, address, identification);
+                    info!("Component! offset=0x{:08X} {:?}", entry.offset, component);
+                    components.push(component);
+                } else {
+                    warn!("Invalid identification: {:?}", identification);
+                }
             } else {
                 info!("Component not present!")
             }
@@ -85,6 +82,11 @@ where
         // Read next record:
         offset += 4;
         entry_value = memory.read_u32(base + offset)?;
+    }
+
+    info!("Rom table:");
+    for entry in &rom_table_entries {
+        info!("Entry: {:?}", entry);
     }
 
     Ok(RomTable {
