@@ -40,8 +40,9 @@ where
         info!("ITM_TCR Before: 0x{:08X}", value);
 
         value |= 1 << 0; // itm enable
+        value |= 1 << 1; // timestamp enable
         value |= 1 << 3; // tx enable (for DWT)
-        value |= 1 << 16; // trace bus ID
+        value |= 13 << 16; // 7 bits trace bus ID
         self.component.write_reg(REGISTER_OFFSET_ITM_TCR, value)?;
 
         let value = self.component.read_reg(REGISTER_OFFSET_ITM_TCR)?;

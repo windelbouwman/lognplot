@@ -7,6 +7,7 @@ mod memory;
 mod romtable;
 mod target;
 mod tpiu;
+mod trace_protocol;
 
 // Public API:
 pub use memory::{MemoryAccess, MemoryAddress};
@@ -23,6 +24,7 @@ use itm::Itm;
 use itm::ITM_PID;
 use romtable::read_rom_table;
 use tpiu::{Tpiu, TPIU_PID};
+pub use trace_protocol::Decoder;
 
 pub type CoreSightResult<T> = Result<T, CoreSightError>;
 

@@ -138,8 +138,8 @@ where
         // config dwt:
         let dwt = self.grab_dwt();
         // Future:
-        // self.grab_dwt().enable_trace(addr)?;
-        dwt.disable_memory_watch();
+        dwt.enable_trace(addr)?;
+        // dwt.disable_memory_watch()?;
 
         Ok(())
     }

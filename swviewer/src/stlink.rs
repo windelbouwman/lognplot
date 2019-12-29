@@ -21,17 +21,23 @@ pub fn find_st_link() -> rusb::Result<Option<rusb::Device<rusb::GlobalContext>>>
 
 pub fn open_st_link(st_link_device: rusb::Device<rusb::GlobalContext>) -> StLinkResult<StLink> {
     let desc = st_link_device.device_descriptor()?;
-    println!("Device description: {:?}", desc);
-    println!("Num configs: {}", desc.num_configurations());
+    info!("Device description: {:?}", desc);
+    info!("Num configs: {}", desc.num_configurations());
 
-    let active_config = st_link_device.active_config_descriptor()?;
-    println!("Active config: {:?}", active_config);
+    let active_config_descriptor = st_link_device.active_config_descriptor()?;
+    info!("Active config: {:?}", active_config_descriptor);
 
     let mut st_link_handle = st_link_device.open()?;
     st_link_handle.reset()?;
     st_link_handle.claim_interface(0)?;
 
-    println!("St link opened!");
+    info!("St link opened!");
+    let active_config = st_link_handle.active_configuration()?;
+    info!("Active configuration: {}", active_config);
+    if active_config != 1 {
+        info!("Changing active configuration to 1");
+        st_link_handle.set_active_configuration(1)?;
+    }
 
     let st_link = StLink::new(st_link_handle);
 
@@ -106,6 +112,7 @@ impl StLink {
 
     /// Retrieve ST-link version.
     pub fn get_version(&self) -> StLinkResult<StLinkVersion> {
+        debug!("Reading version of st-link device.");
         let mut cmd: Vec<u8> = vec![0; 16];
         cmd[0] = CMD_VERSION;
         let res = self.xfer_cmd(&cmd, 6)?.expect("six bytes");

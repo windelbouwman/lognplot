@@ -133,6 +133,7 @@ project? Please submit a pull request or an issue!
 - plot juggler https://github.com/facontidavide/PlotJuggler
 - tracy profiler (https://bitbucket.org/wolfpld/tracy)
 - trace compass: https://www.eclipse.org/tracecompass/
+- sigrok: https://sigrok.org
 - speedscope: https://www.speedscope.app/
 
 # Project structure

@@ -9,8 +9,23 @@ use stlink::{StLink, StLinkMode, StLinkResult};
 
 fn main() {
     // simple_logger::init().unwrap();
-    simple_logger::init_with_level(log::Level::Debug).unwrap();
-    info!("Hello, world! {:?}", rusb::version());
+    let matches = clap::App::new("swviewer")
+        .arg(
+            clap::Arg::with_name("v")
+                .short("v")
+                .multiple(true)
+                .help("Sets the level of verbosity"),
+        )
+        .get_matches();
+
+    let log_level = match matches.occurrences_of("v") {
+        0 => log::Level::Info,
+        1 => log::Level::Debug,
+        2 | _ => log::Level::Trace,
+    };
+    simple_logger::init_with_level(log_level).unwrap();
+    info!("Log level: {}", log_level);
+    info!("rusb version: {:?}", rusb::version());
 
     if let Err(e) = do_magic() {
         error!("An error occurred: {:?}", e);
@@ -34,25 +49,14 @@ fn do_magic() -> StLinkResult<()> {
     if let Some(st_link_device) = stlink::find_st_link()? {
         info!("ST link found!");
         let sl = stlink::open_st_link(st_link_device)?;
-        sl.cmd_x40();
         interact(&sl)?;
+        sl.cmd_x40()?;
 
         if let Err(e) = interact2(&sl) {
             error!("Error: {:?}", e);
         }
 
-        // Enter trace capture:
-        loop {
-            std::thread::sleep_ms(60);
-
-            let trace_byte_count = sl.get_trace_count()?;
-            info!("Trace bytes: {}", trace_byte_count);
-            if trace_byte_count > 0 {
-                info!("Reading trace data.");
-                let trace_data = sl.read_trace_data(trace_byte_count)?;
-                println!("Trace data: {:?}", trace_data);
-            }
-        }
+        capture_trace_data(&sl)?;
     } else {
         warn!("No ST link found, please connect it?");
     }
@@ -105,12 +109,33 @@ where
     let mut target = Target::new(mem_access);
 
     target.read_debug_components()?;
-    target.start_trace_memory_address(0x2000_0000)?;
+    target.start_trace_memory_address(0x2000_0004)?;
     for _a in 1..10 {
         target.poll()?;
     }
 
     Ok(())
+}
+
+fn capture_trace_data(st_link: &StLink) -> StLinkResult<()> {
+    // Enter trace capture:
+    loop {
+        std::thread::sleep(std::time::Duration::from_millis(60));
+
+        let mut decoder = coresight::Decoder::new();
+
+        let trace_byte_count = st_link.get_trace_count()?;
+        debug!("Trace bytes: {}", trace_byte_count);
+        if trace_byte_count > 0 {
+            debug!("Reading trace data.");
+            let trace_data = st_link.read_trace_data(trace_byte_count)?;
+            debug!("Trace data: {:?}", trace_data);
+            decoder.feed(trace_data);
+            while let Some(packet) = decoder.pull() {
+                debug!("Trace packet: {:?}", packet);
+            }
+        }
+    }
 }
 
 impl MemoryAccess for StLink {

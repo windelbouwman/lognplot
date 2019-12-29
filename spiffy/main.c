@@ -8,15 +8,17 @@ typedef unsigned int uint32_t;
 volatile int a;
 volatile int b;
 
-int main() {
+void putc2(char c) {
     volatile uint32_t* ITM_STIM0 = 0xE0000000;
+    while ((*ITM_STIM0) == 0) {}
+    *ITM_STIM0 = c;
+}
+
+int main() {
     while(1) {
-        while ((*ITM_STIM0) == 0) {}
-        *ITM_STIM0 = 'A';
-        while ((*ITM_STIM0) == 0) {}
-        *ITM_STIM0 = 'B';
-        while ((*ITM_STIM0) == 0) {}
-        *ITM_STIM0 = 'C';
+        putc2('A');
+        putc2('B');
+        putc2('C');
 
         a++;
 
