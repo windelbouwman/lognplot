@@ -25,7 +25,9 @@ class LognplotTcpClient:
     def send_sample(self, name: str, timestamp, value: float):
         """ Send a single timestamp / value pair to the trace with the given name.
         """
-        self._send_dict({"name": name, "t": timestamp, "type": "sample", "value": value})
+        self._send_dict(
+            {"name": name, "t": timestamp, "type": "sample", "value": value}
+        )
 
     def send_sample_batch(self, name: str, samples):
         """ Send a batch of samples.
@@ -34,11 +36,7 @@ class LognplotTcpClient:
 
         """
         self._send_dict(
-            {
-                "type": "batch",
-                "name": name,
-                "batch": samples,
-            }
+            {"type": "batch", "name": name, "batch": samples,}
         )
 
     def send_samples(self, name: str, timestamp, dt, samples):

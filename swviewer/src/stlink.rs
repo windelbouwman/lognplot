@@ -3,14 +3,14 @@
 use bytes::{Buf, BufMut};
 use std::io::Cursor;
 
-pub fn find_st_link() -> rusb::Result<Option<rusb::Device<rusb::GlobalContext>>> {
-    // ST-link v2 usb id's:
-    let vid = 0x0483;
-    let pid = 0x3748;
+// ST-link v2 usb id's:
+const STLINK_VID: u16 = 0x0483;
+const STLINK_PID: u16 = 0x3748;
 
+pub fn find_st_link() -> rusb::Result<Option<rusb::Device<rusb::GlobalContext>>> {
     let first_match = rusb::devices()?.iter().find(|d| {
         if let Ok(desc) = d.device_descriptor() {
-            desc.vendor_id() == vid && desc.product_id() == pid
+            desc.vendor_id() == STLINK_VID && desc.product_id() == STLINK_PID
         } else {
             false
         }
@@ -40,8 +40,6 @@ pub fn open_st_link(st_link_device: rusb::Device<rusb::GlobalContext>) -> StLink
     }
 
     let st_link = StLink::new(st_link_handle);
-
-    // st_link_handle.close();
 
     Ok(st_link)
 }

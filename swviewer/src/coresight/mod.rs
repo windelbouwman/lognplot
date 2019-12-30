@@ -24,7 +24,7 @@ use itm::Itm;
 use itm::ITM_PID;
 use romtable::read_rom_table;
 use tpiu::{Tpiu, TPIU_PID};
-pub use trace_protocol::Decoder;
+pub use trace_protocol::{Decoder, TracePacket};
 
 pub type CoreSightResult<T> = Result<T, CoreSightError>;
 

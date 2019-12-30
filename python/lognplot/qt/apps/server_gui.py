@@ -64,6 +64,8 @@ class ServerGuiMainWindow(QtWidgets.QMainWindow):
         # Menu
         menu_bar = self.menuBar()
         file_menu = menu_bar.addMenu("File")
+        new_action = file_menu.addAction("New")
+        new_action.triggered.connect(self.new_database)
         quit_action = file_menu.addAction("Quit")
         quit_action.triggered.connect(self.close)
         help_menu = menu_bar.addMenu("Help")
@@ -72,6 +74,9 @@ class ServerGuiMainWindow(QtWidgets.QMainWindow):
         usage_action.setShortcut(QtGui.QKeySequence("F1"))
         about_action = help_menu.addAction("About")
         about_action.triggered.connect(self.show_about_dialog)
+
+    def new_database(self):
+        self.db.clear()
 
     def show_usage_dialog(self):
         QtWidgets.QMessageBox.information(self, "Usage", help_text)

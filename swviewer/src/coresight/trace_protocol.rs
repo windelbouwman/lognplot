@@ -134,7 +134,7 @@ impl Decoder {
             debug!("Overflow!");
             self.emit(TracePacket::Overflow);
         } else if header == 0x0 {
-            debug!("Sync!");
+            info!("Sync!");
             self.state = DecoderState::Syncing(1);
         // Read ~5 zero bytes (0x00) followed by 0x80
         // TracePacket::Sync
@@ -332,6 +332,61 @@ mod tests {
         );
         assert_eq!(
             Some(TracePacket::TimeStamp { tc: 3, ts: 1092 }),
+            decoder.pull()
+        );
+        assert_eq!(None, decoder.pull());
+    }
+
+    #[test]
+    fn example_capture2() {
+        // Example trace, containing ITM trace data, timestamps and DWT trace data.
+        let trace_data: Vec<u8> = vec![
+            71, 68, 0, 0, 8, 135, 215, 2, 0, 0, 192, 161, 245, 109, 71, 72, 0, 0, 8, 112, 71, 96,
+            0, 0, 8, 112, 143, 216, 2, 0, 0, 240, 197,
+        ];
+
+        let mut decoder = Decoder::new();
+
+        decoder.feed(trace_data);
+        assert_eq!(
+            Some(TracePacket::DwtData {
+                id: 8,
+                payload: vec![68, 0, 0, 8]
+            }),
+            decoder.pull()
+        );
+        assert_eq!(
+            Some(TracePacket::DwtData {
+                id: 16,
+                payload: vec![215, 2, 0, 0]
+            }),
+            decoder.pull()
+        );
+        assert_eq!(
+            Some(TracePacket::TimeStamp { tc: 0, ts: 1800865 }),
+            decoder.pull()
+        );
+        assert_eq!(
+            Some(TracePacket::DwtData {
+                id: 8,
+                payload: vec![72, 0, 0, 8]
+            }),
+            decoder.pull()
+        );
+        assert_eq!(Some(TracePacket::Overflow), decoder.pull());
+        assert_eq!(
+            Some(TracePacket::DwtData {
+                id: 8,
+                payload: vec![96, 0, 0, 8]
+            }),
+            decoder.pull()
+        );
+        assert_eq!(Some(TracePacket::Overflow), decoder.pull());
+        assert_eq!(
+            Some(TracePacket::DwtData {
+                id: 17,
+                payload: vec![216, 2, 0, 0]
+            }),
             decoder.pull()
         );
         assert_eq!(None, decoder.pull());

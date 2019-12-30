@@ -14,6 +14,10 @@ class TsDb:
         # TODO: load / store data in file!
         self._traces = {}  # The internal trace data.
 
+    def clear(self):
+        """ Remove all signals from the database. """
+        self._traces.clear()
+
     def signal_names_and_types(self):
         """ Get a sorted list of signal names. """
         names_and_types = [(name, self.get_serie_type(name)) for name in self._traces]

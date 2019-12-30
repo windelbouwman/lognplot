@@ -51,6 +51,14 @@ where
         Ok(())
     }
 
+    pub fn setup_tracing(&self) -> CoreSightResult<()> {
+        let mut value = self.component.read_reg(REG_OFFSET_DWT_CTRL)?;
+        value |= 1 << 10; // Sync packet rate.
+        value |= 1 << 0; // Enable CYCCNT.
+        self.component.write_reg(REG_OFFSET_DWT_CTRL, value)?;
+        Ok(())
+    }
+
     /// Enable data monitor on a given user variable at some address
     pub fn enable_trace(&self, var_address: u32) -> CoreSightResult<()> {
         let mask = 0; // size of the ignore mask, ignore nothing!

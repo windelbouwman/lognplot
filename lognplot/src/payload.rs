@@ -1,4 +1,4 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use std::collections::HashMap;
 
@@ -6,7 +6,7 @@ use crate::time::TimeStamp;
 use crate::tsdb::{Observation, Sample};
 
 /// A chunk of data at fixed sample rate.
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct SampleBatch {
     /// The name of the signal.
     name: String,
@@ -16,6 +16,14 @@ pub struct SampleBatch {
 }
 
 impl SampleBatch {
+    /// Create a new sample batch with a single sample.
+    pub fn new_sample(name: String, t: f64, value: f64) -> Self {
+        SampleBatch {
+            name,
+            payload: SamplePayload::Single { t, value },
+        }
+    }
+
     pub fn name(&self) -> &str {
         &self.name
     }
@@ -56,18 +64,18 @@ impl SampleBatch {
     */
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(tag = "type")]
 enum SamplePayload {
     /// A bulk of measurements.
-    #[serde(alias = "batch")]
+    #[serde(rename = "batch")]
     Batch {
-        #[serde(alias = "batch")]
+        #[serde(rename = "batch")]
         samples: Vec<(f64, f64)>,
     },
 
     /// A chunk of data sampled at a certain fixed interval.
-    #[serde(alias = "samples")]
+    #[serde(rename = "samples")]
     Sampled {
         /// Timestamp of the first sample
         t: f64,
@@ -76,11 +84,11 @@ enum SamplePayload {
         dt: f64,
 
         /// The data points
-        #[serde(alias = "values")]
+        #[serde(rename = "values")]
         data: Vec<f64>,
     },
 
-    #[serde(alias = "sample")]
+    #[serde(rename = "sample")]
     Single {
         /// Timestamp of the sample
         t: f64,
@@ -89,7 +97,7 @@ enum SamplePayload {
         value: f64,
     },
 
-    #[serde(alias = "event")]
+    #[serde(rename = "event")]
     Event {
         /// Timestamp of the event
         t: f64,

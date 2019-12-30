@@ -40,8 +40,8 @@ class Peer:
             samples = [(t, value)]
             self.data_sink.add_samples(name, samples)
         elif typ == "batch":
-            samples = msg['batch']
-            samples = [(t, float(v)) for t,v in samples]
+            samples = msg["batch"]
+            samples = [(t, float(v)) for t, v in samples]
             self.data_sink.add_samples(name, samples)
         elif typ == "event":
             t, attributes = msg["t"], msg["attributes"]

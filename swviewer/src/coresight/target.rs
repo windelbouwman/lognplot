@@ -116,9 +116,9 @@ where
         Ok(())
     }
 
-    pub fn start_trace_memory_address(&self, addr: u32) -> CoreSightResult<()> {
+    pub fn setup_tracing(&self) -> CoreSightResult<()> {
         // stm32 specific reg (DBGMCU_CR):
-        self.access.write_u32(0xE004_2004, 0x27);
+        self.access.write_u32(0xE004_2004, 0x27)?;
 
         // Config tpiu:
         let tpiu = self.grab_tpiu();
@@ -135,6 +135,14 @@ where
         itm.unlock()?;
         itm.tx_enable()?;
 
+        // config dwt:
+        let dwt = self.grab_dwt();
+        dwt.setup_tracing()?;
+
+        Ok(())
+    }
+
+    pub fn start_trace_memory_address(&self, addr: u32) -> CoreSightResult<()> {
         // config dwt:
         let dwt = self.grab_dwt();
         // Future:
