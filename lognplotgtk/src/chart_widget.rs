@@ -110,6 +110,11 @@ fn draw_on_canvas(
     let t2 = Instant::now();
     let draw_duration = t2 - t1;
     trace!("Drawing time: {:?}", draw_duration);
+    let draw_seconds: f64 = draw_duration.as_secs_f64();
+
+    app_state
+        .borrow()
+        .log_meta_metric("META_chart_render_time", t1, draw_seconds);
 
     // Focus indicator!
     let is_focus = drawing_area.is_focus();

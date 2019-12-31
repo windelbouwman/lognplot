@@ -26,6 +26,12 @@ pub struct SampleMetrics {
     /// The maximum value of all samples
     pub max: f64,
 
+    /// The first observed value
+    pub first: f64,
+
+    /// The last measured value
+    pub last: f64,
+
     /// The mean of all values.
     mean: f64,
 
@@ -46,6 +52,8 @@ impl SampleMetrics {
             min: value,
             max: value,
             mean: value,
+            first: value,
+            last: value,
             m2: 0.0,
             count: 1,
         }
@@ -56,6 +64,10 @@ impl SampleMetrics {
         // These updates are trivial:
         self.min = self.min.min(value);
         self.max = self.max.max(value);
+
+        // Assume the value is appended:
+        self.last = value;
+
         self.count += 1;
 
         // Less trivial update below.. statistical stuff!
@@ -117,6 +129,9 @@ impl Metrics<Sample> for SampleMetrics {
         self.min = self.min.min(metrics.min);
         self.max = self.max.max(metrics.max);
 
+        // Assume metrics are appended
+        self.last = metrics.last;
+
         let delta = metrics.mean - self.mean;
         let new_count = self.count + metrics.count;
         let new_mean = ((self.mean * self.count as f64) + (metrics.mean * metrics.count as f64))
@@ -143,11 +158,11 @@ mod tests {
     #[test]
     fn metric_updates() {
         // Create test samples:
-        let sample1 = Sample::new(1.0);
-        let sample2 = Sample::new(2.0);
+        let sample1 = Sample::new(2.0);
+        let sample2 = Sample::new(1.0);
         let sample3 = Sample::new(3.0);
-        let sample4 = Sample::new(4.0);
-        let sample5 = Sample::new(5.0);
+        let sample4 = Sample::new(5.0);
+        let sample5 = Sample::new(4.0);
 
         let mut metrics = SampleMetrics::from(sample1);
         metrics.update(&sample2);
@@ -157,6 +172,8 @@ mod tests {
 
         assert_eq!(metrics.min, 1.0);
         assert_eq!(metrics.max, 5.0);
+        assert_eq!(metrics.first, 2.0);
+        assert_eq!(metrics.last, 4.0);
         assert_eq!(metrics.count, 5);
         assert_eq!(metrics.mean(), 3.0);
         assert_eq!(metrics.variance(), 2.0);

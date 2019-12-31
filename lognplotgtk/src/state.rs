@@ -1,15 +1,18 @@
 use std::cell::RefCell;
 use std::rc::Rc;
+use std::time::Instant;
 
 use lognplot::chart::{Chart, Curve, CurveData};
 use lognplot::geometry::Size;
 use lognplot::render::x_pixels_to_domain;
-use lognplot::tsdb::TsDbHandle;
+use lognplot::time::TimeStamp;
+use lognplot::tsdb::{Aggregation, Observation, Sample, SampleMetrics, TsDbHandle};
 
 /// Struct with some GUI state in it which will be shown in the GUI.
 pub struct GuiState {
     pub chart: Chart,
     signal_names: Vec<String>,
+    gui_start_instant: Instant,
     db: TsDbHandle,
     // TODO:
     color_wheel: Vec<String>,
@@ -33,6 +36,7 @@ impl GuiState {
         let color_wheel = vec!["blue".to_string(), "red".to_string(), "green".to_string()];
         GuiState {
             chart,
+            gui_start_instant: Instant::now(),
             signal_names: vec![],
             db,
             color_wheel,
@@ -40,6 +44,15 @@ impl GuiState {
             tailing: None,
             drag: None,
         }
+    }
+
+    /// This is cool stuff, log metrics about render time for example to database itself :)
+    pub fn log_meta_metric(&self, name: &str, timestamp: Instant, value: f64) {
+        let elapsed = timestamp.duration_since(self.gui_start_instant);
+        let elapsed_seconds: f64 = elapsed.as_secs_f64();
+        let timestamp = TimeStamp::new(elapsed_seconds);
+        let observation = Observation::new(timestamp, Sample::new(value));
+        self.db.add_value(name, observation);
     }
 
     pub fn into_handle(self) -> GuiStateHandle {
@@ -71,17 +84,12 @@ impl GuiState {
         new_names
     }
 
-    pub fn get_signal_sizes(&self) -> Vec<(String, usize)> {
+    pub fn get_signal_sizes(&self) -> Vec<(String, Option<Aggregation<Sample, SampleMetrics>>)> {
         let all_names = self.db.get_signal_names();
         let mut res = vec![];
         for name in all_names {
-            let size: usize = if let Some(summary) = self.db.summary(&name, None) {
-                summary.count
-            } else {
-                0
-            };
-
-            res.push((name, size));
+            let summary = self.db.summary(&name, None);
+            res.push((name, summary));
         }
         res
     }

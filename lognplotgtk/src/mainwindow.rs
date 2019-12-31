@@ -39,7 +39,7 @@ fn build_ui(app: &gtk::Application, app_state: GuiStateHandle) {
         about_dialog.show();
     });
 
-    let menu_save: gtk::MenuItem =  builder.get_object("menu_save").unwrap();
+    let menu_save: gtk::MenuItem = builder.get_object("menu_save").unwrap();
     menu_save.connect_activate(clone!(@strong app_state => move |_m| {
         app_state.borrow().save();
     }));

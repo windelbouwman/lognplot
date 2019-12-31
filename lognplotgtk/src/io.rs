@@ -11,6 +11,6 @@ pub fn export_data(db: TsDbHandle) -> hdf5::Result<()> {
         let sig1 = group.new_dataset::<f64>().create(&signal_name, 2)?;
         sig1.write(&[3.14, 2.7])?;
     }
-    
+
     Ok(())
 }

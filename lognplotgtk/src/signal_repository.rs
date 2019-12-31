@@ -84,10 +84,17 @@ pub fn setup_signal_repository(builder: &gtk::Builder, app_state: GuiStateHandle
         let iter = model.get_iter_first();
 
         if let Some(iter2) = iter {
-            for (signal_name, signal_size) in app_state.borrow().get_signal_sizes() {
+            for (signal_name, optional_signal_summary) in app_state.borrow().get_signal_sizes() {
                 let model_name_value = model.get_value(&iter2, 0).get::<String>().unwrap().unwrap();
                 if model_name_value == signal_name {
-                    model.set_value(&iter2, 1, &signal_size.to_string().to_value());
+                    if let Some(signal_summary) = optional_signal_summary {
+                        model.set_value(&iter2, 1, &signal_summary.count.to_string().to_value());
+                        model.set_value(
+                            &iter2,
+                            2,
+                            &signal_summary.metrics().last.to_string().to_value(),
+                        );
+                    }
                 }
 
                 if !model.iter_next(&iter2) {

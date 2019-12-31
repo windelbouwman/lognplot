@@ -260,11 +260,12 @@ where
         self.canvas.set_line_width(2.0);
         self.canvas.draw_line(&points);
 
-        // This turns out to be pretty slow:
-        // TODO: find good way for markers. Maybe a cross?
-        // for point in points {
-        //     self.canvas.draw_circle(&point, 3.0);
-        // }
+        // Draw markers as small solid square dots
+        // Idea from pulseview (sigrok application)
+        for point in points {
+            self.canvas
+                .fill_rect(point.x() - 4.0, point.y() - 4.0, 8.0, 8.0);
+        }
     }
 
     /// Draw aggregated values
