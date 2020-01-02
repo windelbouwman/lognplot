@@ -73,6 +73,17 @@ Rust crate: https://crates.io/crates/lognplot
 
 Python package: https://pypi.org/project/lognplot/
 
+## Requirements
+
+For the GTK variant of the tool, you need the following to be installed:
+
+- cairo-gobject-devel
+- pango-devel
+- atk-devel
+- gdk-pixbuf2-devel
+- gtk3-devel
+- hdf5-devel
+
 # Usage
 
 To use the python side of this code, start as a demo the softscope:
