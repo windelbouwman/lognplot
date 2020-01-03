@@ -19,9 +19,14 @@ class Axis:
         self.minimum -= step
         self.maximum += step
 
-    def pan(self, amount):
+    def pan_relative(self, amount):
+        """ Pan a percentage of the axis range. """
         domain = self.domain
         step = domain * amount
+        self.pan_absolute(step)
+
+    def pan_absolute(self, step):
+        """ Move the axis view by an absolute amount. """
         self.minimum += step
         self.maximum += step
 

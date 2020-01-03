@@ -35,6 +35,7 @@ class ChartRenderer(BaseRenderer):
 
         self._draw_curves()
         self._draw_legend()
+        self._draw_cursor()
 
     def shade_region(self, region):
         """ Draw a shaded box in some region.
@@ -211,6 +212,14 @@ class ChartRenderer(BaseRenderer):
                 color_block_size,
                 color,
             )
+
+    def _draw_cursor(self):
+        if self.chart.cursor:
+            x = self.to_x_pixel(self.chart.cursor)
+            pen = QtGui.QPen(Qt.black)
+            pen.setWidth(2)
+            self.painter.setPen(pen)
+            self.painter.drawLine(x, self.layout.chart_top, x, self.layout.chart_bottom)
 
     def to_x_pixel(self, value):
         return transform.to_x_pixel(value, self.chart.x_axis, self.layout)

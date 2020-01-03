@@ -9,6 +9,7 @@ from ..qtapi import QtCore, QtWidgets, QtGui, Qt, pyqtSignal
 from ...utils import bench_it
 from ...chart import Chart
 from ..render import render_chart_on_qpainter, ChartLayout, ChartOptions
+from ..render import transform
 from . import mime
 from .basewidget import BaseWidget
 
@@ -24,7 +25,12 @@ class ChartWidget(BaseWidget):
     def __init__(self, db):
         super().__init__()
         self.chart = Chart(db)
+        self.chart_options = ChartOptions()
+        self.chart_layout = None  # Set when resized
+
         self._colors = cycle(color_wheel)
+
+        self.setMouseTracking(True)
 
         # Accept drop of signal names
         self.setAcceptDrops(True)
@@ -34,6 +40,9 @@ class ChartWidget(BaseWidget):
         self._tailing_timer = QtCore.QTimer()
         self._tailing_timer.timeout.connect(self._on_tailing_timeout)
         self._tailing_timer.start(50)
+
+    def resizeEvent(self, event):
+        self.chart_layout = ChartLayout(self.rect(), self.chart_options)
 
     # Drag drop events:
     def dragEnterEvent(self, event):
@@ -49,10 +58,32 @@ class ChartWidget(BaseWidget):
             self.add_curve(name)
 
     # Mouse interactions:
+    def wheelEvent(self, event):
+        # print(event)
+        event.accept()
+        pos = event.pos()
+        x, y = pos.x(), pos.y()
+        delta = event.angleDelta().y()
+        if delta > 0:
+            self.zoom_in_horizontal()
+        elif delta < 0:
+            self.zoom_out_horizontal()
+        else:
+            pass
+
+    def mouse_move(self, x, y):
+        # Update cursor!
+        value = transform.to_x_value(x, self.chart.x_axis, self.chart_layout)
+        # print(value)
+        self.chart.set_cursor(value)
+        self.update()
+
     def pan(self, dx, dy):
-        print("pan", dx, dy)
-        options1 = ChartOptions()
-        layout = ChartLayout(self.rect(), options1)
+        # print("pan", dx, dy)
+        shift = transform.x_pixels_to_domain(dx, self.chart.x_axis, self.chart_layout)
+        self.chart.horizontal_pan_absolute(-shift)
+        self.chart.autoscale_y()
+        self.update()
 
     def add_curve(self, name, color=None):
         if not self.chart.has_curve(name):
@@ -68,7 +99,9 @@ class ChartWidget(BaseWidget):
         # Contrapt graph via QPainter!
         painter = QtGui.QPainter(self)
         # with bench_it("render"):
-        render_chart_on_qpainter(self.chart, painter, self.rect())
+        render_chart_on_qpainter(
+            self.chart, painter, self.chart_layout, self.chart_options
+        )
 
         self.draw_focus_indicator(painter, self.rect())
 
@@ -83,13 +116,13 @@ class ChartWidget(BaseWidget):
         self.update()
 
     def horizontal_pan(self, amount):
-        self.chart.horizontal_pan(amount)
+        self.chart.horizontal_pan_relative(amount)
         # Autoscale Y for a nice effect?
         self.chart.autoscale_y()
         self.update()
 
     def vertical_pan(self, amount):
-        self.chart.vertical_pan(amount)
+        self.chart.vertical_pan_relative(amount)
         self.update()
 
     def zoom_fit(self):

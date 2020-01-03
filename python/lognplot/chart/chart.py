@@ -18,6 +18,7 @@ class Chart:
         self.x_axis = Axis()
         self.y_axis = Axis()
         self.curves = []
+        self.cursor = None
         self.db = db
 
     def has_curve(self, name):
@@ -39,6 +40,13 @@ class Chart:
         for index, curve in enumerate(self.curves):
             print(f"serie {index} with {len(curve)} samples")
 
+    def set_cursor(self, value):
+        """ Set cursor position onto this chart.
+
+        Use None to hide the cursor.
+        """
+        self.cursor = value
+
     def horizontal_zoom(self, amount):
         """ Zoom in horizontal manner. """
         self.x_axis.zoom(amount)
@@ -46,11 +54,16 @@ class Chart:
     def vertical_zoom(self, amount):
         self.y_axis.zoom(amount)
 
-    def horizontal_pan(self, amount):
-        self.x_axis.pan(amount)
+    def horizontal_pan_relative(self, amount):
+        """ Pan a percentage of the current axis range. """
+        self.x_axis.pan_relative(amount)
 
-    def vertical_pan(self, amount):
-        self.y_axis.pan(amount)
+    def horizontal_pan_absolute(self, amount):
+        """ Pan horizontally by a certain amount. """
+        self.x_axis.pan_absolute(amount)
+
+    def vertical_pan_relative(self, amount):
+        self.y_axis.pan_relative(amount)
 
     def autoscale_y(self):
         """ Automatically adjust the Y-axis to fit data in range. """

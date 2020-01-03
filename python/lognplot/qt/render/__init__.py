@@ -7,9 +7,9 @@ from .layout import ChartLayout
 from .options import ChartOptions
 
 
-def render_chart_on_qpainter(chart: Chart, painter: QtGui.QPainter, rect: QtCore.QRect):
+def render_chart_on_qpainter(chart: Chart, painter: QtGui.QPainter, layout, options):
     """ Call this function to paint a chart onto the given painter within the rectangle specified.
     """
-    renderer = Renderer(painter, chart)
+    renderer = Renderer(painter, chart, layout, options)
     # with bench_it("render"):
-    renderer.render(rect)
+    renderer.render()

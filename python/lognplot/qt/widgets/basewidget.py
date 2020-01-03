@@ -28,7 +28,9 @@ class BaseWidget(QtWidgets.QWidget):
 
     def mouseMoveEvent(self, event):
         super().mouseMoveEvent(event)
-        self._update_mouse_pan(event.x(), event.y())
+        x, y = event.x(), event.y()
+        self._update_mouse_pan(x, y)
+        self.mouse_move(x, y)
 
     def mouseReleaseEvent(self, event):
         super().mouseReleaseEvent(event)
@@ -44,6 +46,10 @@ class BaseWidget(QtWidgets.QWidget):
                 self.pan(dx, dy)
                 self._mouse_drag_source = (x, y)
                 self.update()
+
+    def mouse_move(self, x, y):
+        """ Intended for override. """
+        pass
 
     def pan(self, dx, dy):
         """ Intended for subclasses to override.

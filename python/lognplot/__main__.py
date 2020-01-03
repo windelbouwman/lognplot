@@ -6,6 +6,7 @@
 
 import argparse
 import logging
+import sys
 
 
 def main():
@@ -30,6 +31,10 @@ def main():
         loglevel = logging.INFO
 
     logging.basicConfig(level=loglevel)
+    logging.info("Python version: {}".format(sys.version))
+    from .qt.qtapi import QtCore
+
+    logging.info("Qt version: {}".format(QtCore.qVersion()))
 
     from .qt.apps import run_server_gui
 
