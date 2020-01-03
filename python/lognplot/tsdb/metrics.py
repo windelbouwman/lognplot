@@ -43,12 +43,17 @@ class ValueMetrics(Metrics):
     For example, we have the count of samples about which
     these metrics are a summary. Also, we have minimum and
     maximum values.
+
+    Note that addition is not commutative, the chunks are ordered
+    in sequence.
     """
 
-    def __init__(self, count, minimum, maximum, mean, m2):
+    def __init__(self, count, minimum, maximum, first, last, mean, m2):
         self.count = count
         self.minimum = minimum
         self.maximum = maximum
+        self.first = first  # First observed value
+        self.last = last  # Last observed value
         self._mean = mean
         # The M2 value is a handy value for calculating the
         # variance online. See welford method on wikipedia.
@@ -58,7 +63,7 @@ class ValueMetrics(Metrics):
     @classmethod
     def from_value(cls, value):
         """ Convert a single sample into metrics. """
-        return cls(1, value, value, value, 0.0)
+        return cls(1, value, value, value, value, value, 0.0)
 
     def __add__(self, other):
         if isinstance(other, ValueMetrics):
@@ -75,6 +80,8 @@ class ValueMetrics(Metrics):
                 count=count,
                 minimum=min(self.minimum, other.minimum),
                 maximum=max(self.maximum, other.maximum),
+                first=self.first,
+                last=other.last,
                 mean=mean,
                 m2=m2,
             )

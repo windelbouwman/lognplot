@@ -63,18 +63,18 @@ class ChartWidget(BaseWidget):
         event.accept()
         pos = event.pos()
         x, y = pos.x(), pos.y()
+        value = transform.to_x_value(x, self.chart.x_axis, self.chart_layout)
         delta = event.angleDelta().y()
         if delta > 0:
-            self.zoom_in_horizontal()
+            self.zoom_in_horizontal(around=value)
         elif delta < 0:
-            self.zoom_out_horizontal()
+            self.zoom_out_horizontal(around=value)
         else:
             pass
 
     def mouse_move(self, x, y):
         # Update cursor!
         value = transform.to_x_value(x, self.chart.x_axis, self.chart_layout)
-        # print(value)
         self.chart.set_cursor(value)
         self.update()
 
@@ -105,8 +105,8 @@ class ChartWidget(BaseWidget):
 
         self.draw_focus_indicator(painter, self.rect())
 
-    def horizontal_zoom(self, amount):
-        self.chart.horizontal_zoom(amount)
+    def horizontal_zoom(self, amount, around):
+        self.chart.horizontal_zoom(amount, around)
         # Autoscale Y for a nice effect?
         self.chart.autoscale_y()
         self.update()

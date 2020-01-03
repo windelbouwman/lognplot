@@ -30,6 +30,7 @@ class TimeSpan:
         return (self.begin <= other.end) and (other.begin <= self.end)
 
     def contains_timestamp(self, timestamp):
+        """ Test if this timespan contains the given timestamp. """
         return self.begin <= timestamp <= self.end
 
     def central_timestamp(self):

@@ -47,9 +47,9 @@ class Chart:
         """
         self.cursor = value
 
-    def horizontal_zoom(self, amount):
+    def horizontal_zoom(self, amount, around):
         """ Zoom in horizontal manner. """
-        self.x_axis.zoom(amount)
+        self.x_axis.zoom(amount, around=around)
 
     def vertical_zoom(self, amount):
         self.y_axis.zoom(amount)

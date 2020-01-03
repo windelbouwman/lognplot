@@ -47,11 +47,11 @@ class EventTracksWidget(BaseWidget):
         self.update()
 
     def horizontal_pan(self, amount):
-        self.event_tracks.x_axis.pan(amount)
+        self.event_tracks.x_axis.pan_relative(amount)
         self.update()
 
-    def horizontal_zoom(self, amount):
-        self.event_tracks.x_axis.zoom(amount)
+    def horizontal_zoom(self, amount, around):
+        self.event_tracks.x_axis.zoom(amount, around=around)
         self.update()
 
     def zoom_fit(self):

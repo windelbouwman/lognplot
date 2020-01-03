@@ -215,11 +215,57 @@ class ChartRenderer(BaseRenderer):
 
     def _draw_cursor(self):
         if self.chart.cursor:
+            # Draw cursor line:
             x = self.to_x_pixel(self.chart.cursor)
             pen = QtGui.QPen(Qt.black)
-            pen.setWidth(2)
+            pen.setWidth(1)
             self.painter.setPen(pen)
             self.painter.drawLine(x, self.layout.chart_top, x, self.layout.chart_bottom)
+
+            # Draw values of signals at position:
+            font_metrics = self.painter.fontMetrics()
+            legend_x = x + 10
+            y = self.layout.chart_top + 10
+            text_height = font_metrics.height()
+            color_block_size = text_height * 0.8
+            for index, curve in enumerate(self.chart.curves):
+                color = QtGui.QColor(curve.color)
+                curve_point = curve.query_value(self.chart.cursor)
+                if not curve_point:
+                    continue
+                curve_point_timestamp, curve_point_value = curve_point
+
+                # Draw circle indicator around selected point:
+                pen = QtGui.QPen(color)
+                pen.setWidth(2)
+                self.painter.setPen(pen)
+                marker_x = self.to_x_pixel(curve_point_timestamp)
+                marker_y = self.to_y_pixel(curve_point_value)
+                marker_size = 10
+                indicator_rect = QtCore.QRect(
+                    marker_x - marker_size // 2,
+                    marker_y - marker_size // 2,
+                    marker_size,
+                    marker_size,
+                )
+                self.painter.drawEllipse(indicator_rect)
+
+                # Legend:
+                text = "{} = {}".format(curve.name, curve_point_value)
+                text_rect = font_metrics.boundingRect(text)
+                # legend_y = y + index * text_height
+                legend_x = marker_x + 10
+                legend_y = marker_y
+                text_x = legend_x + color_block_size + 3 - text_rect.x()
+                text_y = legend_y - text_rect.y() - text_rect.height() / 2
+                self.painter.drawText(text_x, text_y, text)
+                self.painter.fillRect(
+                    legend_x,
+                    legend_y - color_block_size / 2,
+                    color_block_size,
+                    color_block_size,
+                    color,
+                )
 
     def to_x_pixel(self, value):
         return transform.to_x_pixel(value, self.chart.x_axis, self.layout)
