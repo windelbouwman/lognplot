@@ -6,6 +6,7 @@ setup(
     author="Windel Bouwman",
     description="Log and plot data. This project basically implements a software scope.",
     url="https://github.com/windelbouwman/lognplot",
+    install_requires=['cbor'],
     packages=find_packages(),
     license="GPLv3",
     classifiers=[
