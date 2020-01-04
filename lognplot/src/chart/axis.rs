@@ -45,7 +45,8 @@ impl ValueAxis {
         self.end() - self.begin()
     }
 
-    pub fn zoom(&mut self, amount: f64) {
+    /// Zoom the axis by a certain percentage, optionally centered around some value.
+    pub fn zoom(&mut self, amount: f64, around: Option<f64>) {
         let domain = self.domain();
         if (domain < 1.0e-18) && (amount < 0.0) {
             return;
@@ -55,9 +56,23 @@ impl ValueAxis {
             return;
         }
 
-        let step = domain * amount;
-        let begin = self.begin() - step;
-        let end = self.end() + step;
+        let (left_percent, right_percent) = if let Some(around) = around {
+            if self.begin() < around && around < self.end() {
+                let left_percent = (around - self.begin()) / domain;
+                assert!(left_percent < 1.0);
+                let right_percent = 1.0 - left_percent;
+                (left_percent, right_percent)
+            } else {
+                (0.5, 0.5)
+            }
+        } else {
+            (0.5, 0.5)
+        };
+
+        let step = domain * amount * 2.0;
+        let begin = self.begin() - step * left_percent;
+        let end = self.end() + step * right_percent;
+
         self.set_limits(begin, end);
     }
 
