@@ -223,26 +223,22 @@ class ChartRenderer(BaseRenderer):
 
     def _draw_handles(self):
         x = self.layout.handles.left()
-        y = self.layout.handles.top() + self.layout.handles.height() / 3
 
         for _, curve in enumerate(self.chart.curves):
             handle_y = curve.average
-            x_full = self.options.handle_width #self.layout.handles.right()
+            x_full = self.options.handle_width
             x_half = x_full / 2
-            y_full = self.options.handle_height
-            y_half = y_full / 2
+            y_half = self.options.handle_height / 2
 
-            polygon = QtGui.QPainterPath(QtCore.QPoint(x, handle_y))
-            polygon.lineTo(QtCore.QPoint(x, handle_y))
-            polygon.lineTo(QtCore.QPoint(x + x_half, handle_y))
-            polygon.lineTo(QtCore.QPoint(x + x_full, handle_y + y_half))
-            polygon.lineTo(QtCore.QPoint(x + x_half, handle_y + y_full))
-            polygon.lineTo(QtCore.QPoint(x, handle_y + y_full))
+            polygon = QtGui.QPainterPath(QtCore.QPointF(x, handle_y - y_half))
+            polygon.lineTo(QtCore.QPointF(x, handle_y - y_half))
+            polygon.lineTo(QtCore.QPointF(x + x_half, handle_y - y_half))
+            polygon.lineTo(QtCore.QPointF(x + x_full, handle_y))
+            polygon.lineTo(QtCore.QPointF(x + x_half, handle_y + y_half))
+            polygon.lineTo(QtCore.QPointF(x, handle_y + y_half))
 
             color = QtGui.QColor(curve.color)
             self.painter.fillPath(polygon, QtGui.QBrush(color))
-
-            handle_y = handle_y + self.options.handle_height
 
     def to_x_pixel(self, value):
         return transform.to_x_pixel(value, self.chart.x_axis, self.layout)

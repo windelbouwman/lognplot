@@ -53,6 +53,7 @@ class ChartWidget(BaseWidget):
         print("pan", dx, dy)
         options1 = ChartOptions()
         layout = ChartLayout(self.rect(), options1)
+        self.repaint()
 
     def add_curve(self, name, color=None):
         if not self.chart.has_curve(name):
@@ -76,31 +77,37 @@ class ChartWidget(BaseWidget):
         self.chart.horizontal_zoom(amount)
         # Autoscale Y for a nice effect?
         self.chart.autoscale_y()
+        self.repaint()
         self.update()
 
     def vertical_zoom(self, amount):
         self.chart.vertical_zoom(amount)
+        self.repaint()
         self.update()
 
     def horizontal_pan(self, amount):
         self.chart.horizontal_pan(amount)
         # Autoscale Y for a nice effect?
         self.chart.autoscale_y()
+        self.repaint()
         self.update()
 
     def vertical_pan(self, amount):
         self.chart.vertical_pan(amount)
+        self.repaint()
         self.update()
 
     def zoom_fit(self):
         """ Autoscale all in fit! """
         self.chart.zoom_fit()
+        self.repaint()
         self.update()
 
     def zoom_to_last(self, span):
         """ Zoom to fit the last x time in view.
         """
         self.chart.zoom_to_last(span)
+        self.repaint()
         self.update()
 
     def enable_tailing(self, timespan):
