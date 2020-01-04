@@ -14,6 +14,7 @@ class Curve:
         self._db = db
         self.name = name
         self.color = color
+        self.average = 0 # Average of the visual part of the curve
 
     def __repr__(self):
         return "Database proxy-curve"

@@ -33,8 +33,13 @@ class ChartRenderer(BaseRenderer):
             self.draw_x_axis(x_ticks)
             self.draw_y_axis(y_ticks)
 
+        if self.options.show_handles:
+            self._draw_handles()
+
         self._draw_curves()
-        self._draw_legend()
+
+        if self.options.show_legend:
+            self._draw_legend()
 
     def shade_region(self, region):
         """ Draw a shaded box in some region.
@@ -76,9 +81,9 @@ class ChartRenderer(BaseRenderer):
 
         if data:
             if isinstance(data[0], Aggregation):
-                self._draw_aggregations_as_shape(data, curve_color)
+                curve.average = self._draw_aggregations_as_shape(data, curve_color)
             else:
-                self._draw_samples_as_lines(data, curve_color)
+                curve.average = self._draw_samples_as_lines(data, curve_color)
 
     def _draw_samples_as_lines(self, samples, curve_color: QtGui.QColor):
         """ Draw raw samples as lines! """
@@ -95,6 +100,8 @@ class ChartRenderer(BaseRenderer):
         for point in points:
             rect = QtCore.QRect(point.x() - 3, point.y() - 3, 6, 6)
             self.painter.drawEllipse(rect)
+
+        return sum(p.y() for p in points) / len(points)
 
     def _draw_aggregations_as_shape(
         self, aggregations: Aggregation, curve_color: QtGui.QColor
@@ -187,6 +194,8 @@ class ChartRenderer(BaseRenderer):
             min_line = QtGui.QPolygon(min_points)
             self.painter.drawPolyline(min_line)
 
+        return sum(p.y() for p in mean_points) / len(mean_points)
+
     def _draw_legend(self):
         """ Draw names / color of the curve next to eachother.
         """
@@ -211,6 +220,29 @@ class ChartRenderer(BaseRenderer):
                 color_block_size,
                 color,
             )
+
+    def _draw_handles(self):
+        x = self.layout.handles.left()
+        y = self.layout.handles.top() + self.layout.handles.height() / 3
+
+        for _, curve in enumerate(self.chart.curves):
+            handle_y = curve.average
+            x_full = self.options.handle_width #self.layout.handles.right()
+            x_half = x_full / 2
+            y_full = self.options.handle_height
+            y_half = y_full / 2
+
+            polygon = QtGui.QPainterPath(QtCore.QPoint(x, handle_y))
+            polygon.lineTo(QtCore.QPoint(x, handle_y))
+            polygon.lineTo(QtCore.QPoint(x + x_half, handle_y))
+            polygon.lineTo(QtCore.QPoint(x + x_full, handle_y + y_half))
+            polygon.lineTo(QtCore.QPoint(x + x_half, handle_y + y_full))
+            polygon.lineTo(QtCore.QPoint(x, handle_y + y_full))
+
+            color = QtGui.QColor(curve.color)
+            self.painter.fillPath(polygon, QtGui.QBrush(color))
+
+            handle_y = handle_y + self.options.handle_height
 
     def to_x_pixel(self, value):
         return transform.to_x_pixel(value, self.chart.x_axis, self.layout)
