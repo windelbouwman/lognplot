@@ -21,13 +21,13 @@ class ChartRenderer(BaseRenderer):
     def render(self):
         """ Main entry point to start rendering a graph. """
 
-        self.draw_bouding_rect()
-
         x_ticks = self.calc_x_ticks(self.chart.x_axis)
         y_ticks = self.calc_y_ticks(self.chart.y_axis)
 
         if self.options.show_grid:
             self.draw_grid(x_ticks, y_ticks)
+
+        self.draw_bouding_rect()
 
         if self.options.show_axis:
             self.draw_x_axis(x_ticks)
