@@ -26,7 +26,7 @@ class ChartLayout:
         self.chart_top = self.rect.top() + self.options.padding
 
         if self.options.show_handles:
-            self.chart_left = self.handles.right() + 1
+            self.chart_left = self.handles.right() + 3
         else:
             self.chart_left = self.rect.left() + self.options.padding
 
