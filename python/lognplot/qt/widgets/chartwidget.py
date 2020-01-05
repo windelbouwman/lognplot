@@ -7,7 +7,7 @@ import logging
 
 from ..qtapi import QtCore, QtWidgets, QtGui, Qt, pyqtSignal
 from ...utils import bench_it
-from ...chart import Chart
+from ...chart import Chart, Curve
 from ..render import render_chart_on_qpainter, ChartLayout, ChartOptions
 from . import mime
 from .basewidget import BaseWidget
@@ -29,6 +29,8 @@ class ChartWidget(BaseWidget):
         # Accept drop of signal names
         self.setAcceptDrops(True)
 
+        self._drag_handle = None
+
         # Tailing mode, select last t seconds
         self._last_span = None
         self._tailing_timer = QtCore.QTimer()
@@ -48,12 +50,42 @@ class ChartWidget(BaseWidget):
             self.logger.debug(f"Add curve {name}")
             self.add_curve(name)
 
+    def curveHandleAtPoint(self, x, y) -> Curve:
+        for curve in self.chart.curves:
+            topleft = curve.handle[0]
+            middleright = curve.handle[3]
+            bottomleft = curve.handle[-1]
+            if (x >= topleft.x() and
+                x <= middleright.x() and
+                y >= topleft.y() and
+                y <= bottomleft.y()
+            ):
+                return curve
+        return None
+
     # Mouse interactions:
+    def mousePress(self, x, y):
+        if self._drag_handle is None:
+            curve = self.curveHandleAtPoint(x,y)
+            if curve is not None:
+                self._drag_handle = curve
+
+    def mouseRelease(self, x, y):
+        self._drag_handle = None
+
+    def mouseDrag(self, x, y, dx, dy):
+        if self._drag_handle is not None:
+            #self.vertical_pan(float(dy) * 0.01) #self.PAN_FACTOR)
+            self._drag_handle.vertical_offset = self._drag_handle.vertical_offset + dy
+            self.repaint()
+
+    # Intended to work together with the WIP minimap?
     def pan(self, dx, dy):
         print("pan", dx, dy)
-        options1 = ChartOptions()
-        layout = ChartLayout(self.rect(), options1)
-        self.repaint()
+        # TODO: fix
+        #options1 = ChartOptions()
+        #layout = ChartLayout(self.rect(), options1)
+        #self.repaint()
 
     def add_curve(self, name, color=None):
         if not self.chart.has_curve(name):

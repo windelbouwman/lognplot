@@ -14,7 +14,12 @@ class Curve:
         self._db = db
         self.name = name
         self.color = color
-        self.average = 0 # Average of the visual part of the curve
+        # Average of the visual part of the curve
+        self.average = 0
+        # Corresponding handle (polygon area)
+        self.handle = []
+        # Vertical adjustment by user
+        self.vertical_offset = 0
 
     def __repr__(self):
         return "Database proxy-curve"

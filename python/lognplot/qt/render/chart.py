@@ -78,20 +78,22 @@ class ChartRenderer(BaseRenderer):
         data = curve.query(timespan, min_count)
         # print("query result", type(data), len(data))
         curve_color = QtGui.QColor(curve.color)
+        # vertical offset
+        v_offset = curve.vertical_offset
 
         if data:
             if isinstance(data[0], Aggregation):
-                curve.average = self._draw_aggregations_as_shape(data, curve_color)
+                curve.average = self._draw_aggregations_as_shape(data, curve_color, v_offset)
             else:
-                curve.average = self._draw_samples_as_lines(data, curve_color)
+                curve.average = self._draw_samples_as_lines(data, curve_color, v_offset)
 
-    def _draw_samples_as_lines(self, samples, curve_color: QtGui.QColor):
+    def _draw_samples_as_lines(self, samples, curve_color: QtGui.QColor, v_offset):
         """ Draw raw samples as lines! """
         pen = QtGui.QPen(curve_color)
         pen.setWidth(2)
         self.painter.setPen(pen)
         points = [
-            QtCore.QPoint(self.to_x_pixel(x), self.to_y_pixel(y)) for (x, y) in samples
+            QtCore.QPoint(self.to_x_pixel(x), self.to_y_pixel(y) + v_offset) for (x, y) in samples
         ]
         line = QtGui.QPolygon(points)
         self.painter.drawPolyline(line)
@@ -104,7 +106,7 @@ class ChartRenderer(BaseRenderer):
         return sum(p.y() for p in points) / len(points)
 
     def _draw_aggregations_as_shape(
-        self, aggregations: Aggregation, curve_color: QtGui.QColor
+        self, aggregations: Aggregation, curve_color: QtGui.QColor, v_offset
     ):
         """ Draw aggregates as polygon shapes.
 
@@ -125,12 +127,12 @@ class ChartRenderer(BaseRenderer):
             # x2 = self.to_x_pixel(metric.x2)
 
             # max line:
-            y_max = self.to_y_pixel(aggregation.metrics.maximum)
+            y_max = self.to_y_pixel(aggregation.metrics.maximum) + v_offset
             max_points.append(QtCore.QPoint(x1, y_max))
             # max_points.append(QtCore.QPoint(x2, y_max))
 
             # min line:
-            y_min = self.to_y_pixel(aggregation.metrics.minimum)
+            y_min = self.to_y_pixel(aggregation.metrics.minimum) + v_offset
             min_points.append(QtCore.QPoint(x1, y_min))
             # min_points.append(QtCore.QPoint(x2, y_min))
 
@@ -138,17 +140,17 @@ class ChartRenderer(BaseRenderer):
             stddev = aggregation.metrics.stddev
 
             # Mean line:
-            y_mean = self.to_y_pixel(mean)
+            y_mean = self.to_y_pixel(mean) + v_offset
             mean_points.append(QtCore.QPoint(x1, y_mean))
             # mean_points.append(QtCore.QPoint(x2, y_mean))
 
             # stddev up line:
-            y_stddev_up = self.to_y_pixel(mean + stddev)
+            y_stddev_up = self.to_y_pixel(mean + stddev) + v_offset
             stddev_up_points.append(QtCore.QPoint(x1, y_stddev_up))
             # stddev_up_points.append(QtCore.QPoint(x2, y_stddev_up))
 
             # stddev down line:
-            y_stddev_down = self.to_y_pixel(mean - stddev)
+            y_stddev_down = self.to_y_pixel(mean - stddev) + v_offset
             stddev_down_points.append(QtCore.QPoint(x1, y_stddev_down))
             # stddev_down_points.append(QtCore.QPoint(x2, y_stddev_down))
 
@@ -194,7 +196,7 @@ class ChartRenderer(BaseRenderer):
             min_line = QtGui.QPolygon(min_points)
             self.painter.drawPolyline(min_line)
 
-        return sum(p.y() for p in mean_points) / len(mean_points)
+        return (sum(p.y() for p in mean_points) / len(mean_points))
 
     def _draw_legend(self):
         """ Draw names / color of the curve next to eachother.
@@ -230,12 +232,18 @@ class ChartRenderer(BaseRenderer):
             x_half = x_full / 2
             y_half = self.options.handle_height / 2
 
-            polygon = QtGui.QPainterPath(QtCore.QPointF(x, handle_y - y_half))
-            polygon.lineTo(QtCore.QPointF(x, handle_y - y_half))
-            polygon.lineTo(QtCore.QPointF(x + x_half, handle_y - y_half))
-            polygon.lineTo(QtCore.QPointF(x + x_full, handle_y))
-            polygon.lineTo(QtCore.QPointF(x + x_half, handle_y + y_half))
-            polygon.lineTo(QtCore.QPointF(x, handle_y + y_half))
+            curve.handle = [
+                QtCore.QPointF(x, handle_y - y_half),
+                QtCore.QPointF(x, handle_y - y_half),
+                QtCore.QPointF(x + x_half, handle_y - y_half),
+                QtCore.QPointF(x + x_full, handle_y),
+                QtCore.QPointF(x + x_half, handle_y + y_half),
+                QtCore.QPointF(x, handle_y + y_half)
+            ] 
+
+            polygon = QtGui.QPainterPath(curve.handle[0])
+            for p in curve.handle[1:]:
+                polygon.lineTo(p)
 
             color = QtGui.QColor(curve.color)
             self.painter.fillPath(polygon, QtGui.QBrush(color))
