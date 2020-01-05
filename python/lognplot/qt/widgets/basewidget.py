@@ -29,7 +29,9 @@ class BaseWidget(QtWidgets.QWidget):
 
     def mouseMoveEvent(self, event):
         super().mouseMoveEvent(event)
-        self._update_mouse_pan(event.x(), event.y())
+        x, y = event.x(), event.y()
+        self._update_mouse_pan(x, y)
+        self.mouse_move(x, y)
 
     def mouseReleaseEvent(self, event):
         super().mouseReleaseEvent(event)
@@ -88,11 +90,11 @@ class BaseWidget(QtWidgets.QWidget):
     # Zooming helpers:
     ZOOM_FACTOR = 0.1
 
-    def zoom_in_horizontal(self):
-        self.horizontal_zoom(-self.ZOOM_FACTOR)
+    def zoom_in_horizontal(self, around=None):
+        self.horizontal_zoom(-self.ZOOM_FACTOR, around)
 
-    def zoom_out_horizontal(self):
-        self.horizontal_zoom(self.ZOOM_FACTOR)
+    def zoom_out_horizontal(self, around=None):
+        self.horizontal_zoom(self.ZOOM_FACTOR, around)
 
     def zoom_in_vertical(self):
         self.vertical_zoom(self.ZOOM_FACTOR)
@@ -101,7 +103,7 @@ class BaseWidget(QtWidgets.QWidget):
         self.vertical_zoom(-self.ZOOM_FACTOR)
 
     # Overridable methods:
-    def horizontal_zoom(self, amount):
+    def horizontal_zoom(self, amount, around):
         pass
 
     def vertical_zoom(self, amount):

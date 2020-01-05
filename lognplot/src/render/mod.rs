@@ -23,6 +23,7 @@ pub use cairo_canvas::CairoCanvas;
 
 use crate::chart::ValueAxis;
 use crate::geometry::Size;
+use crate::time::TimeStamp;
 
 /// Calculate how many domain values a covered by the given amount of pixels.
 pub fn x_pixels_to_domain(size: Size, axis: &ValueAxis, pixels: f64) -> f64 {
@@ -35,5 +36,19 @@ pub fn x_pixels_to_domain(size: Size, axis: &ValueAxis, pixels: f64) -> f64 {
     } else {
         let a = domain / layout.plot_width;
         pixels * a
+    }
+}
+
+pub fn x_pixel_to_domain(pixel: f64, axis: &ValueAxis, size: Size) -> f64 {
+    let options = ChartOptions::default();
+    let mut layout = ChartLayout::new(size);
+    layout.layout(&options);
+
+    let domain = axis.domain();
+    if layout.plot_width < 1.0 {
+        0.0
+    } else {
+        let a = domain / layout.plot_width;
+        a * (pixel - layout.plot_left) + axis.begin()
     }
 }

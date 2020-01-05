@@ -60,6 +60,10 @@ class TsDb:
         serie = self.get_or_create_serie(name)
         return serie.query(timespan, count)
 
+    def query_value(self, name, timestamp):
+        serie = self.get_or_create_serie(name)
+        return serie.query_value(timestamp)
+
     def last_value(self, name):
         """ Retrieve last value of a trace """
         serie = self.get_or_create_serie(name)

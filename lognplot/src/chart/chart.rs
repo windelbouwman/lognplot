@@ -2,7 +2,7 @@
 
 use super::axis::ValueAxis;
 use super::curve::Curve;
-use crate::time::TimeSpan;
+use crate::time::{TimeSpan, TimeStamp};
 use crate::tsdb::{Aggregation, Sample, SampleMetrics};
 
 /// A single 2D-chart
@@ -58,13 +58,13 @@ impl Chart {
     }
 
     /// Zoom horizontally.
-    pub fn zoom_horizontal(&mut self, amount: f64) {
-        self.x_axis.zoom(amount);
+    pub fn zoom_horizontal(&mut self, amount: f64, around: Option<f64>) {
+        self.x_axis.zoom(amount, around);
     }
 
     /// Perform vertical zooming
     pub fn zoom_vertical(&mut self, amount: f64) {
-        self.y_axis.zoom(amount);
+        self.y_axis.zoom(amount, None);
     }
 
     /// Perform a bit of relative horizontal panning

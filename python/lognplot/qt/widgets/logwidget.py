@@ -45,9 +45,9 @@ class LogBarWidget(BaseWidget):
         self.update()
 
     def horizontal_pan(self, amount):
-        self.log_bar.x_axis.pan(amount)
+        self.log_bar.x_axis.pan_relative(amount)
         self.update()
 
-    def horizontal_zoom(self, amount):
-        self.log_bar.x_axis.zoom(amount)
+    def horizontal_zoom(self, amount, around):
+        self.log_bar.x_axis.zoom(amount, around=around)
         self.update()

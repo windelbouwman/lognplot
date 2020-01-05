@@ -3,11 +3,18 @@ from ..time import TimeSpan
 
 
 class Axis:
+    """ Implement an axis with a minimum and maximum value.
+
+    This class can also be used to generate appropriate tick values
+    for the axis.
+    """
+
     def __init__(self):
         self.minimum = -30
         self.maximum = 130
 
-    def zoom(self, amount):
+    def zoom(self, amount, around=None):
+        """ Zoom this axis by a certain amount, optionally around the given value. """
         domain = self.domain
         if domain < 1e-18 and amount < 0:
             return
@@ -16,12 +23,26 @@ class Axis:
             return
 
         step = domain * amount
-        self.minimum -= step
-        self.maximum += step
+        if around is not None and self.minimum < around < self.maximum:
+            left_part = (around - self.minimum) / domain
+            assert left_part < 1.0
+            right_part = 1.0 - left_part
+            step_left = step * left_part
+            step_right = step * right_part
+        else:
+            step_left = step_right = step
 
-    def pan(self, amount):
+        self.minimum -= step_left
+        self.maximum += step_right
+
+    def pan_relative(self, amount):
+        """ Pan a percentage of the axis range. """
         domain = self.domain
         step = domain * amount
+        self.pan_absolute(step)
+
+    def pan_absolute(self, step):
+        """ Move the axis view by an absolute amount. """
         self.minimum += step
         self.maximum += step
 
@@ -38,6 +59,12 @@ class Axis:
         return TimeSpan(begin, end)
 
     def get_ticks(self, n_ticks):
+        """ Get tick values for this axis.
+
+        This function should take care of the following:
+        - tick values are rounded to logical multiples, such as 1, 2 or 0.2
+        - tick values are returned as tuples of values and the string label.
+        """
         domain = self.domain
 
         # Check for too small domain:

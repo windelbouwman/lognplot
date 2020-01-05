@@ -9,6 +9,7 @@ from ..qtapi import QtCore, QtWidgets, QtGui, Qt, pyqtSignal
 from ...utils import bench_it
 from ...chart import Chart, Curve
 from ..render import render_chart_on_qpainter, ChartLayout, ChartOptions
+from ..render import transform
 from . import mime
 from .basewidget import BaseWidget
 
@@ -24,7 +25,12 @@ class ChartWidget(BaseWidget):
     def __init__(self, db):
         super().__init__()
         self.chart = Chart(db)
+        self.chart_options = ChartOptions()
+        self.chart_layout = None  # Set when resized
+
         self._colors = cycle(color_wheel)
+
+        self.setMouseTracking(True)
 
         # Accept drop of signal names
         self.setAcceptDrops(True)
@@ -36,6 +42,9 @@ class ChartWidget(BaseWidget):
         self._tailing_timer = QtCore.QTimer()
         self._tailing_timer.timeout.connect(self._on_tailing_timeout)
         self._tailing_timer.start(50)
+
+    def resizeEvent(self, event):
+        self.chart_layout = ChartLayout(self.rect(), self.chart_options)
 
     # Drag drop events:
     def dragEnterEvent(self, event):
@@ -49,6 +58,27 @@ class ChartWidget(BaseWidget):
         for name in names.split(":"):
             self.logger.debug(f"Add curve {name}")
             self.add_curve(name)
+
+    # Mouse interactions:
+    def wheelEvent(self, event):
+        # print(event)
+        event.accept()
+        pos = event.pos()
+        x, y = pos.x(), pos.y()
+        value = transform.to_x_value(x, self.chart.x_axis, self.chart_layout)
+        delta = event.angleDelta().y()
+        if delta > 0:
+            self.zoom_in_horizontal(around=value)
+        elif delta < 0:
+            self.zoom_out_horizontal(around=value)
+        else:
+            pass
+
+    def mouse_move(self, x, y):
+        # Update cursor!
+        value = transform.to_x_value(x, self.chart.x_axis, self.chart_layout)
+        self.chart.set_cursor(value)
+        self.update()
 
     def curveHandleAtPoint(self, x, y) -> Curve:
         for curve in self.chart.curves:
@@ -76,16 +106,15 @@ class ChartWidget(BaseWidget):
 
     def mouseDrag(self, x, y, dx, dy):
         if self._drag_handle is not None:
-            self._drag_handle.axis.pan(dy / self.rect().height())
+            self._drag_handle.axis.pan_relative(dy / self.rect().height())
             self.repaint()
 
-    # Intended to work together with the WIP minimap?
     def pan(self, dx, dy):
-        print("pan", dx, dy)
-        # TODO: fix
-        #options1 = ChartOptions()
-        #layout = ChartLayout(self.rect(), options1)
-        #self.repaint()
+        # print("pan", dx, dy)
+        shift = transform.x_pixels_to_domain(dx, self.chart.x_axis, self.chart_layout)
+        self.chart.horizontal_pan_absolute(-shift)
+        self.chart.autoscale_y()
+        self.update()
 
     def add_curve(self, name, color=None):
         if not self.chart.has_curve(name):
@@ -101,12 +130,14 @@ class ChartWidget(BaseWidget):
         # Contrapt graph via QPainter!
         painter = QtGui.QPainter(self)
         # with bench_it("render"):
-        render_chart_on_qpainter(self.chart, painter, self.rect())
+        render_chart_on_qpainter(
+            self.chart, painter, self.chart_layout, self.chart_options
+        )
 
         self.draw_focus_indicator(painter, self.rect())
 
-    def horizontal_zoom(self, amount):
-        self.chart.horizontal_zoom(amount)
+    def horizontal_zoom(self, amount, around):
+        self.chart.horizontal_zoom(amount, around)
         # Autoscale Y for a nice effect?
         self.chart.autoscale_y()
         self.repaint()
@@ -118,15 +149,14 @@ class ChartWidget(BaseWidget):
         self.update()
 
     def horizontal_pan(self, amount):
-        self.chart.horizontal_pan(amount)
+        self.chart.horizontal_pan_relative(amount)
         # Autoscale Y for a nice effect?
         self.chart.autoscale_y()
         self.repaint()
         self.update()
 
     def vertical_pan(self, amount):
-        self.chart.vertical_pan(amount)
-        self.repaint()
+        self.chart.vertical_pan_relative(amount)
         self.update()
 
     def zoom_fit(self):

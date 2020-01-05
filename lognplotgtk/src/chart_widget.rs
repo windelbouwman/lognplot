@@ -62,12 +62,15 @@ pub fn setup_drawing_area(draw_area: gtk::DrawingArea, app_state: GuiStateHandle
 
     draw_area.connect_scroll_event(clone!(@strong app_state => move |w, e| {
         // println!("Scroll wheel event! {:?}, {:?}, {:?}", e, e.get_delta(), e.get_direction());
+        let size = get_size(w);
+        let pixel_x_pos = e.get_position().0;
+        let around = Some((pixel_x_pos, size));
         match e.get_direction() {
             gdk::ScrollDirection::Up => {
-                app_state.borrow_mut().zoom_in_horizontal();
+                app_state.borrow_mut().zoom_in_horizontal(around);
             },
             gdk::ScrollDirection::Down => {
-                app_state.borrow_mut().zoom_out_horizontal();
+                app_state.borrow_mut().zoom_out_horizontal(around);
             },
             _ => {}
         }
@@ -155,10 +158,10 @@ fn on_key(draw_area: &gtk::DrawingArea, key: &gdk::EventKey, app_state: GuiState
             app_state.borrow_mut().zoom_out_vertical();
         }
         gdk::enums::key::KP_Add | gdk::enums::key::l => {
-            app_state.borrow_mut().zoom_in_horizontal();
+            app_state.borrow_mut().zoom_in_horizontal(None);
         }
         gdk::enums::key::KP_Subtract | gdk::enums::key::j => {
-            app_state.borrow_mut().zoom_out_horizontal();
+            app_state.borrow_mut().zoom_out_horizontal(None);
         }
         gdk::enums::key::Home | gdk::enums::key::Return => {
             app_state.borrow_mut().zoom_fit();

@@ -52,7 +52,7 @@ Table of Contents
     motivation
     architecture
     protocol
-    reference
+    reference/index.rst
 
 
 Indices and tables

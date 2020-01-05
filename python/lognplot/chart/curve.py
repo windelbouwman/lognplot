@@ -33,3 +33,6 @@ class Curve:
     def query(self, selection_timespan, min_count):
         # TODO: cache calls here?
         return self._db.query(self.name, selection_timespan, min_count)
+
+    def query_value(self, timestamp):
+        return self._db.query_value(self.name, timestamp)

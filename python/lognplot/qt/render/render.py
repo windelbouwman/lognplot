@@ -15,14 +15,18 @@ class Renderer:
     Optionally include a minimap?
     """
 
-    def __init__(self, painter: QtGui.QPainter, chart: Chart):
+    def __init__(
+        self, painter: QtGui.QPainter, chart: Chart, layout: ChartLayout, options
+    ):
         self.painter = painter
         self.chart = chart
+        self.layout = layout
+        self.options = options
 
-    def render(self, rect: QtCore.QRect):
-        options1 = ChartOptions()
-        layout = ChartLayout(rect, options1)
-        chart_renderer = ChartRenderer(self.painter, self.chart, layout, options1)
+    def render(self):
+        chart_renderer = ChartRenderer(
+            self.painter, self.chart, self.layout, self.options
+        )
         chart_renderer.render()
 
         # self.render_minimap(rect)

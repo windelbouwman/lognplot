@@ -4,7 +4,7 @@ use std::time::Instant;
 
 use lognplot::chart::{Chart, Curve, CurveData};
 use lognplot::geometry::Size;
-use lognplot::render::x_pixels_to_domain;
+use lognplot::render::{x_pixel_to_domain, x_pixels_to_domain};
 use lognplot::time::TimeStamp;
 use lognplot::tsdb::{Aggregation, Observation, Sample, SampleMetrics, TsDbHandle};
 
@@ -184,27 +184,37 @@ impl GuiState {
 
     pub fn zoom_in_vertical(&mut self) {
         info!("Zoom in vertical");
-        self.disable_tailing();
-        self.chart.zoom_vertical(0.1);
+        self.zoom_vertical(0.1);
     }
 
     pub fn zoom_out_vertical(&mut self) {
         info!("Zoom out vertical");
-        self.disable_tailing();
-        self.chart.zoom_vertical(-0.1);
+        self.zoom_vertical(-0.1);
     }
 
-    pub fn zoom_in_horizontal(&mut self) {
+    fn zoom_vertical(&mut self, amount: f64) {
+        self.disable_tailing();
+        self.chart.zoom_vertical(amount);
+    }
+
+    pub fn zoom_in_horizontal(&mut self, around: Option<(f64, Size)>) {
         info!("Zoom in horizontal");
-        self.disable_tailing();
-        self.chart.zoom_horizontal(-0.1);
-        self.chart.fit_y_axis();
+        self.zoom_horizontal(-0.1, around);
     }
 
-    pub fn zoom_out_horizontal(&mut self) {
+    pub fn zoom_out_horizontal(&mut self, around: Option<(f64, Size)>) {
         info!("Zoom out horizontal");
+        self.zoom_horizontal(0.1, around);
+    }
+
+    fn zoom_horizontal(&mut self, amount: f64, around: Option<(f64, Size)>) {
+        let around = around.map(|p| {
+            let (pixel, size) = p;
+            let timestamp = x_pixel_to_domain(pixel, &self.chart.x_axis, size);
+            timestamp
+        });
         self.disable_tailing();
-        self.chart.zoom_horizontal(0.1);
+        self.chart.zoom_horizontal(amount, around);
         self.chart.fit_y_axis();
     }
 
