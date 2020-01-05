@@ -35,8 +35,6 @@ class ChartWidget(BaseWidget):
         # Accept drop of signal names
         self.setAcceptDrops(True)
 
-        self._drag_handle = None
-
         # Tailing mode, select last t seconds
         self._last_span = None
         self._tailing_timer = QtCore.QTimer()

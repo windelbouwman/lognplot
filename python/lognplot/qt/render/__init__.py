@@ -5,7 +5,7 @@ from ...chart import Chart
 from .render import Renderer
 from .layout import ChartLayout
 from .options import ChartOptions
-from .transform import *
+
 
 def render_chart_on_qpainter(chart: Chart, painter: QtGui.QPainter, layout, options):
     """ Call this function to paint a chart onto the given painter within the rectangle specified.
