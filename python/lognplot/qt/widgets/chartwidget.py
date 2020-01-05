@@ -69,14 +69,14 @@ class ChartWidget(BaseWidget):
             curve = self.curveHandleAtPoint(x,y)
             if curve is not None:
                 self._drag_handle = curve
+                self.chart.change_active_curve(curve)
 
     def mouseRelease(self, x, y):
         self._drag_handle = None
 
     def mouseDrag(self, x, y, dx, dy):
         if self._drag_handle is not None:
-            #self.vertical_pan(float(dy) * 0.01) #self.PAN_FACTOR)
-            self._drag_handle.vertical_offset = self._drag_handle.vertical_offset + dy
+            self._drag_handle.axis.pan(dy / self.rect().height())
             self.repaint()
 
     # Intended to work together with the WIP minimap?

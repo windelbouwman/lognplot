@@ -18,6 +18,7 @@ class Chart:
         self.x_axis = Axis()
         self.y_axis = Axis()
         self.curves = []
+        self.activeCurve = None
         self.db = db
 
     def has_curve(self, name):
@@ -30,9 +31,15 @@ class Chart:
         if not self.has_curve(name):
             curve = Curve(self.db, name, color)
             self.curves.append(curve)
+            self.change_active_curve(curve)
 
     def clear_curves(self):
         self.curves.clear()
+        self.y_axis = Axis()
+
+    def change_active_curve(self, curve):
+        self.activeCurve = curve
+        self.y_axis = self.activeCurve.axis
 
     def info(self):
         print(f"Chart with {len(self.curves)} series")
