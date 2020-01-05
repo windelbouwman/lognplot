@@ -95,25 +95,19 @@ class ChartWidget(BaseWidget):
 
     # Mouse interactions:
     def mousePress(self, x, y):
-        if self._drag_handle is None:
-            curve = self.curveHandleAtPoint(x,y)
-            if curve is not None:
-                self._drag_handle = curve
-                self.chart.change_active_curve(curve)
-
-    def mouseRelease(self, x, y):
-        self._drag_handle = None
-
-    def mouseDrag(self, x, y, dx, dy):
-        if self._drag_handle is not None:
-            self._drag_handle.axis.pan_relative(dy / self.rect().height())
-            self.repaint()
+        curve = self.curveHandleAtPoint(x,y)
+        if curve is not None:
+            self._drag_handle = curve
+            self.chart.change_active_curve(curve)
 
     def pan(self, dx, dy):
         # print("pan", dx, dy)
         shift = transform.x_pixels_to_domain(dx, self.chart.x_axis, self.chart_layout)
         self.chart.horizontal_pan_absolute(-shift)
-        self.chart.autoscale_y()
+        if self.chart_options.autoscale_y_axis:
+            self.chart.autoscale_y()
+        else:
+            self._drag_handle.axis.pan_relative(dy / self.rect().height())
         self.update()
 
     def add_curve(self, name, color=None):
