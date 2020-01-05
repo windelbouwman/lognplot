@@ -1,5 +1,5 @@
 from ..tsdb.aggregation import Aggregation
-
+from .axis import Axis
 
 class Curve:
     """ A curve is a view onto a signal in the database.
@@ -14,6 +14,12 @@ class Curve:
         self._db = db
         self.name = name
         self.color = color
+        # Average of the visual part of the curve
+        self.average = 0
+        # Corresponding handle (polygon area)
+        self.handle = []
+        # Each curve has its own vertical axis
+        self.axis = Axis()
 
     def __repr__(self):
         return "Database proxy-curve"

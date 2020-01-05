@@ -35,7 +35,7 @@ class BaseRenderer:
         y_ticks = axis.get_ticks(amount_y_ticks)
         return y_ticks
 
-    def draw_grid(self, x_ticks, y_ticks):
+    def draw_grid(self, y_axis, x_ticks, y_ticks):
         """ Render a grid on the given x and y tick markers. """
         pen = QtGui.QPen(Qt.gray)
         pen.setWidth(1)
@@ -46,7 +46,7 @@ class BaseRenderer:
             self.painter.drawLine(x, self.layout.chart_top, x, self.layout.chart_bottom)
 
         for value, _ in y_ticks:
-            y = self.to_y_pixel(value)
+            y = self.to_y_pixel(y_axis, value)
             self.painter.drawLine(self.layout.chart_left, y, self.layout.chart_right, y)
 
     def draw_x_axis(self, x_ticks):
@@ -69,7 +69,7 @@ class BaseRenderer:
             text_y = y + 10 - text_rect.y()
             self.painter.drawText(text_x, text_y, label)
 
-    def draw_y_axis(self, y_ticks):
+    def draw_y_axis(self, y_axis, y_ticks):
         """ Draw the Y-axis. """
         pen = QtGui.QPen(Qt.black)
         pen.setWidth(2)
@@ -77,7 +77,7 @@ class BaseRenderer:
         x = self.layout.chart_right + 5
         self.painter.drawLine(x, self.layout.chart_top, x, self.layout.chart_bottom)
         for value, label in y_ticks:
-            y = self.to_y_pixel(value)
+            y = self.to_y_pixel(y_axis, value)
 
             # Tick handle:
             self.painter.drawLine(x, y, x + 5, y)

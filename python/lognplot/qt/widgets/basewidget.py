@@ -24,6 +24,7 @@ class BaseWidget(QtWidgets.QWidget):
         super().mousePressEvent(event)
         self.disable_tailing()
         self._mouse_drag_source = event.x(), event.y()
+        self.mousePress(event.x(), event.y())
         self.update()
 
     def mouseMoveEvent(self, event):
@@ -36,6 +37,7 @@ class BaseWidget(QtWidgets.QWidget):
         super().mouseReleaseEvent(event)
         self._update_mouse_pan(event.x(), event.y())
         self._mouse_drag_source = None
+        self.mouseRelease(event.x(), event.y())
 
     def _update_mouse_pan(self, x, y):
         if self._mouse_drag_source:
@@ -43,12 +45,18 @@ class BaseWidget(QtWidgets.QWidget):
             if x != x0 or y != y0:
                 dy = y - y0
                 dx = x - x0
+                self.mouseDrag(x, y, dx, dy)
                 self.pan(dx, dy)
                 self._mouse_drag_source = (x, y)
                 self.update()
 
-    def mouse_move(self, x, y):
-        """ Intended for override. """
+    def mousePress(self, x, y):
+        pass
+
+    def mouseRelease(self, x, y):
+        pass
+
+    def mouseDrag(self, x, y, dx, dy):
         pass
 
     def pan(self, dx, dy):

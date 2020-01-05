@@ -7,7 +7,7 @@ import logging
 
 from ..qtapi import QtCore, QtWidgets, QtGui, Qt, pyqtSignal
 from ...utils import bench_it
-from ...chart import Chart
+from ...chart import Chart, Curve
 from ..render import render_chart_on_qpainter, ChartLayout, ChartOptions
 from ..render import transform
 from . import mime
@@ -78,11 +78,34 @@ class ChartWidget(BaseWidget):
         self.chart.set_cursor(value)
         self.update()
 
+    def curveHandleAtPoint(self, x, y) -> Curve:
+        for curve in self.chart.curves:
+            topleft = curve.handle[0]
+            middleright = curve.handle[3]
+            bottomleft = curve.handle[-1]
+            if (x >= topleft.x() and
+                x <= middleright.x() and
+                y >= topleft.y() and
+                y <= bottomleft.y()
+            ):
+                return curve
+        return None
+
+    # Mouse interactions:
+    def mousePress(self, x, y):
+        curve = self.curveHandleAtPoint(x,y)
+        if curve is not None:
+            self._drag_handle = curve
+            self.chart.change_active_curve(curve)
+
     def pan(self, dx, dy):
         # print("pan", dx, dy)
         shift = transform.x_pixels_to_domain(dx, self.chart.x_axis, self.chart_layout)
         self.chart.horizontal_pan_absolute(-shift)
-        self.chart.autoscale_y()
+        if self.chart_options.autoscale_y_axis:
+            self.chart.autoscale_y()
+        else:
+            self._drag_handle.axis.pan_relative(dy / self.rect().height())
         self.update()
 
     def add_curve(self, name, color=None):
@@ -109,16 +132,19 @@ class ChartWidget(BaseWidget):
         self.chart.horizontal_zoom(amount, around)
         # Autoscale Y for a nice effect?
         self.chart.autoscale_y()
+        self.repaint()
         self.update()
 
     def vertical_zoom(self, amount):
         self.chart.vertical_zoom(amount)
+        self.repaint()
         self.update()
 
     def horizontal_pan(self, amount):
         self.chart.horizontal_pan_relative(amount)
         # Autoscale Y for a nice effect?
         self.chart.autoscale_y()
+        self.repaint()
         self.update()
 
     def vertical_pan(self, amount):
@@ -128,12 +154,14 @@ class ChartWidget(BaseWidget):
     def zoom_fit(self):
         """ Autoscale all in fit! """
         self.chart.zoom_fit()
+        self.repaint()
         self.update()
 
     def zoom_to_last(self, span):
         """ Zoom to fit the last x time in view.
         """
         self.chart.zoom_to_last(span)
+        self.repaint()
         self.update()
 
     def enable_tailing(self, timespan):
