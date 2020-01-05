@@ -249,7 +249,7 @@ class ChartRenderer(BaseRenderer):
                 pen.setWidth(2)
                 self.painter.setPen(pen)
                 marker_x = self.to_x_pixel(curve_point_timestamp)
-                marker_y = self.to_y_pixel(self.chart.y_axis, curve_point_value)
+                marker_y = self.to_y_pixel(curve.axis, curve_point_value)
                 marker_size = 10
                 indicator_rect = QtCore.QRect(
                     marker_x - marker_size // 2,
