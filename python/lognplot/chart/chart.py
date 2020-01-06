@@ -1,6 +1,7 @@
 import math
 from .axis import Axis
 from .curve import Curve
+from .legend import Legend
 from ..utils import bench_it
 from ..time import TimeSpan
 from ..tsdb import Aggregation, Metrics
@@ -17,6 +18,7 @@ class Chart:
     def __init__(self, db):
         self.x_axis = Axis()
         self.y_axis = Axis()
+        self.legend = Legend()
         self.curves = []
         self.activeCurve = None
         self.cursor = None

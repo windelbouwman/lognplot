@@ -33,16 +33,11 @@ class ChartRenderer(BaseRenderer):
             self.draw_x_axis(x_ticks)
             self.draw_y_axis(self.chart.y_axis, y_ticks)
 
-        if self.options.show_bar:
-            self._draw_bar()
-
         if self.options.show_handles:
             self._draw_handles()
 
         self._draw_curves()
 
-        if self.options.show_legend:
-            self._draw_legend()
         self._draw_cursor()
 
     def shade_region(self, region):
@@ -196,31 +191,6 @@ class ChartRenderer(BaseRenderer):
             min_line = QtGui.QPolygon(min_points)
             self.painter.drawPolyline(min_line)
 
-    def _draw_legend(self):
-        """ Draw names / color of the curve next to eachother.
-        """
-        font_metrics = self.painter.fontMetrics()
-        x = self.layout.chart_left + 10
-        y = self.layout.chart_top + 10
-        text_height = font_metrics.height()
-        color_block_size = text_height * 0.8
-        for index, curve in enumerate(self.chart.curves):
-            color = QtGui.QColor(curve.color)
-            text = curve.name
-            text_rect = font_metrics.boundingRect(text)
-            legend_x = x
-            legend_y = y + index * text_height
-            text_x = legend_x + color_block_size + 3 - text_rect.x()
-            text_y = legend_y - text_rect.y() - text_rect.height() / 2
-            self.painter.drawText(text_x, text_y, text)
-            self.painter.fillRect(
-                x,
-                legend_y - color_block_size / 2,
-                color_block_size,
-                color_block_size,
-                color,
-            )
-
     def _draw_cursor(self):
         if self.chart.cursor:
             # Draw cursor line:
@@ -300,63 +270,6 @@ class ChartRenderer(BaseRenderer):
 
             color = QtGui.QColor(curve.color)
             self.painter.fillPath(polygon, QtGui.QBrush(color))
-
-    def _draw_bar(self):
-        bar = self.layout.bar
-        curves = self.chart.curves
-        font_metrics = self.painter.fontMetrics()
-
-        segment_width = bar.width() / len(curves)
-
-        x = bar.left()
-        for curve in curves:
-            indicator = QtGui.QPainterPath(QtCore.QPointF(x, bar.top()))
-            indicator.lineTo(QtCore.QPointF(x + bar.height(), bar.top()))
-            indicator.lineTo(QtCore.QPointF(x + bar.height(), bar.bottom()))
-            indicator.lineTo(QtCore.QPointF(x, bar.bottom()))
-
-            self.painter.fillPath(indicator, QtGui.QBrush(QtGui.QColor(curve.color)))
-
-            if curve != self.chart.activeCurve:
-                legend = QtGui.QPainterPath(QtCore.QPointF(x + bar.height(), bar.top()))
-                legend.lineTo(QtCore.QPointF(x + segment_width, bar.top()))
-                legend.lineTo(QtCore.QPointF(x + segment_width, bar.bottom()))
-                legend.lineTo(QtCore.QPointF(x + bar.height(), bar.bottom()))
-                self.painter.fillPath(legend, QtGui.QBrush(Qt.lightGray))
-
-            curve.bar_segment = [
-                QtCore.QPointF(x, bar.top()),
-                QtCore.QPointF(x + segment_width, bar.top()),
-                QtCore.QPointF(x + segment_width, bar.bottom()),
-                QtCore.QPointF(x, bar.bottom()),
-            ]
-
-            polygon = QtGui.QPainterPath(curve.bar_segment[0])
-            for p in curve.bar_segment[1:]:
-                polygon.lineTo(p)
-            polygon.lineTo(curve.bar_segment[0])
-            polygon.lineTo(QtCore.QPointF(x + bar.height(), bar.top()))
-            polygon.lineTo(QtCore.QPointF(x + bar.height(), bar.bottom()))
-
-            pen = QtGui.QPen(Qt.black)
-            pen.setWidth(2)
-            self.painter.strokePath(polygon, pen)
- 
-            # Legend:
-            if self.chart.cursor:
-                curve_point = curve.query_value(self.chart.cursor)
-                if not curve_point:
-                    continue
-                _, curve_point_value = curve_point
-
-                text = format(curve_point_value, '.08g')
-                text_rect = font_metrics.boundingRect(text)
-                # legend_y = y + index * text_height
-                text_x = curve.bar_segment[0].x() + bar.height() + 3 - text_rect.x()
-                text_y = curve.bar_segment[0].y() + bar.height() / 2 - text_rect.y() - text_rect.height() / 2
-                self.painter.drawText(text_x, text_y, text)
-            
-            x += segment_width
 
     def to_x_pixel(self, value):
         return transform.to_x_pixel(value, self.chart.x_axis, self.layout)

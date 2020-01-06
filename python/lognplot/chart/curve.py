@@ -16,8 +16,8 @@ class Curve:
         self.color = color
         # Corresponding handle (polygon area)
         self.handle = []
-        # Corresponding bar segment (polygon area)
-        self.bar_segment = []
+        # Corresponding legend segment (polygon area)
+        self.legend_segment = []
         # Each curve has its own vertical axis
         self.axis = Axis()
 

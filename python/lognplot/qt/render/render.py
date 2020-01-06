@@ -6,6 +6,7 @@ from ...utils import bench_it, clip
 from ...tsdb.metrics import Metrics
 from .layout import ChartLayout
 from .chart import ChartRenderer
+from .legend import LegendRenderer
 from .options import ChartOptions
 
 
@@ -28,6 +29,11 @@ class Renderer:
             self.painter, self.chart, self.layout, self.options
         )
         chart_renderer.render()
+
+        legend_renderer = LegendRenderer(
+            self.painter, self.chart, self.layout, self.options
+        )
+        legend_renderer.render()
 
         # self.render_minimap(rect)
 

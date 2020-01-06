@@ -25,13 +25,13 @@ class ChartLayout:
             axis_height = 0
             axis_width = 0
 
-        if self.options.show_bar:
-            self.bar = QtCore.QRect(self.rect.left() + self.options.padding,
-                                    self.rect.top() + self.options.padding,
-                                    self.rect.right() - 2 * self.options.padding,
-                                    self.options.bar_height)
+        if self.options.show_legend:
+            self.legend = QtCore.QRect(self.rect.left() + self.options.padding,
+                                       self.rect.top() + self.options.padding,
+                                       self.rect.right() - 2 * self.options.padding,
+                                       self.options.legend_height)
 
-            self.chart_top = self.bar.bottom() + 5
+            self.chart_top = self.legend.bottom() + 5
         else:
             self.chart_top = self.rect.top() + self.options.padding
 

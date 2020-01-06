@@ -91,11 +91,11 @@ class ChartWidget(BaseWidget):
                 return curve
         return None
 
-    def barHandleAtPoint(self, x, y) -> Curve:
+    def legendSegmentAtPoint(self, x, y) -> Curve:
         for curve in self.chart.curves:
-            topleft = curve.bar_segment[0]
-            topright = curve.bar_segment[1]
-            bottomleft = curve.bar_segment[-1]
+            topleft = curve.legend_segment[0]
+            topright = curve.legend_segment[1]
+            bottomleft = curve.legend_segment[-1]
             if (x >= topleft.x() and
                 x <= topright.x() and
                 y >= topleft.y() and
@@ -108,7 +108,7 @@ class ChartWidget(BaseWidget):
     def mousePress(self, x, y):
         curve = self.curveHandleAtPoint(x,y)
         if curve is None:
-            curve = self.barHandleAtPoint(x,y)
+            curve = self.legendSegmentAtPoint(x,y)
         if curve is not None:
             self.chart.change_active_curve(curve)
 
