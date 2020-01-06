@@ -85,9 +85,9 @@ class ChartRenderer(BaseRenderer):
 
         if data:
             if isinstance(data[0], Aggregation):
-                curve.average = self._draw_aggregations_as_shape(curve.axis, data, curve_color)
+                self._draw_aggregations_as_shape(curve.axis, data, curve_color)
             else:
-                curve.average = self._draw_samples_as_lines(curve.axis, data, curve_color)
+                self._draw_samples_as_lines(curve.axis, data, curve_color)
 
     def _draw_samples_as_lines(self, y_axis: Axis, samples, curve_color: QtGui.QColor):
         """ Draw raw samples as lines! """
@@ -104,8 +104,6 @@ class ChartRenderer(BaseRenderer):
         for point in points:
             rect = QtCore.QRect(point.x() - 3, point.y() - 3, 6, 6)
             self.painter.drawEllipse(rect)
-
-        return sum(p.y() for p in points) / len(points)
 
     def _draw_aggregations_as_shape(
         self, y_axis: Axis, aggregations: Aggregation, curve_color: QtGui.QColor
@@ -198,8 +196,6 @@ class ChartRenderer(BaseRenderer):
             min_line = QtGui.QPolygon(min_points)
             self.painter.drawPolyline(min_line)
 
-        return (sum(p.y() for p in mean_points) / len(mean_points))
-
     def _draw_legend(self):
         """ Draw names / color of the curve next to eachother.
         """
@@ -284,7 +280,7 @@ class ChartRenderer(BaseRenderer):
         x = self.layout.handles.left()
 
         for _, curve in enumerate(self.chart.curves):
-            handle_y = curve.average
+            handle_y = self.to_y_pixel(curve.axis, 0)
             x_full = self.options.handle_width
             x_half = x_full / 2
             y_half = self.options.handle_height / 2

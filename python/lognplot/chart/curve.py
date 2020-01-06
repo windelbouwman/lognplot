@@ -14,8 +14,6 @@ class Curve:
         self._db = db
         self.name = name
         self.color = color
-        # Average of the visual part of the curve
-        self.average = 0
         # Corresponding handle (polygon area)
         self.handle = []
         # Corresponding bar segment (polygon area)
