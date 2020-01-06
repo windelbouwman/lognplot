@@ -91,11 +91,25 @@ class ChartWidget(BaseWidget):
                 return curve
         return None
 
+    def barHandleAtPoint(self, x, y) -> Curve:
+        for curve in self.chart.curves:
+            topleft = curve.bar_segment[0]
+            topright = curve.bar_segment[1]
+            bottomleft = curve.bar_segment[-1]
+            if (x >= topleft.x() and
+                x <= topright.x() and
+                y >= topleft.y() and
+                y <= bottomleft.y()
+            ):
+                return curve
+        return None
+
     # Mouse interactions:
     def mousePress(self, x, y):
         curve = self.curveHandleAtPoint(x,y)
+        if curve is None:
+            curve = self.barHandleAtPoint(x,y)
         if curve is not None:
-            self._drag_handle = curve
             self.chart.change_active_curve(curve)
 
     def pan(self, dx, dy):
@@ -105,7 +119,7 @@ class ChartWidget(BaseWidget):
         if self.chart_options.autoscale_y_axis:
             self.chart.autoscale_y()
         else:
-            self._drag_handle.axis.pan_relative(dy / self.rect().height())
+            self.chart.activeCurve.axis.pan_relative(dy / self.rect().height())
         self.update()
 
     def add_curve(self, name, color=None):
@@ -131,7 +145,8 @@ class ChartWidget(BaseWidget):
     def horizontal_zoom(self, amount, around):
         self.chart.horizontal_zoom(amount, around)
         # Autoscale Y for a nice effect?
-        self.chart.autoscale_y()
+        if self.chart_options.autoscale_y_axis:
+            self.chart.autoscale_y()
         self.repaint()
         self.update()
 
@@ -143,7 +158,8 @@ class ChartWidget(BaseWidget):
     def horizontal_pan(self, amount):
         self.chart.horizontal_pan_relative(amount)
         # Autoscale Y for a nice effect?
-        self.chart.autoscale_y()
+        if self.chart_options.autoscale_y_axis:
+            self.chart.autoscale_y()
         self.repaint()
         self.update()
 

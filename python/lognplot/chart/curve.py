@@ -18,6 +18,8 @@ class Curve:
         self.average = 0
         # Corresponding handle (polygon area)
         self.handle = []
+        # Corresponding bar segment (polygon area)
+        self.bar_segment = []
         # Each curve has its own vertical axis
         self.axis = Axis()
 
