@@ -1,10 +1,13 @@
 from ..qtapi import QtGui, QtCore, Qt
-from ...chart import Axis, Chart
+from ...chart import Axis, Chart, LegendMode, Curve
 from ...tsdb import Aggregation
 from .layout import ChartLayout
 from .base import BaseRenderer
 
 class LegendRenderer(BaseRenderer):
+    """ Not sure this should derive from BaseRenderer,
+        or BaseRenderer is doing way too much...
+    """
 
     def __init__(
         self, painter: QtGui.QPainter, chart: Chart, layout: ChartLayout, options
@@ -20,8 +23,7 @@ class LegendRenderer(BaseRenderer):
     def _draw_legend(self):
         legend = self.layout.legend
         curves = self.chart.curves
-        font_metrics = self.painter.fontMetrics()
-
+ 
         segment_width = legend.width() / len(curves)
 
         x = legend.left()
@@ -57,21 +59,41 @@ class LegendRenderer(BaseRenderer):
             pen = QtGui.QPen(Qt.black)
             pen.setWidth(2)
             self.painter.strokePath(polygon, pen)
- 
-            # Legend:
-            if self.chart.cursor:
-                curve_point = curve.query_value(self.chart.cursor)
-                if not curve_point:
-                    continue
-                _, curve_point_value = curve_point
 
-                text = format(curve_point_value, '.08g')
-                text_rect = font_metrics.boundingRect(text)
-                # legend_y = y + index * text_height
-                text_x = curve.legend_segment[0].x() + legend.height() + 3 - text_rect.x()
-                text_y = curve.legend_segment[0].y() + legend.height() / 2 - text_rect.y() - text_rect.height() / 2
-                self.painter.setPen(Qt.black)
-                self.painter.drawText(text_x, text_y, text)
-            
+            if self.chart.legend.mode == LegendMode.SIGNAL_NAMES:
+                self._draw_signal_names(x, curve)
+            elif self.chart.legend.mode == LegendMode.CURSOR_VALUES:
+                self._draw_cursor_values(x, curve)
+
             x += segment_width
+
+    def _draw_cursor_values(self, x, curve: Curve):
+        if self.chart.cursor:
+            curve_point = curve.query_value(self.chart.cursor)
+            if not curve_point:
+                return
+            _, curve_point_value = curve_point
+
+            legend = self.layout.legend
+            font_metrics = self.painter.fontMetrics()
+
+            text = format(curve_point_value, '.08g')
+            text_rect = font_metrics.boundingRect(text)
+            # legend_y = y + index * text_height
+            text_x = curve.legend_segment[0].x() + legend.height() + 3 - text_rect.x()
+            text_y = curve.legend_segment[0].y() + legend.height() / 2 - text_rect.y() - text_rect.height() / 2
+            self.painter.setPen(Qt.black)
+            self.painter.drawText(text_x, text_y, text)
+
+    def _draw_signal_names(self, x, curve: Curve):
+        legend = self.layout.legend
+        font_metrics = self.painter.fontMetrics()
+
+        text = curve.name
+        text_rect = font_metrics.boundingRect(text)
+        # legend_y = y + index * text_height
+        text_x = curve.legend_segment[0].x() + legend.height() + 3 - text_rect.x()
+        text_y = curve.legend_segment[0].y() + legend.height() / 2 - text_rect.y() - text_rect.height() / 2
+        self.painter.setPen(Qt.black)
+        self.painter.drawText(text_x, text_y, text)
 

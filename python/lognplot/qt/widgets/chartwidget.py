@@ -109,8 +109,11 @@ class ChartWidget(BaseWidget):
         curve = self.curveHandleAtPoint(x,y)
         if curve is None:
             curve = self.legendSegmentAtPoint(x,y)
+            if curve == self.chart.activeCurve:
+                self.chart.legend.next_mode()
         if curve is not None:
-            self.chart.change_active_curve(curve)
+            if curve != self.chart.activeCurve:
+                self.chart.change_active_curve(curve)
 
     def pan(self, dx, dy):
         # print("pan", dx, dy)
