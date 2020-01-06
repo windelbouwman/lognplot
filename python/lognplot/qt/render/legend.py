@@ -64,8 +64,20 @@ class LegendRenderer(BaseRenderer):
                 self._draw_signal_names(x, curve)
             elif self.chart.legend.mode == LegendMode.CURSOR_VALUES:
                 self._draw_cursor_values(x, curve)
+            elif self.chart.legend.mode == LegendMode.Y_AXIS_SCALE:
+                self._draw_y_axis_scale(x, curve)
 
             x += segment_width
+
+    def _draw_text(self, x, curve: Curve, text):
+        legend = self.layout.legend
+        font_metrics = self.painter.fontMetrics()
+
+        text_rect = font_metrics.boundingRect(text)
+        text_x = curve.legend_segment[0].x() + legend.height() + 3 - text_rect.x()
+        text_y = curve.legend_segment[0].y() + legend.height() / 2 - text_rect.y() - text_rect.height() / 2
+        self.painter.setPen(Qt.black)
+        self.painter.drawText(text_x, text_y, text)
 
     def _draw_cursor_values(self, x, curve: Curve):
         if self.chart.cursor:
@@ -74,26 +86,14 @@ class LegendRenderer(BaseRenderer):
                 return
             _, curve_point_value = curve_point
 
-            legend = self.layout.legend
-            font_metrics = self.painter.fontMetrics()
-
             text = format(curve_point_value, '.08g')
-            text_rect = font_metrics.boundingRect(text)
-            # legend_y = y + index * text_height
-            text_x = curve.legend_segment[0].x() + legend.height() + 3 - text_rect.x()
-            text_y = curve.legend_segment[0].y() + legend.height() / 2 - text_rect.y() - text_rect.height() / 2
-            self.painter.setPen(Qt.black)
-            self.painter.drawText(text_x, text_y, text)
+            self._draw_text(x, curve, text)
 
     def _draw_signal_names(self, x, curve: Curve):
-        legend = self.layout.legend
-        font_metrics = self.painter.fontMetrics()
+        self._draw_text(x, curve, curve.name)
 
-        text = curve.name
-        text_rect = font_metrics.boundingRect(text)
-        # legend_y = y + index * text_height
-        text_x = curve.legend_segment[0].x() + legend.height() + 3 - text_rect.x()
-        text_y = curve.legend_segment[0].y() + legend.height() / 2 - text_rect.y() - text_rect.height() / 2
-        self.painter.setPen(Qt.black)
-        self.painter.drawText(text_x, text_y, text)
+    def _draw_y_axis_scale(self, x, curve: Curve):
+        ticks = self.calc_y_ticks(curve.axis)
+        valperdiv = ticks[1][0] - ticks[0][0]
 
+        self._draw_text(x, curve, '{} / div'.format(valperdiv))
