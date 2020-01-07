@@ -74,7 +74,7 @@ class LegendRenderer(BaseRenderer):
         font_metrics = self.painter.fontMetrics()
 
         text_rect = font_metrics.boundingRect(text)
-        text_x = curve.legend_segment[0].x() + legend.height() + 3 - text_rect.x()
+        text_x = curve.legend_segment[0].x() + legend.height() + 5 - text_rect.x()
         text_y = curve.legend_segment[0].y() + legend.height() / 2 - text_rect.y() - text_rect.height() / 2
         self.painter.setPen(Qt.black)
         self.painter.drawText(text_x, text_y, text)

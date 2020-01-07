@@ -31,7 +31,7 @@ class ChartLayout:
                                        self.rect.right() - 2 * self.options.padding,
                                        self.options.legend_height)
 
-            self.chart_top = self.legend.bottom() + 5
+            self.chart_top = self.legend.bottom() + 10
         else:
             self.chart_top = self.rect.top() + self.options.padding
 
