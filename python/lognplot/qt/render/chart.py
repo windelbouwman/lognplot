@@ -1,5 +1,5 @@
 from ..qtapi import QtGui, QtCore, Qt
-from ...chart import Chart
+from ...chart import Axis, Chart
 from ...utils import bench_it
 from ...tsdb import Aggregation
 from .layout import ChartLayout
@@ -25,16 +25,19 @@ class ChartRenderer(BaseRenderer):
         y_ticks = self.calc_y_ticks(self.chart.y_axis)
 
         if self.options.show_grid:
-            self.draw_grid(x_ticks, y_ticks)
+            self.draw_grid(self.chart.y_axis, x_ticks, y_ticks)
 
         self.draw_bouding_rect()
 
         if self.options.show_axis:
             self.draw_x_axis(x_ticks)
-            self.draw_y_axis(y_ticks)
+            self.draw_y_axis(self.chart.y_axis, y_ticks)
+
+        if self.options.show_handles:
+            self._draw_handles()
 
         self._draw_curves()
-        self._draw_legend()
+
         self._draw_cursor()
 
     def shade_region(self, region):
@@ -77,17 +80,17 @@ class ChartRenderer(BaseRenderer):
 
         if data:
             if isinstance(data[0], Aggregation):
-                self._draw_aggregations_as_shape(data, curve_color)
+                self._draw_aggregations_as_shape(curve.axis, data, curve_color)
             else:
-                self._draw_samples_as_lines(data, curve_color)
+                self._draw_samples_as_lines(curve.axis, data, curve_color)
 
-    def _draw_samples_as_lines(self, samples, curve_color: QtGui.QColor):
+    def _draw_samples_as_lines(self, y_axis: Axis, samples, curve_color: QtGui.QColor):
         """ Draw raw samples as lines! """
         pen = QtGui.QPen(curve_color)
         pen.setWidth(2)
         self.painter.setPen(pen)
         points = [
-            QtCore.QPoint(self.to_x_pixel(x), self.to_y_pixel(y)) for (x, y) in samples
+            QtCore.QPoint(self.to_x_pixel(x), self.to_y_pixel(y_axis, y)) for (x, y) in samples
         ]
         line = QtGui.QPolygon(points)
         self.painter.drawPolyline(line)
@@ -98,7 +101,7 @@ class ChartRenderer(BaseRenderer):
             self.painter.drawEllipse(rect)
 
     def _draw_aggregations_as_shape(
-        self, aggregations: Aggregation, curve_color: QtGui.QColor
+        self, y_axis: Axis, aggregations: Aggregation, curve_color: QtGui.QColor
     ):
         """ Draw aggregates as polygon shapes.
 
@@ -119,12 +122,12 @@ class ChartRenderer(BaseRenderer):
             # x2 = self.to_x_pixel(metric.x2)
 
             # max line:
-            y_max = self.to_y_pixel(aggregation.metrics.maximum)
+            y_max = self.to_y_pixel(y_axis, aggregation.metrics.maximum)
             max_points.append(QtCore.QPoint(x1, y_max))
             # max_points.append(QtCore.QPoint(x2, y_max))
 
             # min line:
-            y_min = self.to_y_pixel(aggregation.metrics.minimum)
+            y_min = self.to_y_pixel(y_axis, aggregation.metrics.minimum)
             min_points.append(QtCore.QPoint(x1, y_min))
             # min_points.append(QtCore.QPoint(x2, y_min))
 
@@ -132,17 +135,17 @@ class ChartRenderer(BaseRenderer):
             stddev = aggregation.metrics.stddev
 
             # Mean line:
-            y_mean = self.to_y_pixel(mean)
+            y_mean = self.to_y_pixel(y_axis, mean)
             mean_points.append(QtCore.QPoint(x1, y_mean))
             # mean_points.append(QtCore.QPoint(x2, y_mean))
 
             # stddev up line:
-            y_stddev_up = self.to_y_pixel(mean + stddev)
+            y_stddev_up = self.to_y_pixel(y_axis, mean + stddev)
             stddev_up_points.append(QtCore.QPoint(x1, y_stddev_up))
             # stddev_up_points.append(QtCore.QPoint(x2, y_stddev_up))
 
             # stddev down line:
-            y_stddev_down = self.to_y_pixel(mean - stddev)
+            y_stddev_down = self.to_y_pixel(y_axis, mean - stddev)
             stddev_down_points.append(QtCore.QPoint(x1, y_stddev_down))
             # stddev_down_points.append(QtCore.QPoint(x2, y_stddev_down))
 
@@ -188,31 +191,6 @@ class ChartRenderer(BaseRenderer):
             min_line = QtGui.QPolygon(min_points)
             self.painter.drawPolyline(min_line)
 
-    def _draw_legend(self):
-        """ Draw names / color of the curve next to eachother.
-        """
-        font_metrics = self.painter.fontMetrics()
-        x = self.layout.chart_left + 10
-        y = self.layout.chart_top + 10
-        text_height = font_metrics.height()
-        color_block_size = text_height * 0.8
-        for index, curve in enumerate(self.chart.curves):
-            color = QtGui.QColor(curve.color)
-            text = curve.name
-            text_rect = font_metrics.boundingRect(text)
-            legend_x = x
-            legend_y = y + index * text_height
-            text_x = legend_x + color_block_size + 3 - text_rect.x()
-            text_y = legend_y - text_rect.y() - text_rect.height() / 2
-            self.painter.drawText(text_x, text_y, text)
-            self.painter.fillRect(
-                x,
-                legend_y - color_block_size / 2,
-                color_block_size,
-                color_block_size,
-                color,
-            )
-
     def _draw_cursor(self):
         if self.chart.cursor:
             # Draw cursor line:
@@ -240,7 +218,7 @@ class ChartRenderer(BaseRenderer):
                 pen.setWidth(2)
                 self.painter.setPen(pen)
                 marker_x = self.to_x_pixel(curve_point_timestamp)
-                marker_y = self.to_y_pixel(curve_point_value)
+                marker_y = self.to_y_pixel(curve.axis, curve_point_value)
                 marker_size = 10
                 indicator_rect = QtCore.QRect(
                     marker_x - marker_size // 2,
@@ -251,27 +229,53 @@ class ChartRenderer(BaseRenderer):
                 self.painter.drawEllipse(indicator_rect)
 
                 # Legend:
-                text = "{} = {}".format(curve.name, curve_point_value)
-                text_rect = font_metrics.boundingRect(text)
-                # legend_y = y + index * text_height
-                legend_x = marker_x + 10
-                legend_y = marker_y
-                text_x = legend_x + color_block_size + 3 - text_rect.x()
-                text_y = legend_y - text_rect.y() - text_rect.height() / 2
-                self.painter.drawText(text_x, text_y, text)
-                self.painter.fillRect(
-                    legend_x,
-                    legend_y - color_block_size / 2,
-                    color_block_size,
-                    color_block_size,
-                    color,
-                )
+                if self.options.show_cursor_legend:
+                    text = "{} = {}".format(curve.name, curve_point_value)
+                    text_rect = font_metrics.boundingRect(text)
+                    # legend_y = y + index * text_height
+                    legend_x = marker_x + 10
+                    legend_y = marker_y
+                    text_x = legend_x + color_block_size + 3 - text_rect.x()
+                    text_y = legend_y - text_rect.y() - text_rect.height() / 2
+                    self.painter.drawText(text_x, text_y, text)
+                    self.painter.fillRect(
+                        legend_x,
+                        legend_y - color_block_size / 2,
+                        color_block_size,
+                        color_block_size,
+                        color,
+                    )
+
+    def _draw_handles(self):
+        x = self.layout.handles.left()
+
+        for _, curve in enumerate(self.chart.curves):
+            handle_y = self.to_y_pixel(curve.axis, 0)
+            x_full = self.options.handle_width
+            x_half = x_full / 2
+            y_half = self.options.handle_height / 2
+
+            curve.handle = [
+                QtCore.QPointF(x, handle_y - y_half),
+                QtCore.QPointF(x, handle_y - y_half),
+                QtCore.QPointF(x + x_half, handle_y - y_half),
+                QtCore.QPointF(x + x_full, handle_y),
+                QtCore.QPointF(x + x_half, handle_y + y_half),
+                QtCore.QPointF(x, handle_y + y_half)
+            ] 
+
+            polygon = QtGui.QPainterPath(curve.handle[0])
+            for p in curve.handle[1:]:
+                polygon.lineTo(p)
+
+            color = QtGui.QColor(curve.color)
+            self.painter.fillPath(polygon, QtGui.QBrush(color))
 
     def to_x_pixel(self, value):
         return transform.to_x_pixel(value, self.chart.x_axis, self.layout)
 
-    def to_y_pixel(self, value):
-        return transform.to_y_pixel(value, self.chart.y_axis, self.layout)
+    def to_y_pixel(self, y_axis, value):
+        return transform.to_y_pixel(value, y_axis, self.layout)
 
     def x_pixel_to_domain(self, pixel):
         axis = self.chart.x_axis
