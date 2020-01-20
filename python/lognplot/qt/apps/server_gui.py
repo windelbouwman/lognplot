@@ -2,7 +2,9 @@
 and enable the plotting of this data.
 """
 import threading
+import json
 import base64
+import logging
 
 from ..qtapi import QtWidgets, Qt, QtGui
 from ..widgets import SoftScope, Dashboard, SignalListWidget
@@ -20,6 +22,8 @@ def run_server_gui():
 
 
 class ServerGuiMainWindow(QtWidgets.QMainWindow):
+    logger = logging.getLogger("lognplot-gui")
+
     def __init__(self):
         super().__init__()
         self.db = TsDb()
@@ -63,9 +67,15 @@ class ServerGuiMainWindow(QtWidgets.QMainWindow):
     def create_menus(self):
         # Menu
         menu_bar = self.menuBar()
+
         file_menu = menu_bar.addMenu("File")
         new_action = file_menu.addAction("New")
         new_action.triggered.connect(self.new_database)
+        save_action = file_menu.addAction("Save session")
+        save_action.triggered.connect(self.save_session)
+        load_session_action = file_menu.addAction("Load session")
+        load_session_action.triggered.connect(self.load_session)
+
         quit_action = file_menu.addAction("Quit")
         quit_action.triggered.connect(self.close)
         help_menu = menu_bar.addMenu("Help")
@@ -77,6 +87,38 @@ class ServerGuiMainWindow(QtWidgets.QMainWindow):
 
     def new_database(self):
         self.db.clear()
+
+    def save_session(self):
+        """ Prompt user for session filename and store session in XML.
+        """
+        self.logger.info("Asking for filename to save session to.")
+        session_filename, _ = QtWidgets.QFileDialog.getSaveFileName(
+            self, "Save session"
+        )
+        if session_filename:
+            self.logger.info("Saving session in {}".format(session_filename))
+            json_dashboard = self._dashboard.save()
+            session = {
+                "dashboard": json_dashboard,
+            }
+            with open(session_filename, "w") as f:
+                json.dump(session, f, indent=4)
+
+        else:
+            self.logger.info("Not saving session, cancelled dialog.")
+
+    def load_session(self):
+        self.logger.info("Asking for filename to load session from.")
+        session_filename, _ = QtWidgets.QFileDialog.getOpenFileName(
+            self, "Load session"
+        )
+        if session_filename:
+            self.logger.info("Loading session from {}".format(session_filename))
+            with open(session_filename, "r") as f:
+                session = json.load(f)
+            self._dashboard.restore(session["dashboard"])
+        else:
+            self.logger.info("Not loading session, cancelled dialog.")
 
     def show_usage_dialog(self):
         QtWidgets.QMessageBox.information(self, "Usage", help_text)
