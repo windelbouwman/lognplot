@@ -13,6 +13,9 @@ class TsDb:
     def __init__(self):
         # TODO: load / store data in file!
         self._traces = {}  # The internal trace data.
+        self._tokens = 0
+        self._event_backlog = False
+        self._callbacks = []
 
     def clear(self):
         """ Remove all signals from the database. """
@@ -33,18 +36,23 @@ class TsDb:
         else:
             serie = ZoomSerie()
             self._traces[name] = serie
+            self.notify_changed()
         return serie
 
+    # Data insertion functions:
     def add_sample(self, name: str, sample):
         """ Add a single sample to the given series. """
         serie = self.get_or_create_serie(name)
         serie.add_sample(sample)
+        self.notify_changed()
 
     def add_samples(self, name: str, samples):
         """ Add samples to the given series. """
         serie = self.get_or_create_serie(name)
         serie.add_samples(samples)
+        self.notify_changed()
 
+    # Query related functions:
     def query_len(self, name: str) -> int:
         """ Get the length of a given series. """
         serie = self.get_or_create_serie(name)
@@ -68,3 +76,37 @@ class TsDb:
         """ Retrieve last value of a trace """
         serie = self.get_or_create_serie(name)
         return serie.last_value()
+
+    # Change handlers
+    def register_changed_callback(self, callback):
+        self._callbacks.append(callback)
+        self._tokens += 1
+    
+    def insert_token(self):
+        self._tokens += 1
+        if self._event_backlog:
+            self._event_backlog = False
+            self._tokens -= 1
+            for callback in self._callbacks:
+                callback()
+
+    def notify_changed(self):
+        """ Notify listeners of a change.
+
+        Rate limit the events to prevent GUI flooding.
+        To do this, keep a token counter, if there is
+        an event, check the tokens, if there is a token,
+        propagate the event. Otherwise, store the event
+        for later processing.
+
+        If more events arrive, aggregate the events into
+        a resulting event.
+        """
+        if self._tokens > 0:
+            self._tokens -= 1
+            for callback in self._callbacks:
+                callback()
+        else:
+            # Simplest event aggregation: there was an event
+            self._event_backlog = True
+

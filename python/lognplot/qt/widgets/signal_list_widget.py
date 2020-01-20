@@ -1,5 +1,4 @@
 from ..qtapi import QtWidgets, QtCore
-from .signal_list_model import SignalListModel
 from .db_tree_model import TsDbTreeModel
 
 
@@ -10,7 +9,6 @@ class SignalListWidget(QtWidgets.QWidget):
     def __init__(self, db):
         super().__init__()
         self._signal_view = QtWidgets.QTreeView()
-        # self._signal_list_model = SignalListModel(db)
         self._signal_list_model = TsDbTreeModel(db)
         sort_filter_proxy = QtCore.QSortFilterProxyModel()
         sort_filter_proxy.setSourceModel(self._signal_list_model)
