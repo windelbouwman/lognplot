@@ -27,8 +27,13 @@ class TsDb:
         return list(sorted(names_and_types))
 
     def get_serie_type(self, name):
-        serie = self.get_or_create_serie(name)
-        return serie.get_type()
+        serie = self.get_serie(name)
+        if serie:
+            return serie.get_type()
+
+    def get_serie(self, name):
+        if name in self._traces:
+            return self._traces[name]
 
     def get_or_create_serie(self, name):
         if name in self._traces:
@@ -53,35 +58,28 @@ class TsDb:
         self.notify_changed()
 
     # Query related functions:
-    def query_len(self, name: str) -> int:
-        """ Get the length of a given series. """
-        serie = self.get_or_create_serie(name)
-        return len(serie)
-
     def query_summary(self, name: str, timespan=None) -> Aggregation:
-        serie = self.get_or_create_serie(name)
-        return serie.query_summary(selection_timespan=timespan)
+        serie = self.get_serie(name)
+        if serie:
+            return serie.query_summary(selection_timespan=timespan)
 
     def query(self, name: str, timespan: TimeSpan, count: int):
         """ Query the database on the given signal.
         """
-        serie = self.get_or_create_serie(name)
-        return serie.query(timespan, count)
+        serie = self.get_serie(name)
+        if serie:
+            return serie.query(timespan, count)
 
     def query_value(self, name, timestamp):
-        serie = self.get_or_create_serie(name)
-        return serie.query_value(timestamp)
-
-    def last_value(self, name):
-        """ Retrieve last value of a trace """
-        serie = self.get_or_create_serie(name)
-        return serie.last_value()
+        serie = self.get_serie(name)
+        if serie:
+            return serie.query_value(timestamp)
 
     # Change handlers
     def register_changed_callback(self, callback):
         self._callbacks.append(callback)
         self._tokens += 1
-    
+
     def insert_token(self):
         self._tokens += 1
         if self._event_backlog:
@@ -109,4 +107,3 @@ class TsDb:
         else:
             # Simplest event aggregation: there was an event
             self._event_backlog = True
-

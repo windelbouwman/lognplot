@@ -23,6 +23,7 @@ class TsDbTreeModel(QtCore.QAbstractItemModel):
         super().__init__()
         self.db = db
         self.names = []
+        self.signal_data = {}
         self._column_names = ["Name", "Type", "Datasize", "Last value"]
         self._last_values = {}  # Keep track of last value
         self._last_times = {}
@@ -37,36 +38,63 @@ class TsDbTreeModel(QtCore.QAbstractItemModel):
     def _on_timeout(self):
         """ Refresh the list content! """
         self._update_names()
+        self._update_data()
         self._update_color()
 
     def _update_names(self):
         new_names = list(sorted(self.db.signal_names_and_types()))
         if new_names != self.names:
             self.names = new_names
+            self.signal_data = {}
+            for name, _ in new_names:
+                self.signal_data[name] = {}
             # TODO: finer grained change emission:
             self.modelReset.emit()
 
+    def _update_data(self):
+        """ Poll the data from the database. """
+        parent = QtCore.QModelIndex()
+        for row, name_and_type in enumerate(self.names):
+            name, _ = name_and_type
+            summary = self.db.query_summary(name)
+            if summary:
+                signal_data = self.signal_data[name]
+                last_value = summary.metrics.last
+                last_time = summary.timespan.end
+                count = summary.metrics.count
+                data_change = False
+
+                previous_count = signal_data.get("count", None)
+                if count != previous_count:
+                    signal_data["count"] = count
+                    data_change = True
+
+                previous_last_value = signal_data.get("last_value", None)
+                if last_value != previous_last_value:
+                    signal_data["last_value"] = last_value
+                    data_change = True
+
+                previous_last_time = signal_data.get("last_time", None)
+                if last_time != previous_last_time:
+                    signal_data["last_time"] = last_time
+                    signal_data["last_active"] = time.time()
+
+                if data_change:
+                    roles = [Qt.DisplayRole]
+                    self.row_changed(row, parent, roles)
+
     def _signal_age(self, name):
-        return time.time() - self._last_active.get(name, 0)
+        signal_data = self.signal_data.get(name)
+        if signal_data:
+            last_active = signal_data.get("last_active", 0)
+        else:
+            last_active = 0
+        return time.time() - last_active
 
     def _update_color(self):
         parent = QtCore.QModelIndex()
         for row, name_and_type in enumerate(self.names):
             name, _ = name_and_type
-            last_time, last_value = self.db.last_value(name)
-
-            previous_last_value = self._last_values.get(name, None)
-            if last_value != previous_last_value:
-                self._last_values[name] = last_value
-                # We have a new value!
-
-                roles = [Qt.DisplayRole]
-                self.row_changed(row, parent, roles)
-
-            previous_last_time = self._last_times.get(name, None)
-            if last_time != previous_last_time:
-                self._last_times[name] = last_time
-                self._last_active[name] = time.time()
 
             # Color the row based on age:
             row_age = self._signal_age(name)
@@ -154,15 +182,16 @@ class TsDbTreeModel(QtCore.QAbstractItemModel):
         if index.isValid():
             row, column = index.row(), index.column()
             name, typ = self.names[row]
+            signal_data = self.signal_data.get(name, {})
             if role == Qt.DisplayRole:
                 if column == 0:
                     return name
                 elif column == 1:
                     return typ
                 elif column == 2:
-                    return str(self.db.query_len(name))
+                    return str(signal_data.get("count", "?"))
                 elif column == 3:
-                    return str(self._last_values.get(name, "?"))
+                    return str(signal_data.get("last_value", "?"))
                 else:
                     return "?"
             elif role == Qt.BackgroundRole:

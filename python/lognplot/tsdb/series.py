@@ -74,6 +74,3 @@ class ZoomSerie(Serie):
 
     def query_value(self, timestamp):
         return self._tree.query_value(timestamp)
-
-    def last_value(self):
-        return self._tree.last_value()

@@ -109,10 +109,6 @@ class Btree:
         """
         return self.root_node.query_value(timestamp)
 
-    def last_value(self):
-        """ Get last item in the collection """
-        return self.root_node.last_value()
-
 
 def enhance(nodes, selection_span):
     """ Enhance resolution by descending into child nodes in the selected time span.
@@ -159,10 +155,6 @@ class BtreeNode(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def query_value(self, timestamp):
-        raise NotImplementedError()
-
-    @abc.abstractmethod
-    def last_value(self):
         raise NotImplementedError()
 
 
@@ -257,9 +249,6 @@ class BtreeInternalNode(BtreeNode):
                     break
         return child_node.query_value(timestamp)
 
-    def last_value(self):
-        return self._children[-1].last_value()
-
 
 class BtreeLeaveNode(BtreeNode):
     """ A leave node in the B-tree.
@@ -344,6 +333,3 @@ class BtreeLeaveNode(BtreeNode):
             index = len(self.samples) - 1
         # raise NotImplementedError()
         return self.samples[index]
-
-    def last_value(self):
-        return self.samples[-1]

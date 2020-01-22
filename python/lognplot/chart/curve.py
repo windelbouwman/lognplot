@@ -19,7 +19,11 @@ class Curve:
         return "Database proxy-curve"
 
     def __len__(self):
-        return self._db.query_len(self.name)
+        summary = self._db.query_summary(self.name)
+        if summary:
+            return summary.count
+        else:
+            return 0
 
     def query_summary(self, timespan=None) -> Aggregation:
         return self._db.query_summary(self.name, timespan=timespan)

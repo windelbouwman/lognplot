@@ -118,29 +118,33 @@ class EventMetrics(Metrics):
     """ Simplest metric, simply counting the events.
     """
 
-    def __init__(self, count):
+    def __init__(self, count, first, last):
         self.count = count
+        self.first = first
+        self.last = last
 
     @classmethod
     def from_event(cls, event):
-        return cls(1)
+        return cls(1, event, event)
 
     def __add__(self, other):
         if isinstance(other, EventMetrics):
             count = self.count + other.count
-            return EventMetrics(count)
+            return EventMetrics(count, self.first, other.last)
         else:  # pragma: no cover
             return NotImplemented
 
 
 class LogMetrics(Metrics):
-    def __init__(self, count):
+    def __init__(self, count, first, last):
         self.count = count
+        self.first = first
+        self.last = last
         self.level_counters = {level: 0 for level in LogLevel.LEVELS}
 
     @classmethod
     def from_record(cls, record):
-        m = cls(0)
+        m = cls(0, record, record)
         m.include(record)
         return m
 
@@ -151,7 +155,7 @@ class LogMetrics(Metrics):
     def __add__(self, other):
         if isinstance(other, LogMetrics):
             count = self.count + other.count
-            result = LogMetrics(count)
+            result = LogMetrics(count, self.first, other.last)
             for level in LogLevel.LEVELS:
                 result.level_counters[level] = (
                     self.level_counters[level] + other.level_counters[level]
