@@ -11,13 +11,13 @@ use std::cell::RefCell;
 
 /// This is the intermediate level fanout ratio.
 /// A higher number yields less overhead (zoom levels)
-const INTERMEDIATE_CHUNK_SIZE: usize = 5;
+const INTERMEDIATE_CHUNK_SIZE: usize = 4;
 
 /// This constant defines the fanout ratio.
 /// Each leave contains maximum this number of values
 /// Also, each intermediate node also contains this maximum number
 /// of subchunks.
-const LEAVE_CHUNK_SIZE: usize = 16;
+const LEAVE_CHUNK_SIZE: usize = 8;
 
 /// This implements a b-tree structure.
 ///
@@ -75,11 +75,11 @@ where
     ///
     /// This will go into deeper levels of detail, until a certain
     /// amount of data points is found.
-    pub fn query_range(&self, timespan: &TimeSpan, min_items: usize) -> RangeQueryResult<V, M> {
+    pub fn query_range(&self, timespan: &TimeSpan, max_items: usize) -> RangeQueryResult<V, M> {
         let root_node = self.root.borrow();
         let mut selection = root_node.select_range(timespan);
 
-        while (selection.len() < min_items) && selection.can_enhance() {
+        while selection.can_enhance() && selection.enhanced_size() < max_items {
             selection = selection.enhance(timespan);
         }
 
@@ -336,6 +336,25 @@ where
         match self {
             RangeSelectionResult::Nodes(nodes) => !nodes.is_empty(),
             RangeSelectionResult::Observations(_) => false,
+        }
+    }
+
+    /// Give an estimate how many results we could get when we enhance.
+    fn enhanced_size(&self) -> usize {
+        match self {
+            RangeSelectionResult::Nodes(nodes) => {
+                if nodes.is_empty() {
+                    0
+                } else {
+                    let first_node: &Node<V, M> = nodes.first().expect("A single item");
+                    let worst_case_child_count = match first_node {
+                        Node::Intermediate(..) => INTERMEDIATE_CHUNK_SIZE,
+                        Node::Leave(..) => LEAVE_CHUNK_SIZE,
+                    };
+                    nodes.len() * worst_case_child_count
+                }
+            }
+            RangeSelectionResult::Observations(observations) => observations.len(),
         }
     }
 

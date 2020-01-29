@@ -25,7 +25,7 @@ const PIXELS_PER_X_TICK: usize = 100;
 const PIXELS_PER_Y_TICK: usize = 60;
 
 /// Divide the width of the plot by this value, and draw at least that many data points.
-const PIXELS_PER_AGGREGATION: usize = 4;
+const PIXELS_PER_AGGREGATION: usize = 2;
 
 /// This struct will be able to render the chart onto a canvas.
 struct ChartRenderer<'a, C>
