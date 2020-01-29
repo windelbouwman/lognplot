@@ -78,6 +78,13 @@ class ServerGuiMainWindow(QtWidgets.QMainWindow):
 
         quit_action = file_menu.addAction("Quit")
         quit_action.triggered.connect(self.close)
+
+        view_menu = menu_bar.addMenu("View")
+        one_plot_action = view_menu.addAction("1 plot")
+        one_plot_action.triggered.connect(self._dashboard.use_one_plot)
+        grid4_action = view_menu.addAction("2x2 plots")
+        grid4_action.triggered.connect(self._dashboard.use_4grid)
+
         help_menu = menu_bar.addMenu("Help")
         usage_action = help_menu.addAction("Usage")
         usage_action.triggered.connect(self.show_usage_dialog)

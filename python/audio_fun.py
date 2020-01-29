@@ -16,7 +16,7 @@ fs = 44100
 ts = 1 / fs
 fmt = "S16_LE"
 fmt = "<h"  # 16 bit signed little endian
-t = 0
+t = 0.0
 buf_size = 2048  # Number of samples to read at once.
 sample_size = struct.calcsize(fmt)
 
@@ -30,6 +30,6 @@ while True:
     samples = []
     for i in range(buf_size):
         (v,) = struct.unpack(fmt, data[i * sample_size : i * sample_size + sample_size])
-        samples.append(v)
+        samples.append(float(v))
     lpc.send_samples("AUDIO", t, ts, samples)
     t += buf_size * ts

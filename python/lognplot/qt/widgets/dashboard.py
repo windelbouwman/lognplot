@@ -24,17 +24,35 @@ class Dashboard(QtWidgets.QWidget):
     def __init__(self, db):
         super().__init__()
         self._db = db
+        self._dashboard_slots = []
+        l = QtWidgets.QGridLayout()
+        self.setLayout(l)
+        self.use_4grid()
+
+    def clear_layout(self):
+        l = self.layout()
+        for dashboard_slot in self._dashboard_slots:
+            dashboard_slot.hide()
+            l.removeWidget(dashboard_slot)
+        self._dashboard_slots.clear()
+
+    def use_one_plot(self):
+        self.clear_layout()
+        l = self.layout()
+        dashboard_slot = DashboardSlot(self._db)
+        l.addWidget(dashboard_slot)
+        self._dashboard_slots.append(dashboard_slot)
+
+    def use_4grid(self):
         rows = 2
         columns = 2
-
-        l = QtWidgets.QGridLayout()
-        self._dashboard_slots = []
+        self.clear_layout()
+        l = self.layout()
         for row in range(rows):
             for column in range(columns):
-                dashboard_slot = DashboardSlot(db)
+                dashboard_slot = DashboardSlot(self._db)
                 l.addWidget(dashboard_slot, row, column)
                 self._dashboard_slots.append(dashboard_slot)
-        self.setLayout(l)
 
     def enable_tailing(self, duration):
         for dashboard_slot in self._dashboard_slots:
