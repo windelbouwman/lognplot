@@ -25,7 +25,7 @@ const PIXELS_PER_X_TICK: usize = 100;
 const PIXELS_PER_Y_TICK: usize = 60;
 
 /// Divide the width of the plot by this value, and draw at least that many data points.
-const PIXELS_PER_AGGREGATION: usize = 40;
+const PIXELS_PER_AGGREGATION: usize = 4;
 
 /// This struct will be able to render the chart onto a canvas.
 struct ChartRenderer<'a, C>
@@ -224,7 +224,8 @@ where
     /// Draw the actual curves!
     fn draw_curves(&mut self) {
         let timespan = self.chart.x_axis.timespan();
-        let point_count = (self.layout.plot_width as usize) / PIXELS_PER_AGGREGATION;
+        let pixels: usize = self.layout.plot_width as usize;
+        let point_count = pixels / PIXELS_PER_AGGREGATION;
 
         for curve in &self.chart.curves {
             // trace!("Plotting curve {:?}", curve);
@@ -236,7 +237,9 @@ where
                         self.draw_aggregations(aggregations, color);
                     }
                     RangeQueryResult::Observations(observations) => {
-                        self.draw_observations(observations, color);
+                        let draw_markers =
+                            observations.len() < pixels / (PIXELS_PER_AGGREGATION * 5);
+                        self.draw_observations(observations, color, draw_markers);
                     }
                 }
             }
@@ -244,7 +247,12 @@ where
     }
 
     /// Draw single observations.
-    fn draw_observations(&mut self, observations: Vec<Observation<Sample>>, color: Color) {
+    fn draw_observations(
+        &mut self,
+        observations: Vec<Observation<Sample>>,
+        color: Color,
+        draw_markers: bool,
+    ) {
         let points: Vec<Point> = observations
             .into_iter()
             .map(|o| {
@@ -262,9 +270,11 @@ where
 
         // Draw markers as small solid square dots
         // Idea from pulseview (sigrok application)
-        for point in points {
-            self.canvas
-                .fill_rect(point.x() - 4.0, point.y() - 4.0, 8.0, 8.0);
+        if draw_markers {
+            for point in points {
+                self.canvas
+                    .fill_rect(point.x() - 4.0, point.y() - 4.0, 8.0, 8.0);
+            }
         }
     }
 

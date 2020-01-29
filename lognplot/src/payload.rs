@@ -55,13 +55,6 @@ impl SampleBatch {
             SamplePayload::Event { .. } => vec![],
         }
     }
-    /*
-        fn size(&self) -> usize {
-            match &self.payload {
-                SamplePayload::Batch { dt: _, data} => { data.len() },
-            }
-        }
-    */
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -104,4 +97,18 @@ enum SamplePayload {
 
         attributes: HashMap<String, String>,
     },
+}
+
+#[cfg(test)]
+mod tests {
+    use super::SampleBatch;
+
+    #[test]
+    /// Check a simple roundtrip operation (to bytes and back to data)
+    fn roundtrip() {
+        let batch = SampleBatch::new_sample("bla".to_string(), 3.14, 2.5);
+        let data = serde_cbor::to_vec(&batch).unwrap();
+        let batch2: SampleBatch = serde_cbor::from_slice(&data).unwrap();
+        assert_eq!(batch.name, batch2.name);
+    }
 }
