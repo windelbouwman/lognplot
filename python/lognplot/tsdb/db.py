@@ -1,7 +1,7 @@
 """ Time series database.
 """
 
-from .series import ZoomSerie
+from .series import ZoomSerie, FuncSerie
 from .aggregation import Aggregation
 from ..time import TimeSpan
 
@@ -43,6 +43,13 @@ class TsDb:
             self._traces[name] = serie
             self.notify_changed()
         return serie
+
+    # Math operation!
+    def add_function(self, name, expr):
+        # TODO: name clash?
+        assert name not in self._traces
+        serie = FuncSerie(self, expr)
+        self._traces[name] = serie
 
     # Data insertion functions:
     def add_sample(self, name: str, sample):

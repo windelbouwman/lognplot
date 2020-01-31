@@ -74,3 +74,29 @@ class ZoomSerie(Serie):
 
     def query_value(self, timestamp):
         return self._tree.query_value(timestamp)
+
+
+class FuncSerie(Serie):
+    """ A serie which might depend upon other series. """
+
+    def __init__(self, db, expr):
+        self._db = db
+        self._expr = expr
+
+    def get_type(self):
+        return "signal"
+
+    def add_sample(self, sample):
+        raise NotImplementedError("Cannot append sample to calculated serie")
+
+    def query(self, selection_timespan: TimeSpan, min_count: int):
+        signal_name = self._expr
+        return self._db.query(signal_name, selection_timespan, min_count)
+
+    def query_summary(self, selection_timespan=None) -> Aggregation:
+        signal_name = self._expr
+        return self._db.query_summary(signal_name, timespan=selection_timespan)
+
+    def query_value(self, timestamp):
+        signal_name = self._expr
+        return self._db.query_value(signal_name, timestamp)
