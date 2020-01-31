@@ -644,6 +644,6 @@ mod tests {
         // Check query
         let time_span = TimeSpan::from_seconds(3, 13);
         let result = tree.query_range(&time_span, 9);
-        assert_eq!(result.len(), 11);
+        assert_eq!(result.len(), 2);
     }
 }
