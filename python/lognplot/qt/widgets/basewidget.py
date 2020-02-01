@@ -8,6 +8,7 @@ class BaseWidget(QtWidgets.QWidget):
     Features:
     - keyboard focus
     - mouse panning?
+    - kinetic scrolling
     """
 
     logger = logging.getLogger("base-widget")
@@ -19,10 +20,20 @@ class BaseWidget(QtWidgets.QWidget):
         self.setFocusPolicy(Qt.StrongFocus)
 
         self._mouse_drag_source = None
+        self._mouse_is_pressed = False
+
+        self._kinetic_timer = QtCore.QTimer()
+        self._kinetic_timer.setInterval(10)
+        self._kinetic_timer.timeout.connect(self._handle_kinetic)
+        self._kinetic_v = 0
+        self._kinetic_a = 0
 
     def mousePressEvent(self, event):
         super().mousePressEvent(event)
         self.disable_tailing()
+        self._mouse_is_pressed = True
+        self._kinetic_old_pos = QtGui.QCursor.pos()
+        self._kinetic_timer.start()
         self._mouse_drag_source = event.x(), event.y()
         self.update()
 
@@ -35,6 +46,7 @@ class BaseWidget(QtWidgets.QWidget):
     def mouseReleaseEvent(self, event):
         super().mouseReleaseEvent(event)
         self._update_mouse_pan(event.x(), event.y())
+        self._mouse_is_pressed = False
         self._mouse_drag_source = None
 
     def _update_mouse_pan(self, x, y):
@@ -46,6 +58,35 @@ class BaseWidget(QtWidgets.QWidget):
                 self.pan(dx, dy)
                 self._mouse_drag_source = (x, y)
                 self.update()
+
+    def _handle_kinetic(self):
+        """ Update kinetic scrolling.
+
+        When mouse is pressed: estimate velocity.
+        When mouse is not pressed: slowly decay velocity.
+        """
+        dt = 0.01  # 10 ms
+        if self._mouse_is_pressed:
+            # Update speed estimate
+            pos = QtGui.QCursor.pos()
+            dx = pos.x() - self._kinetic_old_pos.x()
+            self._kinetic_old_pos = pos
+            self._kinetic_v = dx / dt
+        else:
+            # kinetic scrolling logic:
+            dx = self._kinetic_v * dt
+            if abs(self._kinetic_v) > 0.0001:
+                if self._kinetic_v > 0:
+                    dv = -30
+                    dv = max(dv, -self._kinetic_v)
+                else:
+                    dv = 30
+                    dv = min(dv, -self._kinetic_v)
+                self._kinetic_v += dv
+            else:
+                self._kinetic_timer.stop()
+            self.pan(dx, 0)
+        # print('V=', self._kinetic_v)
 
     def mouse_move(self, x, y):
         """ Intended for override. """
