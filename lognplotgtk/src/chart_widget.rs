@@ -72,6 +72,12 @@ pub fn setup_drawing_area(draw_area: gtk::DrawingArea, app_state: GuiStateHandle
             gdk::ScrollDirection::Down => {
                 app_state.borrow_mut().zoom_out_horizontal(around);
             },
+            gdk::ScrollDirection::Left => {
+                app_state.borrow_mut().pan_left();
+            },
+            gdk::ScrollDirection::Right => {
+                app_state.borrow_mut().pan_right();
+            },
             _ => {}
         }
         w.queue_draw();
