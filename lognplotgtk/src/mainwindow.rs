@@ -74,7 +74,6 @@ fn setup_toolbar_buttons(
     {
         let tb_clear_plot: gtk::ToolButton = builder.get_object("tb_clear_plot").unwrap();
         tb_clear_plot.connect_clicked(clone!(@strong app_state, @strong draw_area => move |_tb| {
-            info!("Clear plot!");
             app_state.borrow_mut().clear_curves();
             draw_area.queue_draw();
         }));
@@ -84,7 +83,6 @@ fn setup_toolbar_buttons(
     {
         let tb_zoom_fit: gtk::ToolButton = builder.get_object("tb_zoom_fit").unwrap();
         tb_zoom_fit.connect_clicked(clone!(@strong app_state, @strong draw_area => move |_tb| {
-            info!("zoom fit!");
             app_state.borrow_mut().zoom_fit();
             draw_area.queue_draw();
         }));
@@ -94,7 +92,6 @@ fn setup_toolbar_buttons(
     {
         let tb_pan_left: gtk::ToolButton = builder.get_object("tb_pan_left").unwrap();
         tb_pan_left.connect_clicked(clone!(@strong app_state, @strong draw_area => move |_tb| {
-            info!("Pan left!");
             app_state.borrow_mut().pan_left();
             draw_area.queue_draw();
         }));
@@ -104,7 +101,6 @@ fn setup_toolbar_buttons(
     {
         let tb_pan_right: gtk::ToolButton = builder.get_object("tb_pan_right").unwrap();
         tb_pan_right.connect_clicked(clone!(@strong app_state, @strong draw_area => move |_tb| {
-            info!("Pan right!");
             app_state.borrow_mut().pan_right();
             draw_area.queue_draw();
         }));

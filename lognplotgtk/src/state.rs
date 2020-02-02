@@ -145,50 +145,50 @@ impl GuiState {
     }
 
     pub fn zoom_fit(&mut self) {
-        info!("Autoscale!");
+        debug!("Autoscale!");
         self.disable_tailing();
         self.chart.autoscale();
     }
 
     pub fn clear_curves(&mut self) {
-        info!("Kill all signals!");
+        debug!("Kill all signals!");
         self.disable_tailing();
         self.chart.clear_curves();
     }
 
     pub fn pan_left(&mut self) {
-        info!("pan left!");
+        debug!("pan left!");
         self.disable_tailing();
         self.chart.pan_horizontal_relative(-0.1);
         self.chart.fit_y_axis();
     }
 
     pub fn pan_right(&mut self) {
-        info!("Pan right!");
+        debug!("Pan right!");
         self.disable_tailing();
         self.chart.pan_horizontal_relative(0.1);
         self.chart.fit_y_axis();
     }
 
     pub fn pan_up(&mut self) {
-        info!("pan up!");
+        debug!("pan up!");
         self.disable_tailing();
         self.chart.pan_vertical(-0.1);
     }
 
     pub fn pan_down(&mut self) {
-        info!("pan down!");
+        debug!("pan down!");
         self.disable_tailing();
         self.chart.pan_vertical(0.1);
     }
 
     pub fn zoom_in_vertical(&mut self) {
-        info!("Zoom in vertical");
+        debug!("Zoom in vertical");
         self.zoom_vertical(0.1);
     }
 
     pub fn zoom_out_vertical(&mut self) {
-        info!("Zoom out vertical");
+        debug!("Zoom out vertical");
         self.zoom_vertical(-0.1);
     }
 
@@ -198,12 +198,12 @@ impl GuiState {
     }
 
     pub fn zoom_in_horizontal(&mut self, around: Option<(f64, Size)>) {
-        info!("Zoom in horizontal");
+        debug!("Zoom in horizontal");
         self.zoom_horizontal(-0.1, around);
     }
 
     pub fn zoom_out_horizontal(&mut self, around: Option<(f64, Size)>) {
-        info!("Zoom out horizontal");
+        debug!("Zoom out horizontal");
         self.zoom_horizontal(0.1, around);
     }
 

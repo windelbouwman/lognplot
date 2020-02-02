@@ -5,7 +5,7 @@ use super::query::{Query, QueryResult};
 use super::sample::{Sample, SampleMetrics};
 use super::trace::Trace;
 use super::{Aggregation, Observation};
-use crate::time::TimeSpan;
+use crate::time::{TimeSpan, TimeStamp};
 use std::collections::HashMap;
 
 /// A time series database which can be used as a library.
@@ -41,17 +41,38 @@ impl TsDb {
         self.data.keys().cloned().collect()
     }
 
-    fn get_or_create_trace(&mut self, name: &str) -> &mut Trace {
-        if !self.data.contains_key(name) {
+    fn get_or_create_trace(&mut self, name: &str, first_timestamp: &TimeStamp) -> &mut Trace {
+        if self.data.contains_key(name) {
+            let trace = self.data.get(name).expect("name to be present");
+            if let Some(summary) = trace.summary(None) {
+                let last_saved_observation_time = summary.timespan.end;
+
+                if first_timestamp < &last_saved_observation_time {
+                    // Copy trace into backup, and begin a new trace.
+                    let trace = self.data.remove(name).unwrap();
+                    // TODO: make nice date time string.
+                    let date_time_marker = format!("{:?}", std::time::SystemTime::now());
+                    let new_name = format!("{}_BACKUP_{}", name, date_time_marker);
+                    // TODO: do not overwrite backup!
+                    // assert!(!self.data.contains_key(new_name));
+                    self.data.insert(new_name, trace);
+                    self.new_trace(name);
+                }
+            }
+        } else {
             self.new_trace(name);
         }
+
         self.data.get_mut(name).unwrap()
     }
 
     /// Add a batch of values
     pub fn add_values(&mut self, name: &str, samples: Vec<Observation<Sample>>) {
-        let trace = self.get_or_create_trace(name);
-        trace.add_values(samples);
+        if !samples.is_empty() {
+            let first_observation = samples.first().expect("Must have an observation here.");
+            let trace = self.get_or_create_trace(name, &first_observation.timestamp);
+            trace.add_values(samples);
+        }
     }
 
     pub fn new_trace(&mut self, name: &str) {
@@ -61,7 +82,7 @@ impl TsDb {
     }
 
     pub fn add_value(&mut self, name: &str, observation: Observation<Sample>) {
-        let trace = self.get_or_create_trace(name);
+        let trace = self.get_or_create_trace(name, &observation.timestamp);
         trace.add_sample(observation);
     }
 
