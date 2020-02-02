@@ -1,7 +1,7 @@
 //! Implementation of a B-tree like data structure.
 //!
-//! The idea is to create leave nodes and intermediate nodes.
-//! Leave and intermediate nodes can have multiple child nodes.
+//! The idea is to create leaf nodes and intermediate nodes.
+//! Leaf and intermediate nodes can have multiple child nodes.
 
 use super::metrics::Metrics;
 use super::{Aggregation, Observation};
@@ -14,10 +14,10 @@ use std::cell::RefCell;
 const INTERMEDIATE_CHUNK_SIZE: usize = 4;
 
 /// This constant defines the fanout ratio.
-/// Each leave contains maximum this number of values
+/// Each leaf contains maximum this number of values
 /// Also, each intermediate node also contains this maximum number
 /// of subchunks.
-const LEAVE_CHUNK_SIZE: usize = 8;
+const LEAF_CHUNK_SIZE: usize = 8;
 
 /// This implements a b-tree structure.
 ///
@@ -38,7 +38,7 @@ where
     V: Clone,
 {
     fn default() -> Self {
-        let root = RefCell::new(Node::new_leave());
+        let root = RefCell::new(Node::new_leaf());
         Btree { root }
     }
 }
@@ -50,7 +50,7 @@ where
 {
     /// Append a sample to the tree
     pub fn append_sample(&self, observation: Observation<V>) {
-        // Strategy, traverse down, until a leave, and split on the way back upwards if
+        // Strategy, traverse down, until a leaf, and split on the way back upwards if
         // required.
         // Find proper chunk, or create one if required.
 
@@ -189,12 +189,11 @@ enum Node<V, M>
 where
     M: Metrics<V> + From<V>,
 {
-    /// An intermediate chunk with some leave
-    /// chunk.
+    /// An intermediate chunk with some sub chunks.
     Intermediate(InternalNode<V, M>),
 
-    /// A leave chunk with some samples in it.
-    Leave(LeaveNode<V, M>),
+    /// A leaf chunk with some samples in it.
+    Leaf(LeafNode<V, M>),
     // TODO: in future support on disk node?
 }
 
@@ -204,7 +203,7 @@ where
     V: Clone,
 {
     fn default() -> Self {
-        Node::new_leave()
+        Node::new_leaf()
     }
 }
 
@@ -218,9 +217,9 @@ where
     metrics: Option<Aggregation<V, M>>,
 }
 
-/// Leave node type
+/// Leaf node type
 #[derive(Debug)]
-struct LeaveNode<V, M>
+struct LeafNode<V, M>
 where
     M: Metrics<V> + From<V>,
 {
@@ -237,14 +236,14 @@ where
         Node::Intermediate(InternalNode::new())
     }
 
-    fn new_leave() -> Self {
-        Node::Leave(LeaveNode::new())
+    fn new_leaf() -> Self {
+        Node::Leaf(LeafNode::new())
     }
 
     /// Test if this chunk is full
     fn _is_full(&self) -> bool {
         match self {
-            Node::Leave(leave) => leave.is_full(),
+            Node::Leaf(leaf) => leaf.is_full(),
             Node::Intermediate(internal) => internal.is_full(),
         }
     }
@@ -262,7 +261,7 @@ where
             Node::Intermediate(internal_node) => internal_node
                 .append_observation(observation)
                 .map(Node::Intermediate),
-            Node::Leave(leave_node) => leave_node.append_observation(observation).map(Node::Leave),
+            Node::Leaf(leaf_node) => leaf_node.append_observation(observation).map(Node::Leaf),
         }
     }
 
@@ -270,7 +269,7 @@ where
     fn select_all(&self) -> RangeSelectionResult<V, M> {
         match self {
             Node::Intermediate(internal) => RangeSelectionResult::Nodes(internal.select_all()),
-            Node::Leave(leave) => RangeSelectionResult::Observations(leave.select_all()),
+            Node::Leaf(leaf) => RangeSelectionResult::Observations(leaf.select_all()),
         }
     }
 
@@ -280,7 +279,7 @@ where
             Node::Intermediate(internal) => {
                 RangeSelectionResult::Nodes(internal.select_range(timespan))
             }
-            Node::Leave(leave) => RangeSelectionResult::Observations(leave.select_range(timespan)),
+            Node::Leaf(leaf) => RangeSelectionResult::Observations(leaf.select_range(timespan)),
         }
     }
 
@@ -289,14 +288,14 @@ where
     fn to_vec(&self) -> Vec<Observation<V>> {
         match self {
             Node::Intermediate(internal) => internal.to_vec(),
-            Node::Leave(leave) => leave.to_vec(),
+            Node::Leaf(leaf) => leaf.to_vec(),
         }
     }
 
     /// Get metrics for this node
     fn metrics(&self) -> Option<Aggregation<V, M>> {
         match self {
-            Node::Leave(leave) => leave.metrics(),
+            Node::Leaf(leaf) => leaf.metrics(),
             Node::Intermediate(internal) => internal.metrics(),
         }
     }
@@ -349,7 +348,7 @@ where
                     let first_node: &Node<V, M> = nodes.first().expect("A single item");
                     let worst_case_child_count = match first_node {
                         Node::Intermediate(..) => INTERMEDIATE_CHUNK_SIZE,
-                        Node::Leave(..) => LEAVE_CHUNK_SIZE,
+                        Node::Leaf(..) => LEAF_CHUNK_SIZE,
                     };
                     nodes.len() * worst_case_child_count
                 }
@@ -525,22 +524,22 @@ where
     }
 }
 
-impl<V, M> LeaveNode<V, M>
+impl<V, M> LeafNode<V, M>
 where
     M: Metrics<V> + Clone + From<V>,
     V: Clone,
 {
-    /// Create a new leave chunk!
+    /// Create a new leaf chunk!
     fn new() -> Self {
-        LeaveNode {
-            observations: Vec::with_capacity(LEAVE_CHUNK_SIZE),
+        LeafNode {
+            observations: Vec::with_capacity(LEAF_CHUNK_SIZE),
             metrics: Default::default(),
         }
     }
 
-    /// Test if this leave is full or not.
+    /// Test if this leaf is full or not.
     fn is_full(&self) -> bool {
-        self.observations.len() >= LEAVE_CHUNK_SIZE
+        self.observations.len() >= LEAF_CHUNK_SIZE
     }
 
     fn metrics(&self) -> Option<Aggregation<V, M>> {
@@ -548,14 +547,14 @@ where
     }
 
     /// Append a single observation to this tree.
-    /// If the node is full, return a new leave node.
-    fn append_observation(&mut self, observation: Observation<V>) -> Option<LeaveNode<V, M>> {
+    /// If the node is full, return a new leaf node.
+    fn append_observation(&mut self, observation: Observation<V>) -> Option<LeafNode<V, M>> {
         if self.is_full() {
             // We must split!
-            // debug!("Split of leave node!");
-            let mut new_leave = LeaveNode::new();
-            new_leave.add_sample(observation);
-            Some(new_leave)
+            // debug!("Split of leaf node!");
+            let mut new_leaf = LeafNode::new();
+            new_leaf.add_sample(observation);
+            Some(new_leaf)
         } else {
             self.add_sample(observation);
             None
@@ -578,7 +577,7 @@ where
         self.observations.push(observation);
     }
 
-    /// Select the observations from this leave which fall into the given
+    /// Select the observations from this leaf which fall into the given
     /// timespan.
     fn select_range(&self, timespan: &TimeSpan) -> Vec<&Observation<V>> {
         let mut in_range_observations = vec![];

@@ -1,7 +1,7 @@
 //! The core idea of the time series database:
 //! split the sample sequence into batches.
 //! This will result in a tree of chunks, each chunk having either sub chunks
-//! or leave chunks, with real data.
+//! or leaf chunks, with real data.
 //! Also: keep track of certain metrics, such as min, max and sum.
 
 // use std::cell::RefCell;
