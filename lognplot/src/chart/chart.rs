@@ -144,4 +144,8 @@ impl Chart {
             self.fit_y_axis_to_metrics(summary.metrics());
         }
     }
+
+    pub fn has_signal(&self, name: &str) -> bool {
+        self.curves.iter().any(|c| c.name() == name)
+    }
 }

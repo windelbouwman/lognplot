@@ -96,12 +96,16 @@ impl GuiState {
 
     pub fn add_curve(&mut self, name: &str) {
         // self.chart.add_curve(Curve::new());
-        let tsdb_data = CurveData::trace(name, self.db.clone());
-        let color = self.next_color();
-        let curve2 = Curve::new(tsdb_data, &color);
+        if !self.chart.has_signal(name) {
+            let tsdb_data = CurveData::trace(name, self.db.clone());
+            let color = self.next_color();
+            let curve2 = Curve::new(tsdb_data, &color);
 
-        self.chart.add_curve(curve2);
-        self.chart.autoscale();
+            self.chart.add_curve(curve2);
+            self.chart.autoscale();
+        } else {
+            info!("Signal {} is already shown", name);
+        }
     }
 
     pub fn next_color(&mut self) -> String {
