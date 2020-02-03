@@ -46,7 +46,7 @@ impl CurveData {
 }
 
 impl CurveData {
-    fn name(&self) -> String {
+    pub fn name(&self) -> String {
         match self {
             CurveData::Points(..) => "no-name".to_string(),
             CurveData::Trace { name, .. } => name.clone(),

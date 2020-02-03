@@ -1,3 +1,4 @@
 
 target
 plot.svg
+*.pyc
