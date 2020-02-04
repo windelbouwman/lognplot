@@ -44,6 +44,7 @@ impl<'a> Canvas for CairoCanvas<'a> {
     }
 
     fn draw_circle(&mut self, center: &Point, radius: f64) {
+        self.cr.new_path();
         self.cr.arc(
             center.x(),
             center.y(),

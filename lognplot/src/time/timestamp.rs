@@ -17,8 +17,14 @@ impl TimeStamp {
         Self { amount }
     }
 
+    /// Create a timestamp from some amount of seconds.
     pub fn from_seconds(seconds: isize) -> Self {
         Self::new(seconds as f64)
+    }
+
+    /// Return absolute distance in time between two timestamps.
+    pub fn distance(&self, other: &Self) -> f64 {
+        return (self.amount - other.amount).abs();
     }
 }
 

@@ -66,6 +66,7 @@ class BaseWidget(QtWidgets.QWidget):
         When mouse is not pressed: slowly decay velocity.
         """
         dt = 0.01  # 10 ms
+        acceleration = 10
         if self._mouse_is_pressed:
             # Update speed estimate
             pos = QtGui.QCursor.pos()
@@ -77,10 +78,10 @@ class BaseWidget(QtWidgets.QWidget):
             dx = self._kinetic_v * dt
             if abs(self._kinetic_v) > 0.0001:
                 if self._kinetic_v > 0:
-                    dv = -30
+                    dv = -acceleration
                     dv = max(dv, -self._kinetic_v)
                 else:
-                    dv = 30
+                    dv = acceleration
                     dv = min(dv, -self._kinetic_v)
                 self._kinetic_v += dv
             else:

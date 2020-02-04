@@ -222,6 +222,16 @@ impl GuiState {
         self.chart.fit_y_axis();
     }
 
+    pub fn set_cursor(&mut self, loc: Option<(f64, Size)>) {
+        if let Some((pixel, size)) = loc {
+            let timestamp = x_pixel_to_domain(pixel, &self.chart.x_axis, size);
+            let timestamp = TimeStamp::new(timestamp);
+            self.chart.cursor = Some(timestamp);
+        } else {
+            self.chart.cursor = None;
+        }
+    }
+
     pub fn zoom_to_last(&mut self, tail_duration: f64) {
         self.chart.zoom_to_last(tail_duration);
         self.chart.fit_y_axis();

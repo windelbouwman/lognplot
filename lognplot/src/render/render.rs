@@ -3,11 +3,16 @@
 use super::canvas::{HorizontalAnchor, VerticalAnchor};
 use super::Canvas;
 use super::{ChartLayout, ChartOptions};
-use crate::chart::Chart;
+use crate::chart::{Chart, Curve};
 use crate::geometry::{Point, Size};
 use crate::style::Color;
 use crate::time::TimeStamp;
 use crate::tsdb::{Aggregation, Observation, RangeQueryResult, Sample, SampleMetrics};
+use std::borrow::Borrow;
+use std::collections::HashMap;
+use std::rc::Rc;
+
+use superslice::Ext;
 
 /// Draw the given chart onto the canvas!
 pub fn draw_chart<C>(chart: &Chart, canvas: &mut C, size: Size)
@@ -27,6 +32,8 @@ const PIXELS_PER_Y_TICK: usize = 60;
 /// Divide the width of the plot by this value, and draw at least that many data points.
 const PIXELS_PER_AGGREGATION: usize = 2;
 
+type CurveData = Option<RangeQueryResult<Sample, SampleMetrics>>;
+
 /// This struct will be able to render the chart onto a canvas.
 struct ChartRenderer<'a, C>
 where
@@ -43,6 +50,8 @@ where
 
     // Parameters:
     options: ChartOptions,
+
+    curve_data_cache: HashMap<String, Rc<CurveData>>,
 }
 
 impl<'a, C> ChartRenderer<'a, C>
@@ -57,14 +66,17 @@ where
             canvas,
             layout,
             options,
+            curve_data_cache: HashMap::new(),
         }
     }
 
     fn draw(&mut self) {
         self.layout.layout(&self.options);
+        self.fetch_curve_data();
         self.draw_axis();
         self.draw_box();
         self.draw_curves();
+        self.draw_cursor();
         self.draw_title();
         self.draw_legend();
     }
@@ -221,17 +233,78 @@ where
         self.canvas.draw_polygon(&outline);
     }
 
+    /// Draw a cursor and some values along it.
+    fn draw_cursor(&mut self) {
+        if let Some(cursor) = &self.chart.cursor {
+            self.draw_cursor_line(cursor);
+            // TBD: how usable / visually helpful is this??
+            self.draw_cursor_values(cursor);
+        }
+    }
+
+    /// Draw the cursor as a line on the data.
+    fn draw_cursor_line(&mut self, cursor: &TimeStamp) {
+        let x = self.x_domain_to_pixel(cursor);
+        let top = Point::new(x, self.layout.plot_top);
+        let bottom = Point::new(x, self.layout.plot_bottom);
+        let points = vec![top, bottom];
+
+        self.canvas.set_pen(Color::black(), 1.0);
+        self.canvas.set_line_width(2.0);
+        self.canvas.draw_line(&points);
+    }
+
+    /// Draw values around cursor.
+    fn draw_cursor_values(&mut self, cursor: &TimeStamp) {
+        for curve in &self.chart.curves {
+            let optional_label = if let Some(curve_data) = self.query_curve_data(&curve).borrow() {
+                match curve_data {
+                    RangeQueryResult::Aggregations(aggregations) => {
+                        find_closest_aggregation(&aggregations, cursor).map(|a| {
+                            let ts = a.timespan.start.clone();
+                            let mean = a.metrics().mean();
+                            let min = a.metrics().min;
+                            let max = a.metrics().max;
+                            let label =
+                                format!("{}: mean={}, min={} max={}", curve.name(), mean, min, max);
+                            (ts, max, label)
+                        })
+                    }
+                    RangeQueryResult::Observations(observations) => {
+                        find_closest_observation(&observations, cursor).map(|o| {
+                            let ts = o.timestamp.clone();
+                            let value = o.value.value;
+                            let label = format!("{}: {}", curve.name(), value);
+                            (ts, value, label)
+                        })
+                    }
+                }
+            } else {
+                None
+            };
+
+            if let Some((ts, value, label)) = optional_label {
+                let x = self.x_domain_to_pixel(&ts);
+                let y = self.y_domain_to_pixel(value);
+                let p1 = Point::new(x, y);
+                let p = Point::new(x + 5.0, y - 15.0);
+                self.canvas.set_pen(curve.color(), 1.0);
+                self.canvas.draw_circle(&p1, 8.0);
+                self.canvas
+                    .print_text(&p, HorizontalAnchor::Left, VerticalAnchor::Bottom, &label);
+            }
+        }
+    }
+
     /// Draw the actual curves!
     fn draw_curves(&mut self) {
-        let timespan = self.chart.x_axis.timespan();
         let pixels: usize = self.layout.plot_width as usize;
-        let point_count = pixels / PIXELS_PER_AGGREGATION;
 
         for curve in &self.chart.curves {
             // trace!("Plotting curve {:?}", curve);
 
             let color = curve.color();
-            if let Some(curve_data) = curve.query(&timespan, point_count) {
+            if let Some(curve_data) = self.query_curve_data(&curve).borrow() {
                 match curve_data {
                     RangeQueryResult::Aggregations(aggregations) => {
                         self.draw_aggregations(aggregations, color);
@@ -246,10 +319,25 @@ where
         }
     }
 
+    /// Fetch curve data from backing data store.
+    fn fetch_curve_data(&mut self) {
+        let timespan = self.chart.x_axis.timespan();
+        let pixels: usize = self.layout.plot_width as usize;
+        let point_count = pixels / PIXELS_PER_AGGREGATION;
+        for curve in &self.chart.curves {
+            let data = curve.query(&timespan, point_count);
+            self.curve_data_cache.insert(curve.name(), Rc::new(data));
+        }
+    }
+
+    fn query_curve_data(&self, curve: &Curve) -> Rc<CurveData> {
+        self.curve_data_cache[&curve.name()].clone()
+    }
+
     /// Draw single observations.
     fn draw_observations(
         &mut self,
-        observations: Vec<Observation<Sample>>,
+        observations: &Vec<Observation<Sample>>,
         color: Color,
         draw_markers: bool,
     ) {
@@ -281,7 +369,7 @@ where
     /// Draw aggregated values
     fn draw_aggregations(
         &mut self,
-        aggregations: Vec<Aggregation<Sample, SampleMetrics>>,
+        aggregations: &Vec<Aggregation<Sample, SampleMetrics>>,
         color: Color,
     ) {
         // Create polygon from metrics:
@@ -364,5 +452,45 @@ fn clip(value: f64, lower: f64, upper: f64) -> f64 {
         upper
     } else {
         value
+    }
+}
+
+/// Find the closest observation in a sorted list of observations.
+fn find_closest_observation<'o>(
+    observations: &'o Vec<Observation<Sample>>,
+    t: &TimeStamp,
+) -> Option<&'o Observation<Sample>> {
+    find_closest(observations, t, |o| &o.timestamp)
+}
+
+/// Find the aggregation which is closest to a certain timestamp
+/// in a sorted list of aggregations.
+fn find_closest_aggregation<'o>(
+    aggregations: &'o Vec<Aggregation<Sample, SampleMetrics>>,
+    t: &TimeStamp,
+) -> Option<&'o Aggregation<Sample, SampleMetrics>> {
+    find_closest(aggregations, t, |a| &a.timespan.start)
+}
+
+/// Find the thing which is closest to the given timestamp.
+/// The function f must be given to turn a thing into a timestamp.
+fn find_closest<'o, T, F>(things: &'o Vec<T>, ts: &TimeStamp, f: F) -> Option<&'o T>
+where
+    F: Fn(&'o T) -> &'o TimeStamp,
+{
+    let idx = things.lower_bound_by(|a| f(a).partial_cmp(&ts).unwrap());
+    if idx >= things.len() {
+        things.last()
+    } else if idx == 0 {
+        things.first()
+    } else {
+        // Compare two aggregations
+        let t1 = &things[idx - 1];
+        let t2 = &things[idx];
+        if f(t1).distance(ts) < f(t2).distance(ts) {
+            Some(t1)
+        } else {
+            Some(t2)
+        }
     }
 }

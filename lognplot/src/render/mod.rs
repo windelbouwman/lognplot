@@ -23,7 +23,6 @@ pub use cairo_canvas::CairoCanvas;
 
 use crate::chart::ValueAxis;
 use crate::geometry::Size;
-use crate::time::TimeStamp;
 
 /// Calculate how many domain values a covered by the given amount of pixels.
 pub fn x_pixels_to_domain(size: Size, axis: &ValueAxis, pixels: f64) -> f64 {

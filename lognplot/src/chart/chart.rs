@@ -19,6 +19,9 @@ pub struct Chart {
 
     /// The curves in the plot
     pub curves: Vec<Curve>,
+
+    /// The position of the cursor.
+    pub cursor: Option<TimeStamp>,
 }
 
 impl Default for Chart {
@@ -29,6 +32,7 @@ impl Default for Chart {
             y_axis: ValueAxis::default(),
             grid: true,
             curves: vec![],
+            cursor: None,
         }
     }
 }

@@ -9,6 +9,11 @@ use lognplot::geometry::Size;
 use lognplot::render::{draw_chart, CairoCanvas};
 
 pub fn setup_drawing_area(draw_area: gtk::DrawingArea, app_state: GuiStateHandle) {
+    // Always get mouse pointer motion:
+    draw_area.add_events(gdk::EventMask::ENTER_NOTIFY_MASK);
+    draw_area.add_events(gdk::EventMask::POINTER_MOTION_MASK);
+    draw_area.add_events(gdk::EventMask::LEAVE_NOTIFY_MASK);
+
     // Connect draw event:
     draw_area.connect_draw(
         clone!(@strong app_state => move |a, c| { draw_on_canvas(a, c, app_state.clone()) } ),
@@ -45,23 +50,32 @@ pub fn setup_drawing_area(draw_area: gtk::DrawingArea, app_state: GuiStateHandle
         Inhibit(false)
     }));
 
+    draw_area.connect_leave_notify_event(clone!(@strong app_state => move |w, _e| {
+        debug!("Mouse leave!");
+        app_state.borrow_mut().set_cursor(None);
+        w.queue_draw();
+        Inhibit(false)
+    }));
+
     draw_area.connect_motion_notify_event(clone!(@strong app_state => move |w, e| {
         let pos = e.get_position();
         debug!("Mouse motion! {:?}", pos);
         let size = get_size(w);
-        app_state
-            .borrow_mut()
-            .move_drag(size, pos.0, pos.1);
 
-        // if e.get_state(). & gdk::BUTTON1_mask {
+        app_state.borrow_mut().set_cursor(Some((pos.0, size.clone())));
+
+        if e.get_state().contains(gdk::ModifierType::BUTTON1_MASK) {
+            app_state
+                .borrow_mut()
+                .move_drag(size, pos.0, pos.1);
+            }
         w.queue_draw();
-        // }
 
         Inhibit(false)
     }));
 
     draw_area.connect_scroll_event(clone!(@strong app_state => move |w, e| {
-        // println!("Scroll wheel event! {:?}, {:?}, {:?}", e, e.get_delta(), e.get_direction());
+        debug!("Scroll wheel event! {:?}, {:?}, {:?}", e, e.get_delta(), e.get_direction());
         let size = get_size(w);
         let pixel_x_pos = e.get_position().0;
         let around = Some((pixel_x_pos, size));
