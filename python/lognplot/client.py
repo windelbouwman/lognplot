@@ -12,15 +12,14 @@ class LognplotTcpClient:
     """ Use this client to transmit sample to the lognplot tool.
     """
 
-    def __init__(self, hostname="127.0.0.1", port=12345):
+    def __init__(self, hostname="localhost", port=12345):
         self._hostname = hostname
         self._port = port
 
     def connect(self):
         """ Connect to the server.
         """
-        self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self._sock.connect((self._hostname, self._port))
+        self._sock = socket.create_connection((self._hostname, self._port))
 
     def send_sample(self, name: str, timestamp, value: float):
         """ Send a single timestamp / value pair to the trace with the given name.

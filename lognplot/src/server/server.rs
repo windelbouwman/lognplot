@@ -57,10 +57,15 @@ async fn server_prog(
 ) -> std::io::Result<()> {
     let peers: Arc<Mutex<Vec<PeerHandle>>> = Arc::new(Mutex::new(vec![]));
     let port: u16 = 12345;
-    info!("Starting up server at port {} with db {:?}!", port, db);
-    let addr = format!("127.0.0.1:{}", port);
-    let addr: std::net::SocketAddr = addr.parse().unwrap();
-    let mut listener = TcpListener::bind(&addr).await?;
+    info!("Starting up server at port {}!", port);
+    // let addr = format!("127.0.0.1:{}", port);
+    // let addr: std::net::SocketAddr = addr.parse().unwrap();
+    let ip = std::net::Ipv6Addr::UNSPECIFIED;
+    let addr = std::net::SocketAddrV6::new(ip, port, 0, 0);
+    let std_listener = std::net::TcpListener::bind(addr)?;
+    // info!("a: only v6={}", std_listener.only_v6()?);
+    // let mut listener = TcpListener::bind(&addr).await?;
+    let mut listener = TcpListener::from_std(std_listener)?;
     info!("Server listening on {:?}", addr);
     let mut kill_switch_receiver = kill_switch_receiver.fuse();
     let mut incoming = listener.incoming().fuse();
