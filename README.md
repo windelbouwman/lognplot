@@ -138,14 +138,25 @@ This is a list of things to do:
 There is an interesting list of similar projects. Do you know of another
 project? Please submit a pull request or an issue!
 
-- getcurve.io (https://getcurve.io/)
-- grafana (https://grafana.com/)
-- KST plot (https://kst-plot.kde.org/)
-- plot juggler https://github.com/facontidavide/PlotJuggler
-- tracy profiler (https://bitbucket.org/wolfpld/tracy)
-- trace compass: https://www.eclipse.org/tracecompass/
-- sigrok: https://sigrok.org
-- speedscope: https://www.speedscope.app/
+- [getcurve.io](https://getcurve.io/)
+- [grafana](https://grafana.com/)
+    - Web based
+- [KST plot](https://kst-plot.kde.org/)
+    - Can view large CSV files
+- [plot juggler](https://github.com/facontidavide/PlotJuggler)
+    - Qt interface
+    - Interfaces with ROS
+- [Plc-Lab](http://plc-lab.nl/)
+    - Fancy GUI
+- [sigrok](https://sigrok.org)
+    - Slick Qt interface
+    - Interfacing with many logic analyzers and oscilloscopes
+- [speedscope](https://www.speedscope.app/)
+    - Callstack tracer
+- [trace compass](https://www.eclipse.org/tracecompass/)
+    - Eclipse based
+    - Supports many trace formats
+- [tracy profiler](https://bitbucket.org/wolfpld/tracy)
 
 # Project structure
 

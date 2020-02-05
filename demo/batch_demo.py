@@ -25,7 +25,7 @@ def main():
             samples.append((timestamp, value))
 
             # Create next value:
-            timestamp += 0.5 + random.random()
+            timestamp += 0.7 + random.random() * 10.0
             value += -0.5 + random.random()
 
         client.send_sample_batch("TEN_MEG", samples)

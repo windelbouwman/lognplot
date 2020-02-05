@@ -261,12 +261,11 @@ where
                 match curve_data {
                     RangeQueryResult::Aggregations(aggregations) => {
                         find_closest_aggregation(&aggregations, cursor).map(|a| {
-                            let ts = a.timespan.start.clone();
-                            let mean = a.metrics().mean();
-                            let min = a.metrics().min;
-                            let max = a.metrics().max;
+                            let ts = a.timespan.middle_timestamp();
+                            let metrics = a.metrics();
+                            let max = metrics.max;
                             let label =
-                                format!("{}: mean={}, min={} max={}", curve.name(), mean, min, max);
+                                format!("mean={}, min={} max={}", metrics.mean(), metrics.min, max);
                             (ts, max, label)
                         })
                     }
@@ -274,7 +273,7 @@ where
                         find_closest_observation(&observations, cursor).map(|o| {
                             let ts = o.timestamp.clone();
                             let value = o.value.value;
-                            let label = format!("{}: {}", curve.name(), value);
+                            let label = format!("{}", value);
                             (ts, value, label)
                         })
                     }
@@ -372,6 +371,10 @@ where
         aggregations: &Vec<Aggregation<Sample, SampleMetrics>>,
         color: Color,
     ) {
+        if aggregations.is_empty() {
+            return;
+        }
+
         // Create polygon from metrics:
         let mut top_line: Vec<Point> = vec![];
         let mut mean_line: Vec<Point> = vec![];
@@ -401,13 +404,39 @@ where
             stddev_low_line.push(Point::new(x3, y_stddev_low));
         }
 
-        bottom_line.reverse();
-        let mut min_max_poly_points: Vec<Point> = top_line;
-        min_max_poly_points.extend(bottom_line);
+        let first_point = {
+            let aggregation = aggregations.first().unwrap();
+            let x = self.x_domain_to_pixel(&aggregation.timespan.start);
+            let y = self.y_domain_to_pixel(aggregation.metrics().first);
+            Point::new(x, y)
+        };
 
-        stddev_low_line.reverse();
-        let mut stddev_poly_points: Vec<Point> = stddev_high_line;
-        stddev_poly_points.extend(stddev_low_line);
+        let last_point = {
+            let aggregation = aggregations.last().unwrap();
+            let x = self.x_domain_to_pixel(&aggregation.timespan.end);
+            let y = self.y_domain_to_pixel(aggregation.metrics().last);
+            Point::new(x, y)
+        };
+
+        let min_max_poly_points: Vec<Point> = {
+            let mut points = vec![];
+            points.push(first_point);
+            points.extend(top_line);
+            points.push(last_point);
+            bottom_line.reverse();
+            points.extend(bottom_line);
+            points
+        };
+
+        let stddev_poly_points: Vec<Point> = {
+            let mut points = vec![];
+            points.push(first_point);
+            points.extend(stddev_high_line);
+            points.push(last_point);
+            stddev_low_line.reverse();
+            points.extend(stddev_low_line);
+            points
+        };
 
         trace!("Polygon with {} points", min_max_poly_points.len());
         trace!("Mean line with {} points", mean_line.len());
@@ -460,7 +489,7 @@ fn find_closest_observation<'o>(
     observations: &'o Vec<Observation<Sample>>,
     t: &TimeStamp,
 ) -> Option<&'o Observation<Sample>> {
-    find_closest(observations, t, |o| &o.timestamp)
+    find_closest(observations, t, |o| o.timestamp.clone())
 }
 
 /// Find the aggregation which is closest to a certain timestamp
@@ -469,20 +498,18 @@ fn find_closest_aggregation<'o>(
     aggregations: &'o Vec<Aggregation<Sample, SampleMetrics>>,
     t: &TimeStamp,
 ) -> Option<&'o Aggregation<Sample, SampleMetrics>> {
-    find_closest(aggregations, t, |a| &a.timespan.start)
+    find_closest(aggregations, t, |a| a.timespan.middle_timestamp())
 }
 
 /// Find the thing which is closest to the given timestamp.
 /// The function f must be given to turn a thing into a timestamp.
 fn find_closest<'o, T, F>(things: &'o Vec<T>, ts: &TimeStamp, f: F) -> Option<&'o T>
 where
-    F: Fn(&'o T) -> &'o TimeStamp,
+    F: Fn(&T) -> TimeStamp,
 {
-    let idx = things.lower_bound_by(|a| f(a).partial_cmp(&ts).unwrap());
-    if idx >= things.len() {
-        things.last()
-    } else if idx == 0 {
-        things.first()
+    let idx = things.lower_bound_by(|a| f(a).partial_cmp(ts).unwrap());
+    if (idx == 0) || (idx >= things.len()) {
+        None
     } else {
         // Compare two aggregations
         let t1 = &things[idx - 1];

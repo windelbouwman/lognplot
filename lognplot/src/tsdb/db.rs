@@ -50,8 +50,8 @@ impl TsDb {
                 if first_timestamp < &last_saved_observation_time {
                     // Copy trace into backup, and begin a new trace.
                     let trace = self.data.remove(name).unwrap();
-                    // TODO: make nice date time string.
-                    let date_time_marker = format!("{:?}", std::time::SystemTime::now());
+                    let now = chrono::offset::Local::now();
+                    let date_time_marker = now.format("%Y%m%d_%H%M%S");
                     let new_name = format!("{}_BACKUP_{}", name, date_time_marker);
                     // TODO: do not overwrite backup!
                     // assert!(!self.data.contains_key(new_name));
