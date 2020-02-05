@@ -1,8 +1,9 @@
 // Data IO. This could be moved to the lognplot crate?
 
 use lognplot::tsdb::TsDbHandle;
+use std::path::Path;
 
-pub fn export_data(db: TsDbHandle, filename: &str) -> hdf5::Result<()> {
+pub fn export_data(db: TsDbHandle, filename: &Path) -> hdf5::Result<()> {
     let file = hdf5::File::open(filename, "w")?;
     export_db(db, file)
 }

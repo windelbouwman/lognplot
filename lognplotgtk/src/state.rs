@@ -1,4 +1,5 @@
 use std::cell::RefCell;
+use std::path::Path;
 use std::rc::Rc;
 use std::time::Instant;
 
@@ -59,8 +60,8 @@ impl GuiState {
         Rc::new(RefCell::new(self))
     }
 
-    pub fn save(&self, filename: &str) {
-        info!("Save data to disk?");
+    pub fn save(&self, filename: &Path) {
+        info!("Save data to {:?}", filename);
         match super::io::export_data(self.db.clone(), filename) {
             Err(e) => {
                 error!("Something happened during data save: {}", e);

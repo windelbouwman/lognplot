@@ -19,6 +19,6 @@ for name in signal_names:
     print(ds)
     # print(ds[:])
 
-
-plt.plot(ds[:])
+# Plot the last signal:
+plt.plot(ds[:,0], ds[:,1])
 plt.show()

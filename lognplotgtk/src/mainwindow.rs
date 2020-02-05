@@ -39,10 +39,28 @@ fn build_ui(app: &gtk::Application, app_state: GuiStateHandle) {
         about_dialog.show();
     });
 
+    let top_level: gtk::Window = builder.get_object("top_unit").unwrap();
+
     let menu_save: gtk::MenuItem = builder.get_object("menu_save").unwrap();
     menu_save.connect_activate(clone!(@strong app_state => move |_m| {
-        let filename = "datorz.h5";
-        app_state.borrow().save(filename);
+        let dialog = gtk::FileChooserDialog::with_buttons(
+            Some("Export data as HDF5"), Some(&top_level), gtk::FileChooserAction::Save,
+            &[("Cancel", gtk::ResponseType::Cancel), ("Save", gtk::ResponseType::Accept)]
+        );
+        let res = dialog.run();
+        match res {
+            gtk::ResponseType::Accept => {
+                let filename = dialog.get_filename();
+                if let Some(filename) = filename {
+                    info!("Saving data to filename: {:?}", filename);
+                    app_state.borrow().save(&filename);
+                }
+            },
+            _ => {
+
+            }
+        }
+        dialog.destroy();
     }));
 
     setup_toolbar_buttons(&builder, &draw_area, app_state.clone());
