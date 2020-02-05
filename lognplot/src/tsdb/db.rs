@@ -95,6 +95,11 @@ impl TsDb {
         }
     }
 
+    // Download raw samples.
+    pub fn get_raw_samples(&self, name: &str) -> Option<Vec<Observation<Sample>>> {
+        self.data.get(name).map(|t| t.to_vec())
+    }
+
     /// Get a summary for a certain timerange (or all time) the given trace.
     pub fn summary(
         &self,

@@ -41,7 +41,8 @@ fn build_ui(app: &gtk::Application, app_state: GuiStateHandle) {
 
     let menu_save: gtk::MenuItem = builder.get_object("menu_save").unwrap();
     menu_save.connect_activate(clone!(@strong app_state => move |_m| {
-        app_state.borrow().save();
+        let filename = "datorz.h5";
+        app_state.borrow().save(filename);
     }));
 
     setup_toolbar_buttons(&builder, &draw_area, app_state.clone());

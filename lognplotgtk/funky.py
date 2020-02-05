@@ -3,6 +3,7 @@
 """
 
 import h5py
+from matplotlib import pyplot as plt
 
 f = h5py.File('datorz.h5', 'r')
 print(f)
@@ -16,5 +17,8 @@ for name in signal_names:
     print('Signal ', name)
     ds = group[name]
     print(ds)
-    print(ds[:])
+    # print(ds[:])
 
+
+plt.plot(ds[:])
+plt.show()

@@ -59,9 +59,9 @@ impl GuiState {
         Rc::new(RefCell::new(self))
     }
 
-    pub fn save(&self) {
+    pub fn save(&self, filename: &str) {
         info!("Save data to disk?");
-        match super::io::export_data(self.db.clone()) {
+        match super::io::export_data(self.db.clone(), filename) {
             Err(e) => {
                 error!("Something happened during data save: {}", e);
             }

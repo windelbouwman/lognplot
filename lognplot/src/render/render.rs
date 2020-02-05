@@ -30,7 +30,7 @@ const PIXELS_PER_X_TICK: usize = 100;
 const PIXELS_PER_Y_TICK: usize = 60;
 
 /// Divide the width of the plot by this value, and draw at least that many data points.
-const PIXELS_PER_AGGREGATION: usize = 2;
+const PIXELS_PER_AGGREGATION: usize = 5;
 
 type CurveData = Option<RangeQueryResult<Sample, SampleMetrics>>;
 
@@ -382,6 +382,22 @@ where
         let mut stddev_high_line: Vec<Point> = vec![];
         let mut stddev_low_line: Vec<Point> = vec![];
 
+        let first_point = {
+            let aggregation = aggregations.first().unwrap();
+            let x = self.x_domain_to_pixel(&aggregation.timespan.start);
+            let y = self.y_domain_to_pixel(aggregation.metrics().first);
+            Point::new(x, y)
+        };
+
+        let last_point = {
+            let aggregation = aggregations.last().unwrap();
+            let x = self.x_domain_to_pixel(&aggregation.timespan.end);
+            let y = self.y_domain_to_pixel(aggregation.metrics().last);
+            Point::new(x, y)
+        };
+
+        mean_line.push(first_point);
+
         for aggregation in aggregations {
             // let x1 = self.x_domain_to_pixel(&aggregation.timespan.start);
             // let x2 = self.x_domain_to_pixel(&aggregation.timespan.end);
@@ -404,19 +420,7 @@ where
             stddev_low_line.push(Point::new(x3, y_stddev_low));
         }
 
-        let first_point = {
-            let aggregation = aggregations.first().unwrap();
-            let x = self.x_domain_to_pixel(&aggregation.timespan.start);
-            let y = self.y_domain_to_pixel(aggregation.metrics().first);
-            Point::new(x, y)
-        };
-
-        let last_point = {
-            let aggregation = aggregations.last().unwrap();
-            let x = self.x_domain_to_pixel(&aggregation.timespan.end);
-            let y = self.y_domain_to_pixel(aggregation.metrics().last);
-            Point::new(x, y)
-        };
+        mean_line.push(last_point);
 
         let min_max_poly_points: Vec<Point> = {
             let mut points = vec![];

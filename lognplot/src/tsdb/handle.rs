@@ -44,6 +44,10 @@ impl LockedTsDb {
         self.db.lock().unwrap().query(name, query)
     }
 
+    pub fn get_raw_samples(&self, name: &str) -> Option<Vec<Observation<Sample>>> {
+        self.db.lock().unwrap().get_raw_samples(name)
+    }
+
     pub fn summary(
         &self,
         name: &str,

@@ -15,9 +15,7 @@ class Server:
 
     async def serve(self):
         self.logger.info("Booting server.")
-        server = await asyncio.start_server(
-            self._on_client, host="localhost", port=12345
-        )
+        server = await asyncio.start_server(self._on_client, port=12345)
         addr = server.sockets[0].getsockname()
         self.logger.info(f"Accepting connections on {addr}")
         async with server:
