@@ -14,7 +14,7 @@ pub struct GuiState {
     pub chart: Chart,
     signal_names: Vec<String>,
     gui_start_instant: Instant,
-    db: TsDbHandle,
+    pub db: TsDbHandle,
     // TODO:
     color_wheel: Vec<String>,
     color_index: usize,

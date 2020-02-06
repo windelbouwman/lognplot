@@ -1,5 +1,6 @@
 //! Thread usable handle. Wrapper around a database.
 
+use super::ChangeSubscriber;
 use super::{Aggregation, Observation, Query, QueryResult, Sample, SampleMetrics, TsDb};
 use crate::time::TimeSpan;
 use std::sync::{Arc, Mutex};
@@ -54,6 +55,10 @@ impl LockedTsDb {
         timespan: Option<&TimeSpan>,
     ) -> Option<Aggregation<Sample, SampleMetrics>> {
         self.db.lock().unwrap().summary(name, timespan)
+    }
+
+    pub fn register_notifier(&self, subscriber: ChangeSubscriber) {
+        self.db.lock().unwrap().register_notifier(subscriber);
     }
 }
 

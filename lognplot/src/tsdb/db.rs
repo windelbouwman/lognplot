@@ -2,9 +2,10 @@
 
 use super::handle::{make_handle, TsDbHandle};
 use super::query::{Query, QueryResult};
-use super::sample::{Sample, SampleMetrics};
 use super::trace::Trace;
+use super::ChangeSubscriber;
 use super::{Aggregation, Observation};
+use super::{Sample, SampleMetrics};
 use crate::time::{TimeSpan, TimeStamp};
 use std::collections::HashMap;
 
@@ -15,6 +16,7 @@ use std::collections::HashMap;
 pub struct TsDb {
     path: String,
     pub data: HashMap<String, Trace>,
+    change_subscribers: Vec<ChangeSubscriber>,
 }
 
 impl std::fmt::Display for TsDb {
@@ -27,7 +29,12 @@ impl Default for TsDb {
     fn default() -> Self {
         let path = "x".to_string();
         let data = HashMap::new();
-        Self { path, data }
+        let change_subscribers = vec![];
+        Self {
+            path,
+            data,
+            change_subscribers,
+        }
     }
 }
 
@@ -72,6 +79,7 @@ impl TsDb {
             let first_observation = samples.first().expect("Must have an observation here.");
             let trace = self.get_or_create_trace(name, &first_observation.timestamp);
             trace.add_values(samples);
+            self.new_data_event(name);
         }
     }
 
@@ -84,6 +92,7 @@ impl TsDb {
     pub fn add_value(&mut self, name: &str, observation: Observation<Sample>) {
         let trace = self.get_or_create_trace(name, &observation.timestamp);
         trace.add_sample(observation);
+        self.new_data_event(name);
     }
 
     /// Query the given trace for data.
@@ -107,5 +116,19 @@ impl TsDb {
         timespan: Option<&TimeSpan>,
     ) -> Option<Aggregation<Sample, SampleMetrics>> {
         self.data.get(name)?.summary(timespan)
+    }
+
+    // Events
+
+    /// Register a subscriber which will be notified of any change.
+    pub fn register_notifier(&mut self, subscriber: ChangeSubscriber) {
+        self.change_subscribers.push(subscriber);
+    }
+
+    /// Notify listeners of the newly arrived data.
+    fn new_data_event(&mut self, name: &str) {
+        for subscriber in &mut self.change_subscribers {
+            subscriber.notify(name);
+        }
     }
 }

@@ -2,6 +2,7 @@ use gio::prelude::*;
 use gtk::prelude::*;
 use gtk::Application;
 use lognplot::tsdb::TsDbHandle;
+use lognplot::tsdb::{ChangeSubscriber, DataChangeEvent};
 
 use super::chart_widget::setup_drawing_area;
 use super::signal_repository::setup_signal_repository;
@@ -26,12 +27,22 @@ fn build_ui(app: &gtk::Application, app_state: GuiStateHandle) {
     let builder = gtk::Builder::new_from_string(glade_src);
 
     // Connect the data set tree:
-
     setup_signal_repository(&builder, app_state.clone());
-
     let draw_area: gtk::DrawingArea = builder.get_object("chart_control").unwrap();
     setup_drawing_area(draw_area.clone(), app_state.clone());
+    setup_menus(&builder, app_state.clone());
+    setup_toolbar_buttons(&builder, app_state.clone());
+    setup_notify_change(&builder, app_state.clone());
+    setup_tailing_timer(&builder, app_state.clone());
 
+    // Connect application to window:
+    let window: gtk::Window = builder.get_object("top_unit").unwrap();
+
+    window.set_application(Some(app));
+    window.show_all();
+}
+
+fn setup_menus(builder: &gtk::Builder, app_state: GuiStateHandle) {
     let about_menu_item: gtk::MenuItem = builder.get_object("about_menu_item").unwrap();
     let about_dialog: gtk::AboutDialog = builder.get_object("about_dialog").unwrap();
 
@@ -62,33 +73,11 @@ fn build_ui(app: &gtk::Application, app_state: GuiStateHandle) {
         }
         dialog.destroy();
     }));
-
-    setup_toolbar_buttons(&builder, &draw_area, app_state.clone());
-
-    // Refreshing timer!
-    let tick = clone!(@strong app_state, @strong draw_area => move || {
-        // println!("TICK!!!");
-        // let redraw =
-        app_state.borrow_mut().do_tailing();
-        // if redraw {
-        // }
-        draw_area.queue_draw();
-        gtk::prelude::Continue(true)
-    });
-    gtk::timeout_add(100, tick);
-
-    // Connect application to window:
-    let window: gtk::Window = builder.get_object("top_unit").unwrap();
-
-    window.set_application(Some(app));
-    window.show_all();
 }
 
-fn setup_toolbar_buttons(
-    builder: &gtk::Builder,
-    draw_area: &gtk::DrawingArea,
-    app_state: GuiStateHandle,
-) {
+fn setup_toolbar_buttons(builder: &gtk::Builder, app_state: GuiStateHandle) {
+    let draw_area: gtk::DrawingArea = builder.get_object("chart_control").unwrap();
+
     // clear button:
     {
         let tb_clear_plot: gtk::ToolButton = builder.get_object("tb_clear_plot").unwrap();
@@ -151,4 +140,50 @@ fn setup_toolbar_buttons(
             }));
         }
     }
+}
+
+/// Setup a timer to implement tailing of signals.
+fn setup_tailing_timer(builder: &gtk::Builder, app_state: GuiStateHandle) {
+    let draw_area: gtk::DrawingArea = builder.get_object("chart_control").unwrap();
+
+    // Refreshing timer!
+    let tick = move || {
+        let redraw = app_state.borrow_mut().do_tailing();
+        if redraw {
+            draw_area.queue_draw();
+        }
+        gtk::prelude::Continue(true)
+    };
+    gtk::timeout_add(100, tick);
+}
+
+/// Subscribe to database changes and redraw correct things.
+fn setup_notify_change(builder: &gtk::Builder, app_state: GuiStateHandle) {
+    let draw_area: gtk::DrawingArea = builder.get_object("chart_control").unwrap();
+
+    // Register change handler:
+    let (sender, mut receiver) = futures::channel::mpsc::channel::<DataChangeEvent>(2);
+    {
+        let db_handle = app_state.borrow_mut().db.clone();
+        let sub = ChangeSubscriber::new(sender);
+        db_handle.register_notifier(sub);
+    }
+
+    // Insert async future function into the event loop:
+    let main_context = glib::MainContext::default();
+    main_context.spawn_local(async move {
+        use futures::StreamExt;
+        while let Some(item) = receiver.next().await {
+            // println!("New stuff! {:?}", item);
+            let update = item
+                .names
+                .iter()
+                .any(|n| app_state.borrow().chart.has_signal(n));
+            if update {
+                // println!("Redraw!");
+                draw_area.queue_draw();
+            }
+            glib::timeout_future_with_priority(glib::Priority::default(), 100).await;
+        }
+    });
 }
