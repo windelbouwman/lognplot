@@ -53,6 +53,7 @@ fn setup_menus(builder: &gtk::Builder, app_state: GuiStateHandle) {
     let top_level: gtk::Window = builder.get_object("top_unit").unwrap();
 
     let menu_save: gtk::MenuItem = builder.get_object("menu_save").unwrap();
+
     menu_save.connect_activate(clone!(@strong app_state => move |_m| {
         let dialog = gtk::FileChooserDialog::with_buttons(
             Some("Export data as HDF5"), Some(&top_level), gtk::FileChooserAction::Save,
@@ -174,15 +175,16 @@ fn setup_notify_change(builder: &gtk::Builder, app_state: GuiStateHandle) {
     main_context.spawn_local(async move {
         use futures::StreamExt;
         while let Some(item) = receiver.next().await {
-            // println!("New stuff! {:?}", item);
+            // Check if we must update the chart:
             let update = item
                 .names
                 .iter()
                 .any(|n| app_state.borrow().chart.has_signal(n));
             if update {
-                // println!("Redraw!");
                 draw_area.queue_draw();
             }
+
+            // Delay to emulate rate limiting of events.
             glib::timeout_future_with_priority(glib::Priority::default(), 100).await;
         }
     });

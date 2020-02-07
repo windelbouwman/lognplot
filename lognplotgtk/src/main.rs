@@ -5,6 +5,7 @@ extern crate log;
 extern crate glib;
 
 mod chart_widget;
+#[cfg(feature = "export-hdf5")]
 mod io;
 mod mainwindow;
 mod mime_types;

@@ -14,16 +14,21 @@ Live timeseries analysis on your desktop!
 
 Lognplot is a graphical viewer for time series data. Unlike many other
 projects in this area, lognplot is not a hosted web application.
-It is a desktop application which visualizes your streaming data.
-A primary usecase would be to visualize live data, coming from an
-embedded or a robotic system.
+It is a desktop application which visualizes your data from your
+application. This can be an embedded, robotic, mobile, PC or PLC application.
 
 Features:
-- Zoom levels
-- Fast query of data
+- Plot data live
+- Fast pan and zoom
 - python GUI implementation (based on PyQt5)
 - rust GUI implementation (based on gtk-rs / cairo)
 - Send data over TCP/IP link to GUI.
+
+# Video
+
+These are recorded videos of the tool:
+
+- [lognplot @ FOSDEM 2020](https://fosdem.org/2020/schedule/event/ema_lognplot/)
 
 # Screenshots
 
@@ -54,6 +59,7 @@ Note that at this moment, you will want to grab the latest
 git version from github.
 
 First clone this repository:
+
     $ git clone https://github.com/windelbouwman/lognplot.git
 
 For python, follow this steps:
@@ -67,7 +73,7 @@ For rust, follow these steps:
     $ cd lognplotgtk
     $ cargo run --release
 
-Packages are release for rust and python
+Packages are released for rust and python
 
 Rust crate: https://crates.io/crates/lognplot
 
@@ -148,6 +154,8 @@ project? Please submit a pull request or an issue!
     - Interfaces with ROS
 - [Plc-Lab](http://plc-lab.nl/)
     - Fancy GUI
+- [RQT](https://wiki.ros.org/rqt)
+    - Comes with ROS
 - [sigrok](https://sigrok.org)
     - Slick Qt interface
     - Interfacing with many logic analyzers and oscilloscopes
@@ -157,17 +165,3 @@ project? Please submit a pull request or an issue!
     - Eclipse based
     - Supports many trace formats
 - [tracy profiler](https://bitbucket.org/wolfpld/tracy)
-
-# Project structure
-
-The project is divided into several crates.
-
-- A time series database ala sqlite to store time series and query them.
-- A cairo based drawing
-
-# Idea list
-
-- use vulkano-rs instead of openGL
-- use cassowary to layout parts of the GUI
-- render pretty lines using shaders
-

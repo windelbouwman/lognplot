@@ -60,6 +60,7 @@ impl GuiState {
         Rc::new(RefCell::new(self))
     }
 
+    #[cfg(feature = "export-hdf5")]
     pub fn save(&self, filename: &Path) {
         info!("Save data to {:?}", filename);
         match super::io::export_data(self.db.clone(), filename) {
@@ -70,6 +71,14 @@ impl GuiState {
                 info!("Data saved success");
             }
         }
+    }
+
+    #[cfg(not(feature = "export-hdf5"))]
+    pub fn save(&self, filename: &Path) {
+        error!(
+            "Not saving to {:?}, since export-hdf5 feature is not enabled.",
+            filename
+        )
     }
 
     pub fn get_new_signal_names(&mut self) -> Vec<String> {
