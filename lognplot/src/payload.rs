@@ -24,6 +24,24 @@ impl SampleBatch {
         }
     }
 
+    pub fn new_samples(name: String, samples: Vec<(f64, f64)>) -> Self {
+        SampleBatch {
+            name,
+            payload: SamplePayload::Batch { samples },
+        }
+    }
+
+    pub fn new_sampled_data(name: String, t0: f64, dt: f64, values: Vec<f64>) -> Self {
+        SampleBatch {
+            name,
+            payload: SamplePayload::Sampled {
+                t: t0,
+                dt,
+                data: values,
+            },
+        }
+    }
+
     pub fn name(&self) -> &str {
         &self.name
     }

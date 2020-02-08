@@ -1,4 +1,10 @@
-use libc::c_char;
+//! C wrapper around the rust internals.
+//!
+//! See also this excellent book:
+//! http://jakegoulding.com/rust-ffi-omnibus/slice_arguments/
+//!
+
+use libc::{c_char, size_t};
 use std::ffi::CStr;
 use std::panic::catch_unwind;
 
@@ -72,6 +78,91 @@ pub extern "C" fn lognplot_client_send_sample(
             .unwrap();
 
             client.send_sample(name, t, value);
+        });
+
+        match result {
+            Ok(_) => {}
+            Err(e) => {
+                println!("Error: {:?}", e);
+            }
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn lognplot_client_send_samples(
+    client_ptr: *mut TcpClient,
+    name: *const c_char,
+    count: size_t,
+    times: *const f64,
+    values: *const f64,
+) {
+    if client_ptr.is_null() {
+        println!("Client is null, not sending data!");
+    } else {
+        let result = catch_unwind(|| {
+            let client: &mut TcpClient = unsafe {
+                assert!(!client_ptr.is_null());
+                &mut *client_ptr
+            };
+
+            let name = unsafe {
+                assert!(!name.is_null());
+                CStr::from_ptr(name)
+            }
+            .to_str()
+            .unwrap();
+
+            let samples = {
+                let times = unsafe { std::slice::from_raw_parts(times, count) };
+                let values = unsafe { std::slice::from_raw_parts(values, count) };
+                let mut samples: Vec<(f64, f64)> = vec![];
+                for (t, v) in times.into_iter().zip(values.iter()) {
+                    samples.push((*t, *v));
+                }
+                samples
+            };
+
+            client.send_samples(name, samples);
+        });
+
+        match result {
+            Ok(_) => {}
+            Err(e) => {
+                println!("Error: {:?}", e);
+            }
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn lognplot_client_send_sampled_samples(
+    client_ptr: *mut TcpClient,
+    name: *const c_char,
+    t0: f64,
+    dt: f64,
+    count: size_t,
+    values: *const f64,
+) {
+    if client_ptr.is_null() {
+        println!("Client is null, not sending data!");
+    } else {
+        let result = catch_unwind(|| {
+            let client: &mut TcpClient = unsafe {
+                assert!(!client_ptr.is_null());
+                &mut *client_ptr
+            };
+
+            let name = unsafe {
+                assert!(!name.is_null());
+                CStr::from_ptr(name)
+            }
+            .to_str()
+            .unwrap();
+
+            let values: Vec<f64> = unsafe { std::slice::from_raw_parts(values, count) }.to_vec();
+
+            client.send_sampled_samples(name, t0, dt, values);
         });
 
         match result {
