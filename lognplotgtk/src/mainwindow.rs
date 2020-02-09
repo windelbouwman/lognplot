@@ -5,7 +5,7 @@ use lognplot::tsdb::TsDbHandle;
 use lognplot::tsdb::{ChangeSubscriber, DataChangeEvent};
 
 use super::chart_widget::setup_drawing_area;
-use super::signal_repository::setup_signal_repository;
+use super::signal_repository::{setup_signal_repository, SignalBrowser};
 
 use super::{GuiState, GuiStateHandle};
 
@@ -27,12 +27,12 @@ fn build_ui(app: &gtk::Application, app_state: GuiStateHandle) {
     let builder = gtk::Builder::new_from_string(glade_src);
 
     // Connect the data set tree:
-    setup_signal_repository(&builder, app_state.clone());
+    let signal_pane = setup_signal_repository(&builder, app_state.clone());
     let draw_area: gtk::DrawingArea = builder.get_object("chart_control").unwrap();
     setup_drawing_area(draw_area.clone(), app_state.clone());
     setup_menus(&builder, app_state.clone());
     setup_toolbar_buttons(&builder, app_state.clone());
-    setup_notify_change(&builder, app_state.clone());
+    setup_notify_change(&builder, app_state.clone(), signal_pane);
     setup_tailing_timer(&builder, app_state.clone());
 
     // Connect application to window:
@@ -159,7 +159,11 @@ fn setup_tailing_timer(builder: &gtk::Builder, app_state: GuiStateHandle) {
 }
 
 /// Subscribe to database changes and redraw correct things.
-fn setup_notify_change(builder: &gtk::Builder, app_state: GuiStateHandle) {
+fn setup_notify_change(
+    builder: &gtk::Builder,
+    app_state: GuiStateHandle,
+    mut signal_pane: SignalBrowser,
+) {
     let draw_area: gtk::DrawingArea = builder.get_object("chart_control").unwrap();
 
     // Register change handler:
@@ -175,9 +179,15 @@ fn setup_notify_change(builder: &gtk::Builder, app_state: GuiStateHandle) {
     main_context.spawn_local(async move {
         use futures::StreamExt;
         while let Some(item) = receiver.next().await {
+            if !item.new_signals.is_empty() {
+                println!("New signals: {:?}", item.new_signals);
+            }
+
+            signal_pane.handle_event(&item);
+
             // Check if we must update the chart:
             let update = item
-                .names
+                .changed_signals
                 .iter()
                 .any(|n| app_state.borrow().chart.has_signal(n));
             if update {

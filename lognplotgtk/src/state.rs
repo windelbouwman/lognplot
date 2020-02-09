@@ -12,7 +12,6 @@ use lognplot::tsdb::{Aggregation, Observation, Sample, SampleMetrics, TsDbHandle
 /// Struct with some GUI state in it which will be shown in the GUI.
 pub struct GuiState {
     pub chart: Chart,
-    signal_names: Vec<String>,
     gui_start_instant: Instant,
     pub db: TsDbHandle,
     // TODO:
@@ -38,7 +37,6 @@ impl GuiState {
         GuiState {
             chart,
             gui_start_instant: Instant::now(),
-            signal_names: vec![],
             db,
             color_wheel,
             color_index: 0,
@@ -81,27 +79,8 @@ impl GuiState {
         )
     }
 
-    pub fn get_new_signal_names(&mut self) -> Vec<String> {
-        // Ugh, this function is wrong...
-        let all_names = self.db.get_signal_names();
-        let mut new_names = vec![];
-        for name in all_names {
-            if !self.signal_names.contains(&name) {
-                self.signal_names.push(name.clone());
-                new_names.push(name);
-            }
-        }
-        new_names
-    }
-
-    pub fn get_signal_sizes(&self) -> Vec<(String, Option<Aggregation<Sample, SampleMetrics>>)> {
-        let all_names = self.db.get_signal_names();
-        let mut res = vec![];
-        for name in all_names {
-            let summary = self.db.summary(&name, None);
-            res.push((name, summary));
-        }
-        res
+    pub fn get_signal_summary(&self, name: &str) -> Option<Aggregation<Sample, SampleMetrics>> {
+        self.db.summary(name, None)
     }
 
     pub fn add_curve(&mut self, name: &str) {

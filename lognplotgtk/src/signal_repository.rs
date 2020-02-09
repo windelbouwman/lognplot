@@ -1,20 +1,80 @@
 use gtk::prelude::*;
+use std::collections::HashMap;
 
 use super::GuiStateHandle;
+use lognplot::tsdb::DataChangeEvent;
+
+pub struct SignalBrowser {
+    model: gtk::TreeStore,
+    app_state: GuiStateHandle,
+
+    // Mapping from signal name to row:
+    model_map: HashMap<String, i32>,
+}
+
+impl SignalBrowser {
+    /// Process a database data change event:
+    pub fn handle_event(&mut self, event: &DataChangeEvent) {
+        self.add_new_signals(event.new_signals.iter());
+        self.update_signals(event.changed_signals.iter());
+    }
+
+    /// Create new signals
+    fn add_new_signals<'a, I>(&mut self, new_signals: I)
+    where
+        I: Iterator<Item = &'a String>,
+    {
+        for signal_name in new_signals {
+            let iter = self.model.append(None);
+            let row = self.model_map.len() as i32;
+            self.model_map.insert(signal_name.clone(), row);
+            self.model
+                .set(&iter, &[0, 1, 2], &[&signal_name, &"-", &"-"]);
+        }
+    }
+
+    fn update_signals<'a, I>(&self, changed_signals: I)
+    where
+        I: Iterator<Item = &'a String>,
+    {
+        for signal_name in changed_signals {
+            if let Some(summary) = self.app_state.borrow().get_signal_summary(&signal_name) {
+                let row = self.model_map[signal_name];
+                let path: gtk::TreePath = gtk::TreePath::new_from_indicesv(&[row]);
+                if let Some(iter2) = self.model.get_iter(&path) {
+                    self.model
+                        .set_value(&iter2, 1, &summary.count.to_string().to_value());
+                    self.model
+                        .set_value(&iter2, 2, &summary.metrics().last.to_string().to_value());
+                }
+            }
+        }
+    }
+}
 
 /// Prepare a widget with a list of available signals.
-pub fn setup_signal_repository(builder: &gtk::Builder, app_state: GuiStateHandle) {
-    let tree_view: gtk::TreeView = builder.get_object("signal_tree_view").unwrap();
-    let filter_edit: gtk::SearchEntry = builder.get_object("signal_search_entry").unwrap();
-    let name_column: gtk::TreeViewColumn = builder.get_object("column_name").unwrap();
-    let size_column: gtk::TreeViewColumn = builder.get_object("column_size").unwrap();
-    let last_value_column: gtk::TreeViewColumn = builder.get_object("column_last_value").unwrap();
-
+pub fn setup_signal_repository(builder: &gtk::Builder, app_state: GuiStateHandle) -> SignalBrowser {
     let model = gtk::TreeStore::new(&[
         String::static_type(),
         String::static_type(),
         String::static_type(),
     ]);
+
+    setup_columns(builder);
+    setup_filter_model(builder, &model);
+    setup_drag_drop(builder);
+
+    SignalBrowser {
+        model,
+        app_state,
+        model_map: HashMap::new(),
+    }
+}
+
+fn setup_columns(builder: &gtk::Builder) {
+    let name_column: gtk::TreeViewColumn = builder.get_object("column_name").unwrap();
+    let size_column: gtk::TreeViewColumn = builder.get_object("column_size").unwrap();
+    let last_value_column: gtk::TreeViewColumn = builder.get_object("column_last_value").unwrap();
 
     let cell = gtk::CellRendererText::new();
     name_column.pack_start(&cell, true);
@@ -27,10 +87,15 @@ pub fn setup_signal_repository(builder: &gtk::Builder, app_state: GuiStateHandle
     let cell = gtk::CellRendererText::new();
     last_value_column.pack_start(&cell, true);
     last_value_column.add_attribute(&cell, "text", 2);
+}
+
+fn setup_filter_model(builder: &gtk::Builder, model: &gtk::TreeStore) {
+    let tree_view: gtk::TreeView = builder.get_object("signal_tree_view").unwrap();
+    let filter_edit: gtk::SearchEntry = builder.get_object("signal_search_entry").unwrap();
 
     // Filter model:
     // Sort model:
-    let sort_model = gtk::TreeModelSort::new(&model);
+    let sort_model = gtk::TreeModelSort::new(model);
     sort_model.set_sort_column_id(gtk::SortColumn::Index(0), gtk::SortType::Ascending);
     let filter_model = gtk::TreeModelFilter::new(&sort_model, None);
 
@@ -44,11 +109,30 @@ pub fn setup_signal_repository(builder: &gtk::Builder, app_state: GuiStateHandle
     filter_edit.connect_search_changed(move |_e| {
         filter_model.refilter();
     });
+}
+
+fn my_filter_func(model: &gtk::TreeModel, iter: &gtk::TreeIter, filter_txt: String) -> bool {
+    let optional_name = model.get_value(&iter, 0).get::<String>().unwrap();
+    // let filter_text = filter_edit;
+    if let Some(name) = optional_name {
+        // println!("FILTER {:?} with {}", name, filter_txt);
+        if filter_txt.is_empty() || name.contains(&filter_txt) {
+            true
+        } else {
+            false
+        }
+    } else {
+        true
+    }
+}
+
+/// Connect drag signal.
+fn setup_drag_drop(builder: &gtk::Builder) {
+    let tree_view: gtk::TreeView = builder.get_object("signal_tree_view").unwrap();
 
     let selection = tree_view.get_selection();
     selection.set_mode(gtk::SelectionMode::Multiple);
 
-    // Connect drag signal.
     let targets = vec![gtk::TargetEntry::new(
         super::mime_types::SIGNAL_NAMES_MIME_TYPE,
         gtk::TargetFlags::empty(),
@@ -68,59 +152,6 @@ pub fn setup_signal_repository(builder: &gtk::Builder, app_state: GuiStateHandle
         }
         debug!("GET DATA {} {}", info, r);
     });
-
-    // Refresh model once in a while
-
-    // Refreshing timer!
-    let tick = move || {
-        let new_signal_names = app_state.borrow_mut().get_new_signal_names();
-
-        for signal_name in new_signal_names {
-            let iter = model.append(None);
-            model.set(&iter, &[0, 1, 2], &[&signal_name, &"-", &"-"]);
-        }
-
-        // Uhm, this is a bit lame:
-        let iter = model.get_iter_first();
-
-        if let Some(iter2) = iter {
-            for (signal_name, optional_signal_summary) in app_state.borrow().get_signal_sizes() {
-                let model_name_value = model.get_value(&iter2, 0).get::<String>().unwrap().unwrap();
-                if model_name_value == signal_name {
-                    if let Some(signal_summary) = optional_signal_summary {
-                        model.set_value(&iter2, 1, &signal_summary.count.to_string().to_value());
-                        model.set_value(
-                            &iter2,
-                            2,
-                            &signal_summary.metrics().last.to_string().to_value(),
-                        );
-                    }
-                }
-
-                if !model.iter_next(&iter2) {
-                    break;
-                }
-            }
-        }
-
-        gtk::prelude::Continue(true)
-    };
-    gtk::timeout_add(1000, tick);
-}
-
-fn my_filter_func(model: &gtk::TreeModel, iter: &gtk::TreeIter, filter_txt: String) -> bool {
-    let optional_name = model.get_value(&iter, 0).get::<String>().unwrap();
-    // let filter_text = filter_edit;
-    if let Some(name) = optional_name {
-        // println!("FILTER {:?} with {}", name, filter_txt);
-        if filter_txt.is_empty() || name.contains(&filter_txt) {
-            true
-        } else {
-            false
-        }
-    } else {
-        true
-    }
 }
 
 fn get_selected_signal_names(w: &gtk::TreeView) -> Vec<String> {

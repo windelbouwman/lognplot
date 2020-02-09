@@ -1,3 +1,8 @@
+//! Notification support for changes in the database.
+//!
+//! This module is used by the GUI to respond to changes
+//! which happen in the database.
+
 use futures::channel::mpsc;
 use std::collections::HashSet;
 
@@ -15,9 +20,19 @@ impl ChangeSubscriber {
         }
     }
 
-    pub fn notify(&mut self, name: &str) {
-        self.event.add_name(name);
+    /// Notification of a newly added signal
+    pub fn notify_signal_added(&mut self, name: &str) {
+        self.event.add_new_signal(name);
+        self.emit_event();
+    }
 
+    /// Notification of a change on a data signal
+    pub fn notify_signal_changed(&mut self, name: &str) {
+        self.event.add_changed_signal(name);
+        self.emit_event();
+    }
+
+    fn emit_event(&mut self) {
         // TODO: if ready?
         let ready = true;
         if ready {
@@ -38,17 +53,23 @@ impl ChangeSubscriber {
 
 #[derive(Debug, Clone)]
 pub struct DataChangeEvent {
-    pub names: HashSet<String>,
+    pub new_signals: HashSet<String>,
+    pub changed_signals: HashSet<String>,
 }
 
 impl DataChangeEvent {
     fn new() -> Self {
         DataChangeEvent {
-            names: HashSet::new(),
+            new_signals: HashSet::new(),
+            changed_signals: HashSet::new(),
         }
     }
 
-    fn add_name(&mut self, name: &str) {
-        self.names.insert(name.to_owned());
+    fn add_new_signal(&mut self, name: &str) {
+        self.new_signals.insert(name.to_owned());
+    }
+
+    fn add_changed_signal(&mut self, name: &str) {
+        self.changed_signals.insert(name.to_owned());
     }
 }

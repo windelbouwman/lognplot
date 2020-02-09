@@ -62,12 +62,18 @@ impl TsDb {
                     let new_name = format!("{}_BACKUP_{}", name, date_time_marker);
                     // TODO: do not overwrite backup!
                     // assert!(!self.data.contains_key(new_name));
-                    self.data.insert(new_name, trace);
+                    // Copy of the old data:
+                    self.data.insert(new_name.clone(), trace);
+                    self.new_signal_event(&new_name);
+                    self.new_data_event(&new_name);
+
+                    // New trace:
                     self.new_trace(name);
                 }
             }
         } else {
             self.new_trace(name);
+            self.new_signal_event(name);
         }
 
         self.data.get_mut(name).unwrap()
@@ -138,7 +144,13 @@ impl TsDb {
     /// Notify listeners of the newly arrived data.
     fn new_data_event(&mut self, name: &str) {
         for subscriber in &mut self.change_subscribers {
-            subscriber.notify(name);
+            subscriber.notify_signal_changed(name);
+        }
+    }
+
+    fn new_signal_event(&mut self, name: &str) {
+        for subscriber in &mut self.change_subscribers {
+            subscriber.notify_signal_added(name);
         }
     }
 }
