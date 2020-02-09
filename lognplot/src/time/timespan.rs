@@ -35,11 +35,11 @@ impl TimeSpan {
 
     /// Adjust this timespan to include the given span.
     pub fn extend_to_include_span(&mut self, span: &Self) {
-        if &span.start < &self.start {
+        if span.start < self.start {
             self.start = span.start.clone();
         }
 
-        if &span.end > &self.end {
+        if span.end > self.end {
             self.end = span.end.clone();
         }
     }
@@ -51,7 +51,7 @@ impl TimeSpan {
 
     /// Test if this timespan fully covers another timespan.
     pub fn covers(&self, other: &TimeSpan) -> bool {
-        (&self.start <= &other.start) && (&other.end <= &self.end)
+        (self.start <= other.start) && (other.end <= self.end)
     }
 
     /// Test if those two timespans overlap.

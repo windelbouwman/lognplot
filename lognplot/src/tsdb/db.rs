@@ -95,6 +95,16 @@ impl TsDb {
         self.new_data_event(name);
     }
 
+    /// Drop all data from the database.
+    pub fn drop_all(&mut self) {
+        self.data.clear();
+    }
+
+    /// Drop a single trace from the database.
+    pub fn drop(&mut self, name: &str) {
+        self.data.remove(name);
+    }
+
     /// Query the given trace for data.
     pub fn query(&self, name: &str, query: Query) -> QueryResult {
         if let Some(trace) = self.data.get(name) {

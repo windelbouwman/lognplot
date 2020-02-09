@@ -152,10 +152,6 @@ where
     pub fn to_vec(&self) -> Vec<Observation<V>> {
         self.root.borrow().to_vec()
     }
-
-    pub fn len(&self) -> usize {
-        self.root.borrow().len()
-    }
 }
 
 /// Inner results, can be either a series of single
@@ -299,10 +295,6 @@ where
             Node::Intermediate(internal) => internal.metrics(),
         }
     }
-
-    fn len(&self) -> usize {
-        self.metrics().map_or(0, |m| m.count)
-    }
 }
 
 /// The result of selecting a time range on a node.
@@ -326,9 +318,12 @@ where
         }
     }
 
-    // fn is_empty(&self) -> bool {
-    //     self.len() == 0
-    // }
+    fn is_empty(&self) -> bool {
+        match self {
+            RangeSelectionResult::Nodes(nodes) => nodes.is_empty(),
+            RangeSelectionResult::Observations(observations) => observations.is_empty(),
+        }
+    }
 
     /// Test if we can enhance this selection result any further.
     fn can_enhance(&self) -> bool {
@@ -619,7 +614,7 @@ mod tests {
         assert_eq!(tree.to_vec().len(), 1);
 
         // Check length:
-        assert_eq!(tree.len(), 1);
+        assert_eq!(tree.summary().unwrap().count, 1);
     }
 
     #[test]
@@ -638,7 +633,7 @@ mod tests {
         assert_eq!(tree.to_vec().len(), 1000);
 
         // Check length:
-        assert_eq!(tree.len(), 1000);
+        assert_eq!(tree.summary().unwrap().count, 1000);
 
         // Check query
         let time_span = TimeSpan::from_seconds(3, 13);

@@ -122,6 +122,33 @@ Another server demo is the rust side of the code. Start the GUI like this:
 
 This application will be able to receive data via TCP/IP.
 
+# Send data from C code
+
+To send data from C-code, refer to the demo in `demo/c`. This demo uses
+the clognplot rust crate, which is a static library which can be used from C.
+The resulting C program will connect over TCP/IP and send its data to the plot
+tool using parts of the rust crates.
+
+# Export data to HDF5
+
+To be able to further process the data in, for example, a python script, you
+can use File->Save to save all captured data as a HDF5 file.
+
+Example usage of this saved HDF5 file:
+
+```python
+
+import h5py
+from matplotlib import pyplot as plt
+
+f = h5py.File('datorz.h5', 'r')
+group = f['my_datorz']
+signal = group['My_signal']
+plt.plot(signal[:,0], signal[:,1])
+plt.show()
+
+```
+
 # Documentation
 
 Documentation for python users can be found here: https://lognplot.readthedocs.io/en/latest/

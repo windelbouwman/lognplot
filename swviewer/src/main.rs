@@ -199,7 +199,7 @@ where
 fn capture_trace_data(st_link: &StLink) -> StLinkResult<()> {
     use scroll::{Pread, LE};
     // Send data to lognplot GUI:
-    let mut client = TcpClient::new("127.0.0.1:12345");
+    let mut client = TcpClient::new("127.0.0.1:12345").unwrap();
 
     // client.send_sample("bla", 1.0, 3.14);
     // client.send_sample("bla", 3.0, 3.14);
@@ -242,7 +242,7 @@ fn capture_trace_data(st_link: &StLink) -> StLinkResult<()> {
 
                             let value: i32 = payload.pread(0).unwrap();
                             trace!("VAL={}", value);
-                            client.send_sample("a", timestamp, value as f64);
+                            client.send_sample("a", timestamp, value as f64).unwrap();
                         }
                     }
                     _ => {

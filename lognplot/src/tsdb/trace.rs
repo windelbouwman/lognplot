@@ -55,10 +55,6 @@ impl Trace {
     pub fn to_vec(&self) -> Vec<Observation<Sample>> {
         self.tree.to_vec()
     }
-
-    pub fn len(&self) -> usize {
-        self.tree.len()
-    }
 }
 
 impl Default for Trace {
