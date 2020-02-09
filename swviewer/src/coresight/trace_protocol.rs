@@ -234,7 +234,7 @@ impl Decoder {
             let mut ts = 0;
             ts_bytes.reverse();
             for ts_byte in ts_bytes {
-                ts = ts << 7;
+                ts <<= 7;
                 ts |= ts_byte as usize;
             }
             self.emit(TracePacket::TimeStamp { tc, ts });

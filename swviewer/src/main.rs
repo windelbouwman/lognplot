@@ -227,7 +227,7 @@ fn capture_trace_data(st_link: &StLink) -> StLinkResult<()> {
                         debug!("Timestamp packet: tc={} ts={}", tc, ts);
                         let mut time_delta: f64 = ts as f64;
                         // Divide by core clock frequency to go from ticks to seconds.
-                        time_delta = time_delta / 16_000_000.0;
+                        time_delta /= 16_000_000.0;
                         timestamp += time_delta;
                         // println!("TIme: {}", timestamp);
                     }

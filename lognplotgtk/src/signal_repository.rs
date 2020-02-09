@@ -116,11 +116,7 @@ fn my_filter_func(model: &gtk::TreeModel, iter: &gtk::TreeIter, filter_txt: Stri
     // let filter_text = filter_edit;
     if let Some(name) = optional_name {
         // println!("FILTER {:?} with {}", name, filter_txt);
-        if filter_txt.is_empty() || name.contains(&filter_txt) {
-            true
-        } else {
-            false
-        }
+        filter_txt.is_empty() || name.contains(&filter_txt)
     } else {
         true
     }

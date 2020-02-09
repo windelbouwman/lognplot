@@ -94,7 +94,7 @@ pub extern "C" fn lognplot_client_send_samples(
             let times = unsafe { std::slice::from_raw_parts(times, count) };
             let values = unsafe { std::slice::from_raw_parts(values, count) };
             let mut samples: Vec<(f64, f64)> = vec![];
-            for (t, v) in times.into_iter().zip(values.iter()) {
+            for (t, v) in times.iter().zip(values.iter()) {
                 samples.push((*t, *v));
             }
             samples

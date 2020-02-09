@@ -203,8 +203,7 @@ impl GuiState {
     fn zoom_horizontal(&mut self, amount: f64, around: Option<(f64, Size)>) {
         let around = around.map(|p| {
             let (pixel, size) = p;
-            let timestamp = x_pixel_to_domain(pixel, &self.chart.x_axis, size);
-            timestamp
+            x_pixel_to_domain(pixel, &self.chart.x_axis, size)
         });
         self.disable_tailing();
         self.chart.zoom_horizontal(amount, around);

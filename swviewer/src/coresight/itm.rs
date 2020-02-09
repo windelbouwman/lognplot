@@ -30,7 +30,7 @@ where
 
     pub fn unlock(&self) -> CoreSightResult<()> {
         self.component
-            .write_reg(REGISTER_OFFSET_ACCESS, 0xC5ACCE55)?;
+            .write_reg(REGISTER_OFFSET_ACCESS, 0xC5AC_CE55)?;
 
         Ok(())
     }
@@ -39,7 +39,7 @@ where
         let mut value = self.component.read_reg(REGISTER_OFFSET_ITM_TCR)?;
         info!("ITM_TCR Before: 0x{:08X}", value);
 
-        value |= 1 << 0; // itm enable
+        value |= 1; // itm enable
         value |= 1 << 1; // timestamp enable
         value |= 1 << 2; // Enable sync pulses, note DWT_CTRL.SYNCTAP must be configured.
         value |= 1 << 3; // tx enable (for DWT)

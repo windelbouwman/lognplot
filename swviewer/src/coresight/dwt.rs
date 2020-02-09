@@ -62,8 +62,8 @@ where
     /// Enable data monitor on a given user variable at some address
     pub fn enable_trace(&self, var_address: u32) -> CoreSightResult<()> {
         let mask = 0; // size of the ignore mask, ignore nothing!
-        let mut function: u32 = 3; // sample PC and data
-                                   // function |= 0b10 << 10; // COMP register contains word sized unit.
+        let function: u32 = 3; // sample PC and data
+                               // function |= 0b10 << 10; // COMP register contains word sized unit.
 
         // entry 0:
         self.component.write_reg(0x20, var_address)?; // COMp value

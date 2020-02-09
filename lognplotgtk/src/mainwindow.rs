@@ -10,7 +10,7 @@ use super::signal_repository::{setup_signal_repository, SignalBrowser};
 use super::{GuiState, GuiStateHandle};
 
 pub fn open_gui(db_handle: TsDbHandle) {
-    let app_state = GuiState::new(db_handle.clone()).into_handle();
+    let app_state = GuiState::new(db_handle).into_handle();
 
     let application = Application::new(Some("com.github.windelbouwman.quartz"), Default::default())
         .expect("failed to initialize GTK application");
@@ -29,11 +29,11 @@ fn build_ui(app: &gtk::Application, app_state: GuiStateHandle) {
     // Connect the data set tree:
     let signal_pane = setup_signal_repository(&builder, app_state.clone());
     let draw_area: gtk::DrawingArea = builder.get_object("chart_control").unwrap();
-    setup_drawing_area(draw_area.clone(), app_state.clone());
+    setup_drawing_area(draw_area, app_state.clone());
     setup_menus(&builder, app_state.clone());
     setup_toolbar_buttons(&builder, app_state.clone());
     setup_notify_change(&builder, app_state.clone(), signal_pane);
-    setup_tailing_timer(&builder, app_state.clone());
+    setup_tailing_timer(&builder, app_state);
 
     // Connect application to window:
     let window: gtk::Window = builder.get_object("top_unit").unwrap();
@@ -179,10 +179,6 @@ fn setup_notify_change(
     main_context.spawn_local(async move {
         use futures::StreamExt;
         while let Some(item) = receiver.next().await {
-            if !item.new_signals.is_empty() {
-                println!("New signals: {:?}", item.new_signals);
-            }
-
             signal_pane.handle_event(&item);
 
             // Check if we must update the chart:

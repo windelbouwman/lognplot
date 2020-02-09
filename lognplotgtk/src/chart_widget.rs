@@ -111,8 +111,7 @@ pub fn setup_drawing_area(draw_area: gtk::DrawingArea, app_state: GuiStateHandle
 fn get_size(drawing_area: &gtk::DrawingArea) -> Size {
     let width = drawing_area.get_allocated_width() as f64;
     let height = drawing_area.get_allocated_height() as f64;
-    let size = Size::new(width, height);
-    size
+    Size::new(width, height)
 }
 
 fn draw_on_canvas(
@@ -162,7 +161,7 @@ fn on_key(draw_area: &gtk::DrawingArea, key: &gdk::EventKey, app_state: GuiState
         gdk::enums::key::Up | gdk::enums::key::w => {
             app_state.borrow_mut().pan_up();
         }
-        gdk::enums::key::s => {
+        gdk::enums::key::Down | gdk::enums::key::s => {
             app_state.borrow_mut().pan_down();
         }
         gdk::enums::key::Left | gdk::enums::key::a => {
@@ -196,5 +195,5 @@ fn on_key(draw_area: &gtk::DrawingArea, key: &gdk::EventKey, app_state: GuiState
     };
     draw_area.queue_draw();
 
-    Inhibit(false)
+    Inhibit(true)
 }

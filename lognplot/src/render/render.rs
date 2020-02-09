@@ -336,12 +336,12 @@ where
     /// Draw single observations.
     fn draw_observations(
         &mut self,
-        observations: &Vec<Observation<Sample>>,
+        observations: &[Observation<Sample>],
         color: Color,
         draw_markers: bool,
     ) {
         let points: Vec<Point> = observations
-            .into_iter()
+            .iter()
             .map(|o| {
                 Point::new(
                     self.x_domain_to_pixel(&o.timestamp),
@@ -368,7 +368,7 @@ where
     /// Draw aggregated values
     fn draw_aggregations(
         &mut self,
-        aggregations: &Vec<Aggregation<Sample, SampleMetrics>>,
+        aggregations: &[Aggregation<Sample, SampleMetrics>],
         color: Color,
     ) {
         if aggregations.is_empty() {
@@ -490,7 +490,7 @@ fn clip(value: f64, lower: f64, upper: f64) -> f64 {
 
 /// Find the closest observation in a sorted list of observations.
 fn find_closest_observation<'o>(
-    observations: &'o Vec<Observation<Sample>>,
+    observations: &'o [Observation<Sample>],
     t: &TimeStamp,
 ) -> Option<&'o Observation<Sample>> {
     find_closest(observations, t, |o| o.timestamp.clone())
@@ -499,7 +499,7 @@ fn find_closest_observation<'o>(
 /// Find the aggregation which is closest to a certain timestamp
 /// in a sorted list of aggregations.
 fn find_closest_aggregation<'o>(
-    aggregations: &'o Vec<Aggregation<Sample, SampleMetrics>>,
+    aggregations: &'o [Aggregation<Sample, SampleMetrics>],
     t: &TimeStamp,
 ) -> Option<&'o Aggregation<Sample, SampleMetrics>> {
     find_closest(aggregations, t, |a| a.timespan.middle_timestamp())
@@ -507,7 +507,7 @@ fn find_closest_aggregation<'o>(
 
 /// Find the thing which is closest to the given timestamp.
 /// The function f must be given to turn a thing into a timestamp.
-fn find_closest<'o, T, F>(things: &'o Vec<T>, ts: &TimeStamp, f: F) -> Option<&'o T>
+fn find_closest<'o, T, F>(things: &'o [T], ts: &TimeStamp, f: F) -> Option<&'o T>
 where
     F: Fn(&T) -> TimeStamp,
 {

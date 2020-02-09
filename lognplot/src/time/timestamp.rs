@@ -24,7 +24,7 @@ impl TimeStamp {
 
     /// Return absolute distance in time between two timestamps.
     pub fn distance(&self, other: &Self) -> f64 {
-        return (self.amount - other.amount).abs();
+        (self.amount - other.amount).abs()
     }
 }
 
