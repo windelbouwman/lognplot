@@ -141,6 +141,13 @@ impl TsDb {
         self.change_subscribers.push(subscriber);
     }
 
+    // Check if we have pending events, and emit them to queues.
+    pub fn poll_events(&mut self) {
+        for subscriber in &mut self.change_subscribers {
+            subscriber.poll_events();
+        }
+    }
+
     /// Notify listeners of the newly arrived data.
     fn new_data_event(&mut self, name: &str) {
         for subscriber in &mut self.change_subscribers {

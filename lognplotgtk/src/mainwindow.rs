@@ -27,8 +27,15 @@ fn build_ui(app: &gtk::Application, app_state: GuiStateHandle) {
     let builder = gtk::Builder::new_from_string(glade_src);
 
     // Connect the data set tree:
-    let signal_pane = setup_signal_repository(&builder, app_state.clone());
     let draw_area: gtk::DrawingArea = builder.get_object("chart_control").unwrap();
+
+    let app_state_add_curve = app_state.clone();
+    let add_curve = move |name: &str| {
+        app_state_add_curve.borrow_mut().add_curve(name);
+        draw_area.queue_draw();
+    };
+    let draw_area: gtk::DrawingArea = builder.get_object("chart_control").unwrap();
+    let signal_pane = setup_signal_repository(&builder, app_state.clone(), add_curve);
     setup_drawing_area(draw_area, app_state.clone());
     setup_menus(&builder, app_state.clone());
     setup_toolbar_buttons(&builder, app_state.clone());
@@ -167,7 +174,7 @@ fn setup_notify_change(
     let draw_area: gtk::DrawingArea = builder.get_object("chart_control").unwrap();
 
     // Register change handler:
-    let (sender, mut receiver) = futures::channel::mpsc::channel::<DataChangeEvent>(2);
+    let (sender, mut receiver) = futures::channel::mpsc::channel::<DataChangeEvent>(0);
     {
         let db_handle = app_state.borrow_mut().db.clone();
         let sub = ChangeSubscriber::new(sender);
@@ -178,11 +185,12 @@ fn setup_notify_change(
     let main_context = glib::MainContext::default();
     main_context.spawn_local(async move {
         use futures::StreamExt;
-        while let Some(item) = receiver.next().await {
-            signal_pane.handle_event(&item);
+        while let Some(event) = receiver.next().await {
+            // println!("Event: {:?}", event);
+            signal_pane.handle_event(&event);
 
             // Check if we must update the chart:
-            let update = item
+            let update = event
                 .changed_signals
                 .iter()
                 .any(|n| app_state.borrow().chart.has_signal(n));
@@ -192,6 +200,9 @@ fn setup_notify_change(
 
             // Delay to emulate rate limiting of events.
             glib::timeout_future_with_priority(glib::Priority::default(), 100).await;
+
+            // Re-query database for some extra samples:
+            app_state.borrow().db.poll_events();
         }
     });
 }

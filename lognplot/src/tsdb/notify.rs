@@ -32,7 +32,17 @@ impl ChangeSubscriber {
         self.emit_event();
     }
 
+    pub fn poll_events(&mut self) {
+        if !self.event.is_empty() {
+            self.emit_event();
+        }
+    }
+
     fn emit_event(&mut self) {
+        if self.event.is_empty() {
+            return;
+        }
+
         // TODO: if ready?
         let ready = true;
         if ready {
@@ -63,6 +73,10 @@ impl DataChangeEvent {
             new_signals: HashSet::new(),
             changed_signals: HashSet::new(),
         }
+    }
+
+    fn is_empty(&self) -> bool {
+        self.new_signals.is_empty() && self.changed_signals.is_empty()
     }
 
     fn add_new_signal(&mut self, name: &str) {

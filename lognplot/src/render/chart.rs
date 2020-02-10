@@ -399,9 +399,6 @@ where
         mean_line.push(first_point);
 
         for aggregation in aggregations {
-            // let x1 = self.x_domain_to_pixel(&aggregation.timespan.start);
-            // let x2 = self.x_domain_to_pixel(&aggregation.timespan.end);
-            let x3 = self.x_domain_to_pixel(&aggregation.timespan.middle_timestamp());
             let y_max = self.y_domain_to_pixel(aggregation.metrics().max);
             let y_min = self.y_domain_to_pixel(aggregation.metrics().min);
             let mean = aggregation.metrics().mean();
@@ -410,14 +407,32 @@ where
             let y_stddev_high = self.y_domain_to_pixel(mean + stddev);
             let y_stddev_low = self.y_domain_to_pixel(mean - stddev);
 
-            // top_line.push(Point::new(x1, y_max));
-            top_line.push(Point::new(x3, y_max));
-            // bottom_line.push(Point::new(x1, y_min));
-            bottom_line.push(Point::new(x3, y_min));
-            // mean_line.push(Point::new(x1, y_mean));
-            mean_line.push(Point::new(x3, y_mean));
-            stddev_high_line.push(Point::new(x3, y_stddev_high));
-            stddev_low_line.push(Point::new(x3, y_stddev_low));
+            // TBD: what is a good visualization of aggregations?
+            // blocks or not?
+            let draw_block = false;
+            if draw_block {
+                let x1 = self.x_domain_to_pixel(&aggregation.timespan.start);
+                top_line.push(Point::new(x1, y_max));
+                bottom_line.push(Point::new(x1, y_min));
+                mean_line.push(Point::new(x1, y_mean));
+                stddev_high_line.push(Point::new(x1, y_stddev_high));
+                stddev_low_line.push(Point::new(x1, y_stddev_low));
+
+                let x2 = self.x_domain_to_pixel(&aggregation.timespan.end);
+                top_line.push(Point::new(x2, y_max));
+                bottom_line.push(Point::new(x2, y_min));
+                mean_line.push(Point::new(x2, y_mean));
+                stddev_high_line.push(Point::new(x2, y_stddev_high));
+                stddev_low_line.push(Point::new(x2, y_stddev_low));
+            } else {
+                let x3 = self.x_domain_to_pixel(&aggregation.timespan.middle_timestamp());
+
+                top_line.push(Point::new(x3, y_max));
+                bottom_line.push(Point::new(x3, y_min));
+                mean_line.push(Point::new(x3, y_mean));
+                stddev_high_line.push(Point::new(x3, y_stddev_high));
+                stddev_low_line.push(Point::new(x3, y_stddev_low));
+            }
         }
 
         mean_line.push(last_point);

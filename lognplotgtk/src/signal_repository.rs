@@ -53,7 +53,11 @@ impl SignalBrowser {
 }
 
 /// Prepare a widget with a list of available signals.
-pub fn setup_signal_repository(builder: &gtk::Builder, app_state: GuiStateHandle) -> SignalBrowser {
+pub fn setup_signal_repository<F: Fn(&str) + 'static>(
+    builder: &gtk::Builder,
+    app_state: GuiStateHandle,
+    add_curve: F,
+) -> SignalBrowser {
     let model = gtk::TreeStore::new(&[
         String::static_type(),
         String::static_type(),
@@ -63,6 +67,7 @@ pub fn setup_signal_repository(builder: &gtk::Builder, app_state: GuiStateHandle
     setup_columns(builder);
     setup_filter_model(builder, &model);
     setup_drag_drop(builder);
+    setup_activate(builder, add_curve);
 
     SignalBrowser {
         model,
@@ -166,4 +171,18 @@ fn get_selected_signal_names(w: &gtk::TreeView) -> Vec<String> {
         }
     }
     selected_names
+}
+
+fn setup_activate<F: Fn(&str) + 'static>(builder: &gtk::Builder, add_curve: F) {
+    let tree_view: gtk::TreeView = builder.get_object("signal_tree_view").unwrap();
+
+    tree_view.connect_row_activated(move |tv, path, _column| {
+        let model = tv.get_model().unwrap();
+        let iter = model.get_iter(path).unwrap();
+        let value = model.get_value(&iter, 0).get::<String>().unwrap().unwrap();
+
+        debug!("Signal activated: {}, adding to chart.", value);
+        // Add activated signal to plot:
+        add_curve(&value);
+    });
 }

@@ -60,6 +60,10 @@ impl LockedTsDb {
     pub fn register_notifier(&self, subscriber: ChangeSubscriber) {
         self.db.lock().unwrap().register_notifier(subscriber);
     }
+
+    pub fn poll_events(&self) {
+        self.db.lock().unwrap().poll_events();
+    }
 }
 
 impl std::fmt::Display for LockedTsDb {
