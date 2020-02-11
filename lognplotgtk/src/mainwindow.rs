@@ -58,29 +58,102 @@ fn setup_menus(builder: &gtk::Builder, app_state: GuiStateHandle) {
     });
 
     let top_level: gtk::Window = builder.get_object("top_unit").unwrap();
-
     let menu_save: gtk::MenuItem = builder.get_object("menu_save").unwrap();
-
     menu_save.connect_activate(clone!(@strong app_state => move |_m| {
-        let dialog = gtk::FileChooserDialog::with_buttons(
-            Some("Export data as HDF5"), Some(&top_level), gtk::FileChooserAction::Save,
-            &[("Cancel", gtk::ResponseType::Cancel), ("Save", gtk::ResponseType::Accept)]
-        );
-        let res = dialog.run();
-        match res {
-            gtk::ResponseType::Accept => {
-                let filename = dialog.get_filename();
-                if let Some(filename) = filename {
-                    info!("Saving data to filename: {:?}", filename);
-                    app_state.borrow().save(&filename);
-                }
-            },
-            _ => {
+        save_data_as_hdf5(&top_level, &app_state);
+    }));
 
+    let top_level: gtk::Window = builder.get_object("top_unit").unwrap();
+    let menu_save_session: gtk::MenuItem = builder.get_object("menu_save_session").unwrap();
+    menu_save_session.connect_activate(clone!(@strong app_state => move |_m| {
+        save_session(&top_level, &app_state);
+    }));
+
+    let top_level: gtk::Window = builder.get_object("top_unit").unwrap();
+    let menu_load_session: gtk::MenuItem = builder.get_object("menu_load_session").unwrap();
+    let draw_area: gtk::DrawingArea = builder.get_object("chart_control").unwrap();
+    menu_load_session.connect_activate(clone!(@strong app_state => move |_m| {
+        load_session(&top_level, &app_state, &draw_area);
+    }));
+}
+
+/// Popup a dialog and export data as HDF5 format.
+fn save_data_as_hdf5(top_level: &gtk::Window, app_state: &GuiStateHandle) {
+    let dialog = gtk::FileChooserDialog::with_buttons(
+        Some("Export data as HDF5"),
+        Some(top_level),
+        gtk::FileChooserAction::Save,
+        &[
+            ("Cancel", gtk::ResponseType::Cancel),
+            ("Save", gtk::ResponseType::Accept),
+        ],
+    );
+    let res = dialog.run();
+    match res {
+        gtk::ResponseType::Accept => {
+            let filename = dialog.get_filename();
+            if let Some(filename) = filename {
+                info!("Saving data to filename: {:?}", filename);
+                app_state.borrow().save(&filename);
             }
         }
-        dialog.destroy();
-    }));
+        _ => {}
+    }
+    dialog.destroy();
+}
+
+/// Popup a dialog to save session for later usage.
+fn save_session(top_level: &gtk::Window, app_state: &GuiStateHandle) {
+    let dialog = gtk::FileChooserDialog::with_buttons(
+        Some("Export session as JSON"),
+        Some(top_level),
+        gtk::FileChooserAction::Save,
+        &[
+            ("Cancel", gtk::ResponseType::Cancel),
+            ("Save", gtk::ResponseType::Accept),
+        ],
+    );
+    let res = dialog.run();
+    if let gtk::ResponseType::Accept = res {
+        let filename = dialog.get_filename();
+        if let Some(filename) = filename {
+            info!("Saving session to filename: {:?}", filename);
+            if let Err(err) = app_state.borrow().save_session(&filename) {
+                error!("Error saving session to {:?}: {}", filename, err);
+            } else {
+                info!("Session saved!");
+            }
+        }
+    }
+    dialog.destroy();
+}
+
+/// Popup a dialog to restore a session from before.
+fn load_session(top_level: &gtk::Window, app_state: &GuiStateHandle, draw_area: &gtk::DrawingArea) {
+    let dialog = gtk::FileChooserDialog::with_buttons(
+        Some("Import session from JSON file"),
+        Some(top_level),
+        gtk::FileChooserAction::Open,
+        &[
+            ("Cancel", gtk::ResponseType::Cancel),
+            ("Open", gtk::ResponseType::Accept),
+        ],
+    );
+
+    let res = dialog.run();
+    if let gtk::ResponseType::Accept = res {
+        let filename = dialog.get_filename();
+        if let Some(filename) = filename {
+            info!("Loading session to filename: {:?}", filename);
+            if let Err(err) = app_state.borrow_mut().load_session(&filename) {
+                error!("Error loading session from {:?}: {}", filename, err);
+            } else {
+                info!("Session loaded!");
+                draw_area.queue_draw();
+            }
+        }
+    }
+    dialog.destroy();
 }
 
 fn setup_toolbar_buttons(builder: &gtk::Builder, app_state: GuiStateHandle) {

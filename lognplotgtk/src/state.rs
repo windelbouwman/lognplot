@@ -3,6 +3,7 @@ use std::path::Path;
 use std::rc::Rc;
 use std::time::Instant;
 
+use crate::session;
 use lognplot::chart::{Chart, Curve, CurveData};
 use lognplot::geometry::Size;
 use lognplot::render::{x_pixel_to_domain, x_pixels_to_domain};
@@ -77,6 +78,26 @@ impl GuiState {
             "Not saving to {:?}, since export-hdf5 feature is not enabled.",
             filename
         )
+    }
+
+    pub fn save_session(&self, filename: &Path) -> std::io::Result<()> {
+        let mut s = session::Session::new();
+        s.add_item((&self.chart).into());
+        let f = std::fs::File::create(filename)?;
+        serde_json::to_writer(f, &s)?;
+        Ok(())
+    }
+
+    pub fn load_session(&mut self, filename: &Path) -> std::io::Result<()> {
+        let f = std::fs::File::open(filename)?;
+        let s: session::Session = serde_json::from_reader(f)?;
+        if let Some(session::DashBoardItem::Graph { curves }) = s.first() {
+            self.clear_curves();
+            for curve in curves {
+                self.add_curve(curve);
+            }
+        }
+        Ok(())
     }
 
     pub fn get_signal_summary(&self, name: &str) -> Option<Aggregation<Sample, SampleMetrics>> {
