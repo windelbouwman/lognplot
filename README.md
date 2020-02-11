@@ -5,6 +5,7 @@
 [![docs.rs Documentation](https://docs.rs/lognplot/badge.svg)](https://docs.rs/lognplot)
 [![crates.io page](https://img.shields.io/crates/v/lognplot.svg)](https://crates.io/crates/lognplot)
 [![PyPI](https://img.shields.io/pypi/v/lognplot)](https://pypi.org/project/lognplot)
+[![matrix](https://img.shields.io/matrix/lognplot:matrix.org)](https://matrix.to/#/#lognplot:matrix.org)
 
 ![logo](logo/logo.png)
 
