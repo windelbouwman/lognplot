@@ -19,11 +19,20 @@ It is a desktop application which visualizes your data from your
 application. This can be an embedded, robotic, mobile, PC or PLC application.
 
 Features:
-- Plot data live
-- Fast pan and zoom
-- python GUI implementation (based on PyQt5)
-- rust GUI implementation (based on gtk-rs / cairo)
+- Plot data live while staying responsive
 - Send data over TCP/IP link to GUI.
+- Two GUI implementations:
+    - python GUI implementation (based on PyQt5)
+    - rust GUI implementation (based on gtk-rs / cairo)
+- Client libraries for:
+    - Python
+    - C
+    - Rust
+- Export data to HDF5
+- Data adapters for:
+    - MQTT
+    - ROS (planned)
+    - ADS (planned)
 
 # Video
 

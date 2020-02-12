@@ -60,24 +60,18 @@ impl GuiState {
     }
 
     #[cfg(feature = "export-hdf5")]
-    pub fn save(&self, filename: &Path) {
+    pub fn save(&self, filename: &Path) -> Result<(), String> {
         info!("Save data to {:?}", filename);
-        match super::io::export_data(self.db.clone(), filename) {
-            Err(e) => {
-                error!("Something happened during data save: {}", e);
-            }
-            Ok(_) => {
-                info!("Data saved success");
-            }
-        }
+        super::io::export_data(self.db.clone(), filename).map_err(|e| e.to_string())
     }
 
     #[cfg(not(feature = "export-hdf5"))]
-    pub fn save(&self, filename: &Path) {
-        error!(
+    pub fn save(&self, filename: &Path) -> Result<(), String> {
+        let msg = format!(
             "Not saving to {:?}, since export-hdf5 feature is not enabled.",
             filename
-        )
+        );
+        Err(msg)
     }
 
     pub fn save_session(&self, filename: &Path) -> std::io::Result<()> {

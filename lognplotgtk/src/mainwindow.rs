@@ -89,17 +89,21 @@ fn save_data_as_hdf5(top_level: &gtk::Window, app_state: &GuiStateHandle) {
         ],
     );
     let res = dialog.run();
-    match res {
-        gtk::ResponseType::Accept => {
-            let filename = dialog.get_filename();
-            if let Some(filename) = filename {
-                info!("Saving data to filename: {:?}", filename);
-                app_state.borrow().save(&filename);
+    let filename = dialog.get_filename();
+    dialog.destroy();
+    if let gtk::ResponseType::Accept = res {
+        if let Some(filename) = filename {
+            info!("Saving data to filename: {:?}", filename);
+            let res = { app_state.borrow().save(&filename) };
+            if let Err(err) = res {
+                let error_message = format!("Error saving data: {}", err);
+                error!("{}", error_message);
+                show_error(top_level, &error_message);
+            } else {
+                info!("Data saved success");
             }
         }
-        _ => {}
     }
-    dialog.destroy();
 }
 
 /// Popup a dialog to save session for later usage.
@@ -114,18 +118,22 @@ fn save_session(top_level: &gtk::Window, app_state: &GuiStateHandle) {
         ],
     );
     let res = dialog.run();
+    let filename = dialog.get_filename();
+    dialog.destroy();
+
     if let gtk::ResponseType::Accept = res {
-        let filename = dialog.get_filename();
         if let Some(filename) = filename {
             info!("Saving session to filename: {:?}", filename);
-            if let Err(err) = app_state.borrow().save_session(&filename) {
-                error!("Error saving session to {:?}: {}", filename, err);
+            let res = { app_state.borrow().save_session(&filename) };
+            if let Err(err) = res {
+                let error_message = format!("Error saving session to {:?}: {}", filename, err);
+                error!("{}", error_message);
+                show_error(top_level, &error_message);
             } else {
                 info!("Session saved!");
             }
         }
     }
-    dialog.destroy();
 }
 
 /// Popup a dialog to restore a session from before.
@@ -141,19 +149,34 @@ fn load_session(top_level: &gtk::Window, app_state: &GuiStateHandle, draw_area: 
     );
 
     let res = dialog.run();
+    let filename = dialog.get_filename();
+    dialog.destroy();
     if let gtk::ResponseType::Accept = res {
-        let filename = dialog.get_filename();
         if let Some(filename) = filename {
             info!("Loading session to filename: {:?}", filename);
-            if let Err(err) = app_state.borrow_mut().load_session(&filename) {
-                error!("Error loading session from {:?}: {}", filename, err);
+            let res = { app_state.borrow_mut().load_session(&filename) };
+            if let Err(err) = res {
+                let error_message = format!("Error loading session from {:?}: {}", filename, err);
+                error!("{}", error_message);
+                show_error(top_level, &error_message);
             } else {
                 info!("Session loaded!");
                 draw_area.queue_draw();
             }
         }
     }
-    dialog.destroy();
+}
+
+fn show_error(top_level: &gtk::Window, message: &str) {
+    let error_dialog = gtk::MessageDialog::new(
+        Some(top_level),
+        gtk::DialogFlags::MODAL,
+        gtk::MessageType::Error,
+        gtk::ButtonsType::Ok,
+        &message,
+    );
+    error_dialog.run();
+    error_dialog.destroy();
 }
 
 fn setup_toolbar_buttons(builder: &gtk::Builder, app_state: GuiStateHandle) {
