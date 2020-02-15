@@ -1,11 +1,11 @@
 """Beckhoff ADS adapter.
 
-Downloads filtered beckhof ADS data and sends it to the GUI tool.
+Subscribes to Beckhof ADS variables and sends it to the GUI tool.
 
 Auto subscribe only works for DINT and LREAL for now.
 
 Example usage:
-    python ads_adapter.py GVl.*temperature
+    python ads_adapter.py --regex GVl.*temperature
 
 """
 from lognplot.client import LognplotTcpClient
