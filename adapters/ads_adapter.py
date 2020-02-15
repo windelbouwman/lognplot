@@ -17,12 +17,29 @@ import datetime
 import re
 import argparse
 from collections import namedtuple
+from typing import Type
 
 
 class AdsClient:
     Entry = namedtuple(
         "Entry", ["name", "typename", "comment", "datatype", "datatype_size"]
     )
+
+    # Some data types have same number, maybe use type string field found in __parse_ads_entries...
+    DATATYPE_MAP = {
+        17: pyads.PLCTYPE_BOOL,  # ADST_UINT8
+        17: pyads.PLCTYPE_BYTE,  # ADST_UINT8
+        3: pyads.PLCTYPE_DINT,  # ADST_INT32
+        19: pyads.PLCTYPE_DWORD,  # ADST_UINT32
+        2: pyads.PLCTYPE_INT,  # ADST_UINT16
+        5: pyads.PLCTYPE_LREAL,  # ADST_REAL64
+        4: pyads.PLCTYPE_REAL,  # ADST_REAL32
+        16: pyads.PLCTYPE_SINT,  # ADST_INT8
+        19: pyads.PLCTYPE_UDINT,  # ADST_UINT32
+        18: pyads.PLCTYPE_UINT,  # ADST_UINT16
+        17: pyads.PLCTYPE_USINT,  # ADST_UINT8
+        18: pyads.PLCTYPE_WORD,  # ADST_UINT16
+    }  # type: Dict[str, Type]
 
     def __init__(self, ams_net_id: str, ams_net_port: str):
         self.notification_handles = []
@@ -46,21 +63,14 @@ class AdsClient:
         parsed_entries = self.get_ads_entries()
 
         for entry in parsed_entries:
-            if re.match(pattern, entry.name) == None:
-                continue
-            elif entry.datatype == 3:
-                self.log(entry.name, pyads.PLCTYPE_DINT)
-            elif entry.datatype == 5:
-                self.log(entry.name, pyads.PLCTYPE_LREAL)
-
-    def format_timestamp(timestamp: datetime):
-        return time.mktime(timestamp.timetuple()) + timestamp.microsecond / 1e6
+            if re.match(pattern, entry.name) != None:
+                self.log(entry.name, self.DATATYPE_MAP[entry.datatype])
 
     def callback(self, plc_type):
         @self.plc.notification(plc_type)
         def decorated_callback(handle, name, timestamp, value):
             client.send_sample(
-                name, self.format_timestamp(timestamp), float(value),
+                name, self.__format_timestamp(timestamp), float(value),
             )
 
         return decorated_callback
@@ -75,6 +85,9 @@ class AdsClient:
             bytes(entries), upload_info.nSymSize, upload_info.nSymbols
         )
         return parsed_entries
+
+    def __format_timestamp(timestamp: datetime):
+        return time.mktime(timestamp.timetuple()) + timestamp.microsecond / 1e6
 
     def __get_upload_info(self):
         upload_info = self.plc.read(
