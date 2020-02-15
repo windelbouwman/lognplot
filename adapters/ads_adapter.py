@@ -35,7 +35,7 @@ class AdsClient:
 
         self.plc.close()
 
-    def start_logging(self, name, plc_type):
+    def start_logging(self, name: str, plc_type):
         attr = pyads.NotificationAttrib(ctypes.sizeof(plc_type))
         handles = self.plc.add_device_notification(
             name, attr, self.callback(plc_type), pyads.ADSTRANS_SERVERCYCLE
@@ -66,17 +66,17 @@ class AdsClient:
         return decorated_callback
 
     def get_ads_entries(self):
-        upload_info = self._get_upload_info()
+        upload_info = self.__get_upload_info()
         entries = self.plc.read(
             pyads.constants.ADSIGRP_SYM_UPLOAD, 0, ctypes.c_ubyte * upload_info.nSymSize
         )
 
-        parsed_entries = self._parse_ads_entries(
+        parsed_entries = self.__parse_ads_entries(
             bytes(entries), upload_info.nSymSize, upload_info.nSymbols
         )
         return parsed_entries
 
-    def _get_upload_info(self):
+    def __get_upload_info(self):
         upload_info = self.plc.read(
             pyads.constants.ADSIGRP_SYM_UPLOADINFO,
             0,
@@ -84,7 +84,7 @@ class AdsClient:
         )
         return upload_info
 
-    def _parse_ads_entries(self, entries_data: bytes, size: int, count: int):
+    def __parse_ads_entries(self, entries_data: bytes, size: int, count: int):
         parsed_entries = []
         total_bytes = 0
         while total_bytes < size:
