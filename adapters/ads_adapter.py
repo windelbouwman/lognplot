@@ -21,7 +21,7 @@ from typing import Type
 
 
 class AdsClient:
-    Entry = namedtuple(
+    VariableDescriptionEntry = namedtuple(
         "Entry", ["name", "typename", "comment", "datatype", "datatype_size"]
     )
 
@@ -51,7 +51,7 @@ class AdsClient:
 
         self.plc.close()
 
-    def log(self, name: str, plc_type):
+    def subscribe_by_name(self, name: str, plc_type):
         attr = pyads.NotificationAttrib(ctypes.sizeof(plc_type))
         handles = self.plc.add_device_notification(
             name, attr, self.callback(plc_type), pyads.ADSTRANS_SERVERCYCLE
@@ -63,7 +63,7 @@ class AdsClient:
 
         for entry in parsed_entries:
             if re.match(pattern, entry.name) != None:
-                self.log(entry.name, self.DATATYPE_MAP[entry.typename])
+                self.subscribe_by_name(entry.name, self.DATATYPE_MAP[entry.typename])
 
     def callback(self, plc_type):
         @self.plc.notification(plc_type)
@@ -80,14 +80,10 @@ class AdsClient:
             pyads.constants.ADSIGRP_SYM_UPLOAD, 0, ctypes.c_ubyte * upload_info.nSymSize
         )
 
-        parsed_entries = self._unpack_entries(
+        parsed_entries = AdsClient.unpack_entries(
             bytes(entries), upload_info.nSymSize, upload_info.nSymbols
         )
         return parsed_entries
-
-    @staticmethod
-    def format_timestamp(timestamp: datetime):
-        return time.mktime(timestamp.timetuple()) + timestamp.microsecond / 1e6
 
     def _get_upload_info(self):
         upload_info = self.plc.read(
@@ -97,7 +93,12 @@ class AdsClient:
         )
         return upload_info
 
-    def _unpack_entry(data: bytes, index: int) -> (int, Entry):
+    @staticmethod
+    def format_timestamp(timestamp: datetime):
+        return time.mktime(timestamp.timetuple()) + timestamp.microsecond / 1e6
+
+    @staticmethod
+    def unpack_entry(data: bytes, index: int) -> (int, VariableDescriptionEntry):
         fmt = "<6I3H"
         (
             entry_length,
@@ -124,14 +125,17 @@ class AdsClient:
 
         return (
             entry_length,
-            self.Entry(name, typ, comment, entry_datatype, entry_datatype_size),
+            AdsClient.VariableDescriptionEntry(
+                name, typ, comment, entry_datatype, entry_datatype_size
+            ),
         )
 
-    def _unpack_entries(self, entries_data: bytes, size: int, count: int):
+    @staticmethod
+    def unpack_entries(entries_data: bytes, size: int, count: int):
         parsed_entries = []
         index = 0
         while index < size:
-            entry_size, entry = _unpack_entry(data, index)
+            entry_size, entry = AdsClient.unpack_entry(data, index)
             index += entry_size
             parsed_entries.append(entry)
 
@@ -167,7 +171,7 @@ def main():
     ads_client = AdsClient(args.ams_net_id, args.ams_net_port)
 
     ads_client.subscribe(args.regex)
-    ads_client.log("GVL.test", pyads.PLCTYPE_LREAL)
+    # ads_client.subscribe_by_name("GVL.test", pyads.PLCTYPE_LREAL)
 
 
 if __name__ == "__main__":
