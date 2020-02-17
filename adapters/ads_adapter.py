@@ -40,9 +40,10 @@ class AdsClient:
         "WORD": pyads.PLCTYPE_WORD,
     }  # type: Dict[str, Type]
 
-    def __init__(self, ams_net_id: str, ams_net_port: str):
+    def __init__(self, ams_net_id: str, ams_net_port: str, lnp):
         self.notification_handles = []
         self.plc = pyads.Connection(ams_net_id, ams_net_port)
+        self.lnp_client = lnp
         self.plc.open()
 
     def __del__(self):
@@ -68,7 +69,7 @@ class AdsClient:
     def callback(self, plc_type):
         @self.plc.notification(plc_type)
         def decorated_callback(handle, name, timestamp, value):
-            client.send_sample(
+            self.lnp_client.send_sample(
                 name, AdsClient.format_timestamp(timestamp), float(value),
             )
 
@@ -110,18 +111,16 @@ class AdsClient:
             name_len,
             type_len,
             comment_len,
-        ) = struct.unpack_from(fmt, entries_data, index)
+        ) = struct.unpack_from(fmt, data, index)
 
         name_offset = index + struct.calcsize(fmt)
-        name = entries_data[name_offset : name_offset + name_len].decode("ascii")
+        name = data[name_offset : name_offset + name_len].decode("ascii")
 
         type_offset = name_offset + name_len + 1
-        typ = entries_data[type_offset : type_offset + type_len].decode("ascii")
+        typ = data[type_offset : type_offset + type_len].decode("ascii")
 
         comment_offset = type_offset + type_len + 1
-        comment = entries_data[comment_offset : comment_offset + comment_len].decode(
-            "ascii"
-        )
+        comment = data[comment_offset : comment_offset + comment_len].decode("ascii")
 
         return (
             entry_length,
@@ -135,7 +134,7 @@ class AdsClient:
         parsed_entries = []
         index = 0
         while index < size:
-            entry_size, entry = AdsClient.unpack_entry(data, index)
+            entry_size, entry = AdsClient.unpack_entry(entries_data, index)
             index += entry_size
             parsed_entries.append(entry)
 
@@ -156,10 +155,10 @@ def main():
     parser.add_argument(
         "--regex",
         help="Regular expression pattern used for filtering",
-        default="*",
+        default=".*",
         type=str,
     )
-    parser.add_argument("--lognplot-hostname", default="127.0.0.1", type=str)
+    parser.add_argument("--lognplot-hostname", default="localhost", type=str)
     parser.add_argument("--lognplot-port", default="12345", type=int)
     args = parser.parse_args()
 
@@ -168,10 +167,9 @@ def main():
     )
     lnp_client.connect()
 
-    ads_client = AdsClient(args.ams_net_id, args.ams_net_port)
+    ads_client = AdsClient(args.ams_net_id, args.ams_net_port, lnp_client)
 
     ads_client.subscribe(args.regex)
-    # ads_client.subscribe_by_name("GVL.test", pyads.PLCTYPE_LREAL)
 
 
 if __name__ == "__main__":
