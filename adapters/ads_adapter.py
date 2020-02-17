@@ -63,7 +63,7 @@ class AdsClient:
         parsed_entries = self.get_ads_entries()
 
         for entry in parsed_entries:
-            if re.match(pattern, entry.name) != None:
+            if re.match(pattern, entry.name) is not None:
                 if entry.typename in self.DATATYPE_MAP:
                     self.subscribe_by_name(entry.name, self.DATATYPE_MAP[entry.typename])
 
