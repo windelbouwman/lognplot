@@ -13,6 +13,7 @@ requires = [
 ]
 requires-python=">=3.6"
 license = "GPLv3"
+description-file = "README.md"
 
 classifiers = [
     "Topic :: Scientific/Engineering :: Visualization",

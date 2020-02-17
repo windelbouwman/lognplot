@@ -4,7 +4,8 @@
 
 import socket
 import struct
-
+import datetime
+import time
 import cbor
 
 
@@ -24,6 +25,8 @@ class LognplotTcpClient:
     def send_sample(self, name: str, timestamp, value: float):
         """ Send a single timestamp / value pair to the trace with the given name.
         """
+        timestamp = coerce_timestamp(timestamp)
+        value = float(value)
         self._send_dict(
             {"name": name, "t": timestamp, "type": "sample", "value": value}
         )
@@ -38,9 +41,12 @@ class LognplotTcpClient:
             {"type": "batch", "name": name, "batch": samples,}
         )
 
-    def send_samples(self, name: str, timestamp, dt, samples):
+    def send_samples(self, name: str, timestamp, dt: float, samples):
         """ Send equidistant spaced samples.
         """
+
+        timestamp = coerce_timestamp(timestamp)
+
         self._send_dict(
             {
                 "name": name,
@@ -56,6 +62,7 @@ class LognplotTcpClient:
         
         Attributes can be given as a dictionary of key/value strings.
         """
+        timestamp = coerce_timestamp(timestamp)
         self._send_dict(
             {"name": name, "t": timestamp, "type": "event", "attributes": attributes}
         )
@@ -71,3 +78,11 @@ class LognplotTcpClient:
         data.extend(struct.pack(">I", len(msg_data)))
         data.extend(msg_data)
         self._sock.sendall(data)
+
+
+def coerce_timestamp(timestamp) -> float:
+    """ Convert a timestamp into a floating point number. """
+    if isinstance(timestamp, datetime.datetime):
+        return time.mktime(timestamp.timetuple()) + timestamp.microsecond / 1e6
+    else:
+        return float(timestamp)

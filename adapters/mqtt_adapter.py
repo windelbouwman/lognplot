@@ -27,10 +27,10 @@ def main():
     parser.add_argument("--lognplot-port", default="12345", type=int)
     args = parser.parse_args()
 
-    lnp_client = LognplotTcpClient(
+    lognplot_client = LognplotTcpClient(
         hostname=args.lognplot_hostname, port=args.lognplot_port
     )
-    lnp_client.connect()
+    lognplot_client.connect()
 
     # The callback for when the client receives a CONNACK response from the server.
     def on_connect(client, userdata, flags, rc):
@@ -49,7 +49,7 @@ def main():
         else:
             timestamp = time.time()
             topic_name = "/mqtt{}".format(msg.topic)
-            lnp_client.send_sample(topic_name, timestamp, value)
+            lognplot_client.send_sample(topic_name, timestamp, value)
 
     mqtt_client = mqtt.Client()
     mqtt_client.on_connect = on_connect

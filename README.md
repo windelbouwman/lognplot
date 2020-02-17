@@ -75,7 +75,7 @@ First clone this repository:
 For python, follow this steps:
 
     $ cd lognplot/python
-    $ pip install --editable .
+    $ pip install .
     $ python -m lognplot
 
 For rust, follow these steps:
