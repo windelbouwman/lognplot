@@ -1,0 +1,24 @@
+
+[build-system]
+requires = ["flit_core >=2,<3"]
+build-backend = "flit_core.buildapi"
+
+[tool.flit.metadata]
+module = "lognplot"
+author = "Windel Bouwman"
+author-email = "windel.bouwman@gmail.com"
+home-page = "https://github.com/windelbouwman/lognplot"
+requires = [
+    "cbor"
+]
+requires-python=">=3.6"
+license = "GPLv3"
+
+classifiers = [
+    "Topic :: Scientific/Engineering :: Visualization",
+    "Topic :: System :: Monitoring",
+    "Topic :: System :: Logging",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+]
+
+keywords = "plot"
