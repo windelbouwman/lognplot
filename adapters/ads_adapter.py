@@ -64,7 +64,8 @@ class AdsClient:
 
         for entry in parsed_entries:
             if re.match(pattern, entry.name) != None:
-                self.subscribe_by_name(entry.name, self.DATATYPE_MAP[entry.typename])
+                if entry.typename in self.DATATYPE_MAP:
+                    self.subscribe_by_name(entry.name, self.DATATYPE_MAP[entry.typename])
 
     def callback(self, plc_type):
         @self.plc.notification(plc_type)
