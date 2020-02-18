@@ -30,9 +30,9 @@ Features:
     - Rust
 - Export data to HDF5
 - Data adapters for:
+    - ADS
     - MQTT
-    - ROS (planned)
-    - ADS (planned)
+    - ROS2
 
 # Video
 

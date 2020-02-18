@@ -19,6 +19,6 @@ spare the bandwidth.
 
 List of adapters:
 
+- ADS
 - MQTT
-- ADS (planned)
-- ROS2 (planned)
+- ROS2
