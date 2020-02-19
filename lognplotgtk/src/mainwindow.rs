@@ -58,7 +58,25 @@ fn setup_menus(builder: &gtk::Builder, app_state: GuiStateHandle) {
     });
 
     let top_level: gtk::Window = builder.get_object("top_unit").unwrap();
+    let quit_menu: gtk::MenuItem = builder.get_object("menu_quit").unwrap();
+    quit_menu.connect_activate(move |_m| {
+        top_level.close();
+    });
+
+    let menu_new: gtk::MenuItem = builder.get_object("menu_new").unwrap();
+    menu_new.connect_activate(clone!(@strong app_state => move |_m| {
+        app_state.borrow().drop_data();
+    }));
+
+    let menu_open: gtk::MenuItem = builder.get_object("menu_open").unwrap();
+    menu_open.set_sensitive(false);
+    menu_open.connect_activate(move |_m| {
+        unimplemented!("TODO: implement open");
+    });
+
+    let top_level: gtk::Window = builder.get_object("top_unit").unwrap();
     let menu_save: gtk::MenuItem = builder.get_object("menu_save").unwrap();
+    menu_save.set_sensitive(cfg!(feature = "export-hdf5"));
     menu_save.connect_activate(clone!(@strong app_state => move |_m| {
         save_data_as_hdf5(&top_level, &app_state);
     }));
@@ -181,6 +199,14 @@ fn show_error(top_level: &gtk::Window, message: &str) {
 
 fn setup_toolbar_buttons(builder: &gtk::Builder, app_state: GuiStateHandle) {
     let draw_area: gtk::DrawingArea = builder.get_object("chart_control").unwrap();
+
+    // Drop database:
+    {
+        let tb_drop_db: gtk::ToolButton = builder.get_object("tb_drop_all").unwrap();
+        tb_drop_db.connect_clicked(clone!(@strong app_state => move |_tb| {
+            app_state.borrow().drop_data();
+        }));
+    }
 
     // clear button:
     {

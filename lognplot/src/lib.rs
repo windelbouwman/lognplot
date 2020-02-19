@@ -11,15 +11,9 @@
 extern crate log;
 
 pub mod chart;
-mod client;
 pub mod geometry;
-mod payload;
+pub mod net;
 pub mod render;
 pub mod style;
 pub mod time;
 pub mod tsdb;
-
-pub use client::TcpClient;
-
-#[cfg(feature = "server")]
-pub mod server;

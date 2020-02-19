@@ -13,7 +13,7 @@ mod session;
 mod signal_repository;
 mod state;
 
-use lognplot::server::run_server;
+use lognplot::net::run_server;
 use lognplot::tsdb::TsDb;
 
 pub use state::{GuiState, GuiStateHandle};
@@ -39,7 +39,7 @@ fn main() {
 
     simple_logger::init_with_level(log_level).unwrap();
 
-    info!("BOOTING QUARTZ TOOL");
+    info!("Starting lognplot GUI tool");
 
     let db = TsDb::default();
     let db_handle = db.into_handle();

@@ -5,7 +5,7 @@ mod coresight;
 mod stlink;
 
 use coresight::{MemoryAccess, MemoryAddress, Target};
-use lognplot::TcpClient;
+use lognplot::net::TcpClient;
 use stlink::{StLink, StLinkMode, StLinkResult};
 
 fn main() {

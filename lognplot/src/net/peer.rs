@@ -6,7 +6,7 @@ use tokio::net::TcpStream;
 use tokio::task::JoinHandle;
 use tokio_util::codec::{Framed, LengthDelimitedCodec};
 
-use crate::payload::SampleBatch;
+use super::payload::SampleBatch;
 use crate::tsdb::TsDbHandle;
 
 /// A handle to a peer connection

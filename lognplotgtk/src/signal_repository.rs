@@ -15,6 +15,9 @@ pub struct SignalBrowser {
 impl SignalBrowser {
     /// Process a database data change event:
     pub fn handle_event(&mut self, event: &DataChangeEvent) {
+        if event.drop_all {
+            self.drop_all();
+        }
         self.add_new_signals(event.new_signals.iter());
         self.update_signals(event.changed_signals.iter());
     }
@@ -33,6 +36,7 @@ impl SignalBrowser {
         }
     }
 
+    /// Update existing signals in the model
     fn update_signals<'a, I>(&self, changed_signals: I)
     where
         I: Iterator<Item = &'a String>,
@@ -49,6 +53,12 @@ impl SignalBrowser {
                 }
             }
         }
+    }
+
+    /// Drop all signals from the model
+    fn drop_all(&mut self) {
+        self.model.clear();
+        self.model_map.clear();
     }
 }
 
@@ -106,7 +116,7 @@ fn setup_filter_model(builder: &gtk::Builder, model: &gtk::TreeStore) {
 
     filter_model.set_visible_func(clone!(@strong filter_edit => move |m, i| {
         let txt = filter_edit.get_text().unwrap().to_string();
-        my_filter_func(m, i, txt)
+        signal_filter_func(m, i, txt)
     }));
 
     tree_view.set_model(Some(&filter_model));
@@ -116,11 +126,9 @@ fn setup_filter_model(builder: &gtk::Builder, model: &gtk::TreeStore) {
     });
 }
 
-fn my_filter_func(model: &gtk::TreeModel, iter: &gtk::TreeIter, filter_txt: String) -> bool {
+fn signal_filter_func(model: &gtk::TreeModel, iter: &gtk::TreeIter, filter_txt: String) -> bool {
     let optional_name = model.get_value(&iter, 0).get::<String>().unwrap();
-    // let filter_text = filter_edit;
     if let Some(name) = optional_name {
-        // println!("FILTER {:?} with {}", name, filter_txt);
         filter_txt.is_empty() || name.contains(&filter_txt)
     } else {
         true

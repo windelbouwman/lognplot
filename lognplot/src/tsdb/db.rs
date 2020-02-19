@@ -104,11 +104,14 @@ impl TsDb {
     /// Drop all data from the database.
     pub fn drop_all(&mut self) {
         self.data.clear();
+        self.data.shrink_to_fit();
+        self.drop_all_event();
     }
 
     /// Drop a single trace from the database.
     pub fn drop(&mut self, name: &str) {
         self.data.remove(name);
+        self.drop_event(name);
     }
 
     /// Query the given trace for data.
@@ -158,6 +161,16 @@ impl TsDb {
     fn new_signal_event(&mut self, name: &str) {
         for subscriber in &mut self.change_subscribers {
             subscriber.notify_signal_added(name);
+        }
+    }
+
+    fn drop_event(&mut self, _name: &str) {
+        unimplemented!("TODO");
+    }
+
+    fn drop_all_event(&mut self) {
+        for subscriber in &mut self.change_subscribers {
+            subscriber.notify_drop_all();
         }
     }
 }

@@ -59,6 +59,11 @@ impl GuiState {
         Rc::new(RefCell::new(self))
     }
 
+    pub fn drop_data(&self) {
+        info!("Drop all data from database, to start a new!");
+        self.db.drop_all();
+    }
+
     #[cfg(feature = "export-hdf5")]
     pub fn save(&self, filename: &Path) -> Result<(), String> {
         info!("Save data to {:?}", filename);

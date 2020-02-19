@@ -3,7 +3,7 @@
 use libc::{c_char, size_t};
 use std::ffi::CStr;
 
-use lognplot::TcpClient;
+use lognplot::net::TcpClient;
 
 #[no_mangle]
 pub extern "C" fn lognplot_client_new(address: *const c_char) -> *mut TcpClient {
