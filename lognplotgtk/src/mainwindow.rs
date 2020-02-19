@@ -27,20 +27,26 @@ fn build_ui(app: &gtk::Application, app_state: GuiStateHandle) {
     let builder = gtk::Builder::new_from_string(glade_src);
 
     // Connect the data set tree:
-    let draw_area: gtk::DrawingArea = builder.get_object("chart_control").unwrap();
-
     let app_state_add_curve = app_state.clone();
     let add_curve = move |name: &str| {
         app_state_add_curve.borrow_mut().add_curve(name);
-        draw_area.queue_draw();
     };
-    let draw_area: gtk::DrawingArea = builder.get_object("chart_control").unwrap();
     let signal_pane = setup_signal_repository(&builder, app_state.clone(), add_curve);
-    setup_drawing_area(draw_area, app_state.clone());
+
+    let db = { app_state.borrow().db.clone() };
+    // First chart:
+    let draw_area: gtk::DrawingArea = builder.get_object("chart_control").unwrap();
+    let chart_state1 = setup_drawing_area(draw_area, db.clone());
+    app_state.borrow_mut().add_chart(chart_state1);
+
+    // Second chart:
+    let draw_area2: gtk::DrawingArea = builder.get_object("chart_control2").unwrap();
+    let chart_state2 = setup_drawing_area(draw_area2, db.clone());
+    app_state.borrow_mut().add_chart(chart_state2);
+
     setup_menus(&builder, app_state.clone());
     setup_toolbar_buttons(&builder, app_state.clone());
-    setup_notify_change(&builder, app_state.clone(), signal_pane);
-    setup_tailing_timer(&builder, app_state);
+    setup_notify_change(app_state.clone(), signal_pane);
 
     // Connect application to window:
     let window: gtk::Window = builder.get_object("top_unit").unwrap();
@@ -89,9 +95,8 @@ fn setup_menus(builder: &gtk::Builder, app_state: GuiStateHandle) {
 
     let top_level: gtk::Window = builder.get_object("top_unit").unwrap();
     let menu_load_session: gtk::MenuItem = builder.get_object("menu_load_session").unwrap();
-    let draw_area: gtk::DrawingArea = builder.get_object("chart_control").unwrap();
     menu_load_session.connect_activate(clone!(@strong app_state => move |_m| {
-        load_session(&top_level, &app_state, &draw_area);
+        load_session(&top_level, &app_state);
     }));
 }
 
@@ -155,7 +160,7 @@ fn save_session(top_level: &gtk::Window, app_state: &GuiStateHandle) {
 }
 
 /// Popup a dialog to restore a session from before.
-fn load_session(top_level: &gtk::Window, app_state: &GuiStateHandle, draw_area: &gtk::DrawingArea) {
+fn load_session(top_level: &gtk::Window, app_state: &GuiStateHandle) {
     let dialog = gtk::FileChooserDialog::with_buttons(
         Some("Import session from JSON file"),
         Some(top_level),
@@ -179,7 +184,6 @@ fn load_session(top_level: &gtk::Window, app_state: &GuiStateHandle, draw_area: 
                 show_error(top_level, &error_message);
             } else {
                 info!("Session loaded!");
-                draw_area.queue_draw();
             }
         }
     }
@@ -198,8 +202,6 @@ fn show_error(top_level: &gtk::Window, message: &str) {
 }
 
 fn setup_toolbar_buttons(builder: &gtk::Builder, app_state: GuiStateHandle) {
-    let draw_area: gtk::DrawingArea = builder.get_object("chart_control").unwrap();
-
     // Drop database:
     {
         let tb_drop_db: gtk::ToolButton = builder.get_object("tb_drop_all").unwrap();
@@ -211,36 +213,32 @@ fn setup_toolbar_buttons(builder: &gtk::Builder, app_state: GuiStateHandle) {
     // clear button:
     {
         let tb_clear_plot: gtk::ToolButton = builder.get_object("tb_clear_plot").unwrap();
-        tb_clear_plot.connect_clicked(clone!(@strong app_state, @strong draw_area => move |_tb| {
+        tb_clear_plot.connect_clicked(clone!(@strong app_state => move |_tb| {
             app_state.borrow_mut().clear_curves();
-            draw_area.queue_draw();
         }));
     }
 
     // zoom fit:
     {
         let tb_zoom_fit: gtk::ToolButton = builder.get_object("tb_zoom_fit").unwrap();
-        tb_zoom_fit.connect_clicked(clone!(@strong app_state, @strong draw_area => move |_tb| {
+        tb_zoom_fit.connect_clicked(clone!(@strong app_state => move |_tb| {
             app_state.borrow_mut().zoom_fit();
-            draw_area.queue_draw();
         }));
     }
 
     // pan left:
     {
         let tb_pan_left: gtk::ToolButton = builder.get_object("tb_pan_left").unwrap();
-        tb_pan_left.connect_clicked(clone!(@strong app_state, @strong draw_area => move |_tb| {
+        tb_pan_left.connect_clicked(clone!(@strong app_state => move |_tb| {
             app_state.borrow_mut().pan_left();
-            draw_area.queue_draw();
         }));
     }
 
     // pan right:
     {
         let tb_pan_right: gtk::ToolButton = builder.get_object("tb_pan_right").unwrap();
-        tb_pan_right.connect_clicked(clone!(@strong app_state, @strong draw_area => move |_tb| {
+        tb_pan_right.connect_clicked(clone!(@strong app_state => move |_tb| {
             app_state.borrow_mut().pan_right();
-            draw_area.queue_draw();
         }));
     }
 
@@ -272,29 +270,8 @@ fn setup_toolbar_buttons(builder: &gtk::Builder, app_state: GuiStateHandle) {
     }
 }
 
-/// Setup a timer to implement tailing of signals.
-fn setup_tailing_timer(builder: &gtk::Builder, app_state: GuiStateHandle) {
-    let draw_area: gtk::DrawingArea = builder.get_object("chart_control").unwrap();
-
-    // Refreshing timer!
-    let tick = move || {
-        let redraw = app_state.borrow_mut().do_tailing();
-        if redraw {
-            draw_area.queue_draw();
-        }
-        gtk::prelude::Continue(true)
-    };
-    gtk::timeout_add(100, tick);
-}
-
 /// Subscribe to database changes and redraw correct things.
-fn setup_notify_change(
-    builder: &gtk::Builder,
-    app_state: GuiStateHandle,
-    mut signal_pane: SignalBrowser,
-) {
-    let draw_area: gtk::DrawingArea = builder.get_object("chart_control").unwrap();
-
+fn setup_notify_change(app_state: GuiStateHandle, mut signal_pane: SignalBrowser) {
     // Register change handler:
     let (sender, mut receiver) = futures::channel::mpsc::channel::<DataChangeEvent>(0);
     {
@@ -310,15 +287,7 @@ fn setup_notify_change(
         while let Some(event) = receiver.next().await {
             // println!("Event: {:?}", event);
             signal_pane.handle_event(&event);
-
-            // Check if we must update the chart:
-            let update = event
-                .changed_signals
-                .iter()
-                .any(|n| app_state.borrow().chart.has_signal(n));
-            if update {
-                draw_area.queue_draw();
-            }
+            app_state.borrow().handle_event(&event);
 
             // Delay to emulate rate limiting of events.
             glib::timeout_future_with_priority(glib::Priority::default(), 100).await;

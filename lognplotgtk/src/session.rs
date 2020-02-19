@@ -3,16 +3,12 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Session {
-    dashboard: Vec<DashBoardItem>,
+    pub dashboard: Vec<DashBoardItem>,
 }
 
 impl Session {
     pub fn new() -> Self {
         Session { dashboard: vec![] }
-    }
-
-    pub fn first(&self) -> Option<&DashBoardItem> {
-        self.dashboard.first()
     }
 
     pub fn add_item(&mut self, item: DashBoardItem) {

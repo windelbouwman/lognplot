@@ -5,7 +5,7 @@ mod btree;
 mod connection;
 mod db;
 mod handle;
-mod logrecords;
+// mod logrecords;
 mod metrics;
 mod notify;
 mod observation;
