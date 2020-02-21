@@ -1,6 +1,6 @@
 use super::canvas::{HorizontalAnchor, VerticalAnchor};
 use super::Canvas;
-use crate::geometry::Point;
+use crate::geometry::{Point, Size};
 use crate::style::Color;
 
 use std::io::Write;
@@ -75,6 +75,13 @@ impl<'w> Canvas for SvgOutput<'w> {
             text
         )
         .unwrap();
+    }
+
+    fn text_size(&self, text: &str) -> Size {
+        // Assume 16x8 font size here:
+        // TODO: how to do this properly with SVG?
+        let width = (text.len() * 8) as f64;
+        Size::new(width, 16.0)
     }
 
     /// Draw a line between points.

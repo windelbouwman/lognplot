@@ -31,9 +31,10 @@ fn build_ui(app: &gtk::Application, app_state: GuiStateHandle) {
     let add_curve = move |name: &str| {
         app_state_add_curve.borrow_mut().add_curve(name);
     };
-    let signal_pane = setup_signal_repository(&builder, app_state.clone(), add_curve);
-
     let db = { app_state.borrow().db.clone() };
+
+    let signal_pane = setup_signal_repository(&builder, db.clone(), add_curve);
+
     // First chart:
     let draw_area: gtk::DrawingArea = builder.get_object("chart_control").unwrap();
     let chart_state1 = setup_drawing_area(draw_area, db.clone());
@@ -41,12 +42,12 @@ fn build_ui(app: &gtk::Application, app_state: GuiStateHandle) {
 
     // Second chart:
     let draw_area2: gtk::DrawingArea = builder.get_object("chart_control2").unwrap();
-    let chart_state2 = setup_drawing_area(draw_area2, db.clone());
+    let chart_state2 = setup_drawing_area(draw_area2, db);
     app_state.borrow_mut().add_chart(chart_state2);
 
     setup_menus(&builder, app_state.clone());
     setup_toolbar_buttons(&builder, app_state.clone());
-    setup_notify_change(app_state.clone(), signal_pane);
+    setup_notify_change(app_state, signal_pane);
 
     // Connect application to window:
     let window: gtk::Window = builder.get_object("top_unit").unwrap();

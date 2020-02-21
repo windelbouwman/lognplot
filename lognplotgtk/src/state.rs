@@ -6,9 +6,7 @@ use std::time::Instant;
 use crate::chart_widget::ChartStateHandle;
 use crate::session;
 use lognplot::time::TimeStamp;
-use lognplot::tsdb::{
-    Aggregation, DataChangeEvent, Observation, Sample, SampleMetrics, TsDbHandle,
-};
+use lognplot::tsdb::{DataChangeEvent, Observation, Sample, TsDbHandle};
 
 /// Struct with some GUI state in it which will be shown in the GUI.
 pub struct GuiState {
@@ -76,10 +74,6 @@ impl GuiState {
             chart.borrow_mut().set_session_item(item);
         }
         Ok(())
-    }
-
-    pub fn get_signal_summary(&self, name: &str) -> Option<Aggregation<Sample, SampleMetrics>> {
-        self.db.summary(name, None)
     }
 
     pub fn add_chart(&mut self, chart: ChartStateHandle) {

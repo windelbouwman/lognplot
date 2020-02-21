@@ -1,12 +1,11 @@
 use gtk::prelude::*;
 use std::collections::HashMap;
 
-use super::GuiStateHandle;
-use lognplot::tsdb::DataChangeEvent;
+use lognplot::tsdb::{DataChangeEvent, TsDbHandle};
 
 pub struct SignalBrowser {
     model: gtk::TreeStore,
-    app_state: GuiStateHandle,
+    db: TsDbHandle,
 
     // Mapping from signal name to row:
     model_map: HashMap<String, i32>,
@@ -42,7 +41,7 @@ impl SignalBrowser {
         I: Iterator<Item = &'a String>,
     {
         for signal_name in changed_signals {
-            if let Some(summary) = self.app_state.borrow().get_signal_summary(&signal_name) {
+            if let Some(summary) = self.db.summary(&signal_name, None) {
                 let row = self.model_map[signal_name];
                 let path: gtk::TreePath = gtk::TreePath::new_from_indicesv(&[row]);
                 if let Some(iter2) = self.model.get_iter(&path) {
@@ -65,7 +64,7 @@ impl SignalBrowser {
 /// Prepare a widget with a list of available signals.
 pub fn setup_signal_repository<F: Fn(&str) + 'static>(
     builder: &gtk::Builder,
-    app_state: GuiStateHandle,
+    db: TsDbHandle,
     add_curve: F,
 ) -> SignalBrowser {
     let model = gtk::TreeStore::new(&[
@@ -81,7 +80,7 @@ pub fn setup_signal_repository<F: Fn(&str) + 'static>(
 
     SignalBrowser {
         model,
-        app_state,
+        db,
         model_map: HashMap::new(),
     }
 }
@@ -154,8 +153,8 @@ fn setup_drag_drop(builder: &gtk::Builder) {
     );
     tree_view.connect_drag_data_get(|w, _dc, data, info, _time| {
         let selected_names = get_selected_signal_names(w);
-        // Join all signal names by ':'
-        let r = data.set_text(&selected_names.join(":"));
+        let mime_payload: String = serde_json::to_string(&selected_names).unwrap();
+        let r = data.set_text(&mime_payload);
         if !r {
             error!("Drag data get transfer failed");
         }

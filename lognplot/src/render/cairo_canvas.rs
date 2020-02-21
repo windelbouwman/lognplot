@@ -1,6 +1,6 @@
 use super::canvas::{HorizontalAnchor, VerticalAnchor};
 use super::Canvas;
-use crate::geometry::Point;
+use crate::geometry::{Point, Size};
 use crate::style::Color;
 
 pub struct CairoCanvas<'a> {
@@ -53,6 +53,11 @@ impl<'a> Canvas for CairoCanvas<'a> {
             2.0 * std::f64::consts::PI,
         );
         self.cr.stroke();
+    }
+
+    fn text_size(&self, text: &str) -> Size {
+        let extents = self.cr.text_extents(text);
+        Size::new(extents.width, extents.height)
     }
 
     fn print_text(

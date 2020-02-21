@@ -311,19 +311,19 @@ where
     M: Metrics<V> + From<V> + Clone,
     V: Clone,
 {
-    fn len(&self) -> usize {
-        match self {
-            RangeSelectionResult::Nodes(nodes) => nodes.len(),
-            RangeSelectionResult::Observations(observations) => observations.len(),
-        }
-    }
+    // fn len(&self) -> usize {
+    //     match self {
+    //         RangeSelectionResult::Nodes(nodes) => nodes.len(),
+    //         RangeSelectionResult::Observations(observations) => observations.len(),
+    //     }
+    // }
 
-    fn is_empty(&self) -> bool {
-        match self {
-            RangeSelectionResult::Nodes(nodes) => nodes.is_empty(),
-            RangeSelectionResult::Observations(observations) => observations.is_empty(),
-        }
-    }
+    // fn is_empty(&self) -> bool {
+    //     match self {
+    //         RangeSelectionResult::Nodes(nodes) => nodes.is_empty(),
+    //         RangeSelectionResult::Observations(observations) => observations.is_empty(),
+    //     }
+    // }
 
     /// Test if we can enhance this selection result any further.
     fn can_enhance(&self) -> bool {

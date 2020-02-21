@@ -27,6 +27,12 @@ fn main() {
                 .multiple(true)
                 .help("Sets the level of verbosity."),
         )
+        .arg(
+            clap::Arg::with_name("port")
+                .short("p")
+                .help("Port to listen on")
+                .default_value("12345"),
+        )
         .get_matches();
 
     let verbosity = matches.occurrences_of("v");
@@ -37,6 +43,14 @@ fn main() {
         2 | _ => log::Level::Trace,
     };
 
+    use std::str::FromStr;
+    let port = u16::from_str(
+        matches
+            .value_of("port")
+            .expect("port value must be present"),
+    )
+    .unwrap_or(12345);
+
     simple_logger::init_with_level(log_level).unwrap();
 
     info!("Starting lognplot GUI tool");
@@ -44,7 +58,7 @@ fn main() {
     let db = TsDb::default();
     let db_handle = db.into_handle();
 
-    let stop_token = run_server(db_handle.clone());
+    let stop_token = run_server(db_handle.clone(), port);
     mainwindow::open_gui(db_handle);
     stop_token.stop();
 }

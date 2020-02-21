@@ -1,4 +1,4 @@
-use crate::geometry::Point;
+use crate::geometry::{Point, Size};
 use crate::style::Color;
 
 pub enum VerticalAnchor {
@@ -25,6 +25,7 @@ pub trait Canvas {
         vertical_anchor: VerticalAnchor,
         text: &str,
     );
+    fn text_size(&self, text: &str) -> Size;
     fn draw_line(&mut self, points: &[Point]);
     fn draw_polygon(&mut self, points: &[Point]);
     fn draw_circle(&mut self, center: &Point, radius: f64);

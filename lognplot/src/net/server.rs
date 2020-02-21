@@ -26,9 +26,8 @@ impl ServerHandle {
     }
 }
 
-pub fn run_server(db: TsDbHandle) -> ServerHandle {
+pub fn run_server(db: TsDbHandle, port: u16) -> ServerHandle {
     let (kill_switch, kill_switch_receiver) = oneshot::channel::<()>();
-
     let thread = thread::spawn(move || {
         info!("Server thread begun!!!");
         let mut runtime = tokio::runtime::Builder::new()
@@ -39,7 +38,7 @@ pub fn run_server(db: TsDbHandle) -> ServerHandle {
             .unwrap();
 
         runtime.block_on(async {
-            server_prog(db, kill_switch_receiver).await.unwrap();
+            server_prog(db, port, kill_switch_receiver).await.unwrap();
         });
 
         info!("Server finished!!!");
@@ -53,10 +52,10 @@ pub fn run_server(db: TsDbHandle) -> ServerHandle {
 
 async fn server_prog(
     db: TsDbHandle,
+    port: u16,
     kill_switch_receiver: oneshot::Receiver<()>,
 ) -> std::io::Result<()> {
     let peers: Arc<Mutex<Vec<PeerHandle>>> = Arc::new(Mutex::new(vec![]));
-    let port: u16 = 12345;
     info!("Starting up server at port {}!", port);
     // let addr = format!("127.0.0.1:{}", port);
     // let addr: std::net::SocketAddr = addr.parse().unwrap();

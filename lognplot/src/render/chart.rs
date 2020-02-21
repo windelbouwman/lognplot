@@ -84,16 +84,23 @@ where
     fn draw_legend(&mut self) {
         let x = self.layout.plot_left + 10.0;
         let mut y = self.layout.plot_top + 10.0;
+
+        // Grab height of capital x as text height:
+        let text_height = self.canvas.text_size("X").height;
+        let square_size = text_height;
+        let dy = text_height * 1.3;
+
         for curve in &self.chart.curves {
             let name = curve.name();
             let color = curve.color();
             self.canvas.set_pen(color, 1.0);
-            self.canvas.fill_rect(x, y - 5.0, 10.0, 10.0);
-            let p = Point::new(x + 15.0, y);
+            self.canvas
+                .fill_rect(x, y - square_size / 2.0, square_size, square_size);
+            let p = Point::new(x + dy, y);
             self.canvas.set_pen(Color::black(), 1.0);
             self.canvas
                 .print_text(&p, HorizontalAnchor::Left, VerticalAnchor::Middle, &name);
-            y += 15.0;
+            y += dy;
         }
     }
 

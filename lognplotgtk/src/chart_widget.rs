@@ -276,14 +276,18 @@ pub fn setup_drawing_area(draw_area: gtk::DrawingArea, db: TsDbHandle) -> ChartS
 
     draw_area.connect_drag_data_received(
         clone!(@strong chart_state => move |w, _dc, _x, _y, data, _info, _time| {
-            let signal_names: String = data.get_text().expect("Must work!!").to_string();
-            info!("DROP {}", signal_names);
-            for signal_name in signal_names.split(":") {
-                chart_state
-                .borrow_mut()
-                .add_curve(&signal_name);
+            let mime_payload: String = data.get_text().expect("Must work!!").to_string();
+            if let Ok(signal_names) = serde_json::from_str::<Vec<String>>(&mime_payload) {
+                info!("DROP {:?}", signal_names);
+                for signal_name in signal_names {
+                    chart_state
+                    .borrow_mut()
+                    .add_curve(&signal_name);
+                }
+                w.grab_focus();
+            } else {
+                error!("Error in drop action, could not plot mime data: {}", mime_payload);
             }
-            w.grab_focus();
         }),
     );
 
