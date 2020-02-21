@@ -10,7 +10,7 @@ from lognplot.client import LognplotTcpClient
 
 
 def main():
-    t = 0.0
+    t = time.time()
     dt = 2.0
     client = LognplotTcpClient()
     client.connect()

@@ -4,7 +4,6 @@
 //! For rendering this chart, see the render module.
 
 mod axis;
-mod axis_options;
 mod chart;
 mod curve;
 

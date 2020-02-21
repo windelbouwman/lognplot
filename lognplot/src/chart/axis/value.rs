@@ -1,6 +1,10 @@
-use super::axis_options::AxisOptions;
+use super::date::calc_date_ticks;
+use super::options::AxisOptions;
+use super::TickLabels;
 use crate::geometry::Range;
 use crate::time::{TimeSpan, TimeStamp};
+
+use super::util::{calc_tick_spacing, ceil_to_multiple_of};
 
 #[derive(Clone)]
 pub struct ValueAxis {
@@ -18,8 +22,6 @@ impl Default for ValueAxis {
         }
     }
 }
-
-type TickLabels = Vec<(f64, String)>;
 
 impl ValueAxis {
     pub fn set_limits(&mut self, begin: f64, end: f64) {
@@ -93,34 +95,16 @@ impl ValueAxis {
     pub fn calc_tiks(&self, n_ticks: usize) -> TickLabels {
         calc_tiks(self.range.begin(), self.range.end(), n_ticks)
     }
-}
 
-/// Given the current axis, calculate sensible
-/// tick spacing.
-fn calc_tick_spacing(domain: f64, n_ticks: usize) -> (i32, f64) {
-    assert!(n_ticks >= 2);
-
-    let scale = domain.log10().floor();
-    let approx = (10.0_f64).powf(-scale) * domain / (n_ticks as f64);
-
-    // Snap to grid:
-    // 10, 20, 25, 50
-    let options = vec![0.1, 0.2, 0.5, 1.0, 2.0, 5.0];
-    let best = options
-        .iter()
-        .min_by_key(|x| (((*x - approx).abs() * 1_000_000.0) as i64))
-        .unwrap();
-
-    trace!(
-        "domain: {}, Scale {}, approx: {}, best: {}",
-        domain,
-        scale,
-        approx,
-        best
-    );
-
-    let tick_width = best * (10.0_f64).powf(scale);
-    (scale as i32, tick_width)
+    /// Calculate date time tick markers.
+    pub fn calc_date_tiks(&self, n_ticks: usize) -> TickLabels {
+        let begin = self.range.begin();
+        if begin > 1_581_715_634.0 {
+            calc_date_ticks(begin, self.range.end(), n_ticks)
+        } else {
+            calc_tiks(begin, self.range.end(), n_ticks)
+        }
+    }
 }
 
 /// Calculate the proper major tick and minor ticks for
@@ -150,18 +134,6 @@ fn calc_tiks(begin: f64, end: f64, n_ticks: usize) -> TickLabels {
     res
 }
 
-/// Round the given number to an integer multiple of the given step size.
-fn ceil_to_multiple_of(x: f64, step: f64) -> f64 {
-    let offset = x % step;
-    if offset > 0.0 {
-        x + step - offset
-    } else if offset < 0.0 {
-        x - offset
-    } else {
-        x
-    }
-}
-
 fn create_points(start: f64, end: f64, step: f64) -> Vec<f64> {
     let mut res = vec![];
     let mut x = start;
@@ -174,6 +146,7 @@ fn create_points(start: f64, end: f64, step: f64) -> Vec<f64> {
 
 #[cfg(test)]
 mod tests {
+    use super::super::tests::compare_ticks;
     use super::{TickLabels, ValueAxis};
 
     #[test]
@@ -234,13 +207,5 @@ mod tests {
             (3.2, "3.2".to_string()),
         ];
         compare_ticks(ticks, expected_ticks);
-    }
-
-    fn compare_ticks(ticks1: TickLabels, ticks2: TickLabels) {
-        assert!(ticks1.len() == ticks2.len());
-        for (t1, t2) in ticks1.into_iter().zip(ticks2.into_iter()) {
-            assert_eq!(t1.1, t2.1);
-            assert!((t1.0 - t2.0).abs() < 1.0e-6);
-        }
     }
 }
