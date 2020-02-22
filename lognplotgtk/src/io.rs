@@ -4,7 +4,7 @@ use lognplot::tsdb::TsDbHandle;
 use std::path::Path;
 
 pub fn export_data(db: TsDbHandle, filename: &Path) -> hdf5::Result<()> {
-    let file = hdf5::File::open(filename, "w")?;
+    let file = hdf5::File::create(filename)?;
     export_db(db, file)
 }
 
@@ -65,7 +65,7 @@ mod tests {
 
         let db_handle = db.into_handle();
 
-        let file = hdf5::File::open("export_test.h5", "w")?;
+        let file = hdf5::File::create("export_test.h5")?;
         export_db(db_handle, file)
     }
 }

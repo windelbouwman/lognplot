@@ -4,7 +4,7 @@ use super::TickLabels;
 use crate::geometry::Range;
 use crate::time::{TimeSpan, TimeStamp};
 
-use super::util::{calc_tick_spacing, ceil_to_multiple_of};
+use super::util::{calc_tick_spacing, ceil_to_multiple_of, format_at_scale};
 
 #[derive(Clone)]
 pub struct ValueAxis {
@@ -120,12 +120,7 @@ fn calc_tiks(begin: f64, end: f64, n_ticks: usize) -> TickLabels {
     let res = tick_values
         .into_iter()
         .map(|x| {
-            let label = if scale > 0 {
-                x.to_string()
-            } else {
-                let digits = (-scale + 1) as usize;
-                format!("{0:.width$}", x, width = digits)
-            };
+            let label = format_at_scale(x, scale);
             (x, label)
         })
         .collect();

@@ -1,5 +1,4 @@
-use super::util::calc_tick_spacing;
-use super::util::ceil_to_multiple_of;
+use super::util::{calc_tick_spacing, ceil_to_multiple_of, format_at_scale};
 use super::TickLabels;
 use chrono::TimeZone;
 
@@ -23,12 +22,7 @@ pub fn calc_date_ticks(begin: f64, end: f64, n_ticks: usize) -> TickLabels {
         // start.format("%H:%M:%S").to_string()
         } else {
             let seconds_after_first: f64 = (counter as f64) * tick_step;
-            if scale > 0 {
-                format!("+{0} s", seconds_after_first)
-            } else {
-                let digits = (-scale + 1) as usize;
-                format!("+{0:.width$} s", seconds_after_first, width = digits)
-            }
+            format!("+{0} s", format_at_scale(seconds_after_first, scale))
         };
         ticks.push((x, label));
         x += tick_step;

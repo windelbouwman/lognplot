@@ -37,3 +37,14 @@ pub fn ceil_to_multiple_of(x: f64, step: f64) -> f64 {
         x
     }
 }
+
+/// Format a number at with the proper amount of precision given the
+/// scale the number is in.
+pub fn format_at_scale(value: f64, scale: i32) -> String {
+    if scale > 0 {
+        format!("{:.0}", value)
+    } else {
+        let digits = (-scale + 1) as usize;
+        format!("{0:.width$}", value, width = digits)
+    }
+}

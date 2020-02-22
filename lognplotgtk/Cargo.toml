@@ -16,7 +16,7 @@ glib = "0.9"
 gio = "0.8"
 gtk = "0.8"
 gdk = "0.12"
-hdf5 = { version = "0.5.2", optional = true }
+hdf5 = { version = "0.6", optional = true }
 lognplot = { path = "../lognplot", features=["cairo", "server"] }
 log = "0.4.8"
 ndarray = "0.12"
