@@ -44,7 +44,7 @@
     <property name="website">https://github.com/windelbouwman/lognplot</property>
     <property name="website_label" translatable="yes">Github website</property>
     <property name="authors">Windel Bouwman</property>
-    <property name="logo">../../logo/icon.png</property>
+    <property name="logo_icon_name"/>
     <property name="license_type">gpl-3-0</property>
     <child>
       <placeholder/>

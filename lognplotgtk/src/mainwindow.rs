@@ -52,6 +52,10 @@ fn build_ui(app: &gtk::Application, app_state: GuiStateHandle) {
     // Connect application to window:
     let window: gtk::Window = builder.get_object("top_unit").unwrap();
 
+    if let Ok(Some(icon)) = crate::resources::load_icon() {
+        window.set_icon(Some(&icon));
+    }
+
     window.set_application(Some(app));
     window.show_all();
 }
@@ -59,6 +63,12 @@ fn build_ui(app: &gtk::Application, app_state: GuiStateHandle) {
 fn setup_menus(builder: &gtk::Builder, app_state: GuiStateHandle) {
     let about_menu_item: gtk::MenuItem = builder.get_object("about_menu_item").unwrap();
     let about_dialog: gtk::AboutDialog = builder.get_object("about_dialog").unwrap();
+    if let Ok(Some(icon)) = crate::resources::load_icon() {
+        about_dialog.set_icon(Some(&icon));
+    }
+    if let Ok(Some(logo)) = crate::resources::load_logo() {
+        about_dialog.set_logo(Some(&logo));
+    }
 
     about_menu_item.connect_activate(move |_m| {
         about_dialog.show();

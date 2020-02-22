@@ -15,3 +15,5 @@ matrix:
       cache: cargo
       script:
         - cargo test -p lognplot
+        - cargo build --release -p clognplot
+        - make -C demo/c

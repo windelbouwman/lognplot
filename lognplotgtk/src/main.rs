@@ -9,6 +9,7 @@ mod chart_widget;
 mod io;
 mod mainwindow;
 mod mime_types;
+mod resources;
 mod session;
 mod signal_repository;
 mod state;
