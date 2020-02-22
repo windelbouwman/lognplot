@@ -147,7 +147,7 @@ fn create_points(start: f64, end: f64, step: f64) -> Vec<f64> {
 #[cfg(test)]
 mod tests {
     use super::super::tests::compare_ticks;
-    use super::{TickLabels, ValueAxis};
+    use super::ValueAxis;
 
     #[test]
     fn tick_calculation() {
