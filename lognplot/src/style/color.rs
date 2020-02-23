@@ -44,13 +44,23 @@ impl FromStr for Color {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let (r, g, b) = match s {
-            "red" => (255, 0, 0),
-            "green" => (0, 255, 0),
-            "blue" => (0, 0, 255),
-            "black" => (0, 0, 0),
-            other => {
-                return Err(format!("Color not recognized: {}", other));
+        let (r, g, b) = if s.starts_with("#") {
+            if s.len() != 7 {
+                return Err(format!("Color code {} must have 7 digits", s));
+            }
+            let r = u8::from_str_radix(&s[1..3], 16).unwrap();
+            let g = u8::from_str_radix(&s[3..5], 16).unwrap();
+            let b = u8::from_str_radix(&s[5..7], 16).unwrap();
+            (r, g, b)
+        } else {
+            match s {
+                "red" => (255, 0, 0),
+                "green" => (0, 255, 0),
+                "blue" => (0, 0, 255),
+                "black" => (0, 0, 0),
+                other => {
+                    return Err(format!("Color not recognized: {}", other));
+                }
             }
         };
 

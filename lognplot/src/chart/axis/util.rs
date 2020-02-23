@@ -41,10 +41,27 @@ pub fn ceil_to_multiple_of(x: f64, step: f64) -> f64 {
 /// Format a number at with the proper amount of precision given the
 /// scale the number is in.
 pub fn format_at_scale(value: f64, scale: i32) -> String {
-    if scale > 0 {
+    if scale > 5 {
+        let exp = scale - 1;
+        let factor = (10.0_f64).powi(exp);
+        format!("{:.0}e{}", value / factor, exp)
+    } else if scale > 0 {
         format!("{:.0}", value)
     } else {
         let digits = (-scale + 1) as usize;
         format!("{0:.width$}", value, width = digits)
+    }
+}
+
+#[cfg(test)]
+pub mod tests {
+    use super::format_at_scale;
+
+    #[test]
+    fn test_format_scale() {
+        assert_eq!("10", format_at_scale(10.0, 3));
+        assert_eq!("10.000", format_at_scale(10.0, -2));
+        assert_eq!("200e6", format_at_scale(2e8, 7));
+        assert_eq!("1000e9", format_at_scale(1e12, 10));
     }
 }
