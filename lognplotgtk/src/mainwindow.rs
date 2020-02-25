@@ -35,16 +35,7 @@ fn build_ui(app: &gtk::Application, app_state: GuiStateHandle) {
 
     let signal_pane = setup_signal_repository(&builder, db.clone(), add_curve);
 
-    // First chart:
-    let draw_area: gtk::DrawingArea = builder.get_object("chart_control").unwrap();
-    let chart_state1 = setup_drawing_area(draw_area, db.clone(), "chart1");
-    app_state.borrow_mut().add_chart(chart_state1);
-
-    // Second chart:
-    let draw_area2: gtk::DrawingArea = builder.get_object("chart_control2").unwrap();
-    let chart_state2 = setup_drawing_area(draw_area2, db, "chart2");
-    app_state.borrow_mut().add_chart(chart_state2);
-
+    setup_chart_area(&builder, app_state.clone(), db.clone());
     setup_menus(&builder, app_state.clone());
     setup_toolbar_buttons(&builder, app_state.clone());
     setup_notify_change(app_state, signal_pane);
@@ -60,9 +51,33 @@ fn build_ui(app: &gtk::Application, app_state: GuiStateHandle) {
     window.show_all();
 }
 
-fn setup_menus(builder: &gtk::Builder, app_state: GuiStateHandle) {
-    let about_menu_item: gtk::MenuItem = builder.get_object("about_menu_item").unwrap();
-    let about_dialog: gtk::AboutDialog = builder.get_object("about_dialog").unwrap();
+fn setup_chart_area(builder: &gtk::Builder, app_state: GuiStateHandle, db: TsDbHandle) {
+    // First chart:
+    let draw_area: gtk::DrawingArea = builder.get_object("chart_control").unwrap();
+    let chart_state1 = setup_drawing_area(draw_area, db.clone(), "chart1");
+    app_state.borrow_mut().add_chart(chart_state1);
+
+    // Second chart:
+    let draw_area2: gtk::DrawingArea = builder.get_object("chart_control2").unwrap();
+    let chart_state2 = setup_drawing_area(draw_area2.clone(), db, "chart2");
+    app_state.borrow_mut().add_chart(chart_state2);
+
+    // Split handler:
+    // TODO:
+    // let hbx: gtk::Box = builder.get_object("root_splittor_box").unwrap();
+    // let split_button: gtk::Button = builder.get_object("button_split_vertical").unwrap();
+    // split_button.connect_clicked(move |_| {
+    //     println!("Split!");
+    //     hbx.remove(&draw_area2);
+    //     let paned = gtk::Paned::new(gtk::Orientation::Vertical);
+    //     hbx.add(&paned);
+    //     paned.add(&draw_area2);
+
+    //     // hbx.add_widget(draw_area2);
+    // });
+}
+
+fn setup_about_dialog(about_dialog: &gtk::AboutDialog) {
     if let Ok(Some(icon)) = crate::resources::load_icon() {
         about_dialog.set_icon(Some(&icon));
     }
@@ -70,43 +85,52 @@ fn setup_menus(builder: &gtk::Builder, app_state: GuiStateHandle) {
         about_dialog.set_logo(Some(&logo));
     }
 
-    about_menu_item.connect_activate(move |_m| {
+    about_dialog.connect_delete_event(|p, _| gtk::Inhibit(p.hide_on_delete()));
+    about_dialog.connect_response(|p, _| p.hide());
+}
+
+fn setup_menus(builder: &gtk::Builder, app_state: GuiStateHandle) {
+    let about_menu_item: gtk::MenuItem = builder.get_object("about_menu_item").unwrap();
+    let about_dialog: gtk::AboutDialog = builder.get_object("about_dialog").unwrap();
+
+    setup_about_dialog(&about_dialog);
+    about_menu_item.connect_activate(move |_| {
         about_dialog.show();
     });
 
     let top_level: gtk::Window = builder.get_object("top_unit").unwrap();
     let quit_menu: gtk::MenuItem = builder.get_object("menu_quit").unwrap();
-    quit_menu.connect_activate(move |_m| {
+    quit_menu.connect_activate(move |_| {
         top_level.close();
     });
 
     let menu_new: gtk::MenuItem = builder.get_object("menu_new").unwrap();
-    menu_new.connect_activate(clone!(@strong app_state => move |_m| {
+    menu_new.connect_activate(clone!(@strong app_state => move |_| {
         app_state.borrow().drop_data();
     }));
 
     let menu_open: gtk::MenuItem = builder.get_object("menu_open").unwrap();
     menu_open.set_sensitive(false);
-    menu_open.connect_activate(move |_m| {
+    menu_open.connect_activate(move |_| {
         unimplemented!("TODO: implement open");
     });
 
     let top_level: gtk::Window = builder.get_object("top_unit").unwrap();
     let menu_save: gtk::MenuItem = builder.get_object("menu_save").unwrap();
     menu_save.set_sensitive(cfg!(feature = "export-hdf5"));
-    menu_save.connect_activate(clone!(@strong app_state => move |_m| {
+    menu_save.connect_activate(clone!(@strong app_state => move |_| {
         save_data_as_hdf5(&top_level, &app_state);
     }));
 
     let top_level: gtk::Window = builder.get_object("top_unit").unwrap();
     let menu_save_session: gtk::MenuItem = builder.get_object("menu_save_session").unwrap();
-    menu_save_session.connect_activate(clone!(@strong app_state => move |_m| {
+    menu_save_session.connect_activate(clone!(@strong app_state => move |_| {
         save_session(&top_level, &app_state);
     }));
 
     let top_level: gtk::Window = builder.get_object("top_unit").unwrap();
     let menu_load_session: gtk::MenuItem = builder.get_object("menu_load_session").unwrap();
-    menu_load_session.connect_activate(clone!(@strong app_state => move |_m| {
+    menu_load_session.connect_activate(clone!(@strong app_state => move |_| {
         load_session(&top_level, &app_state);
     }));
 }
@@ -234,22 +258,6 @@ fn setup_toolbar_buttons(builder: &gtk::Builder, app_state: GuiStateHandle) {
         let tb_zoom_fit: gtk::ToolButton = builder.get_object("tb_zoom_fit").unwrap();
         tb_zoom_fit.connect_clicked(clone!(@strong app_state => move |_tb| {
             app_state.borrow_mut().zoom_fit();
-        }));
-    }
-
-    // pan left:
-    {
-        let tb_pan_left: gtk::ToolButton = builder.get_object("tb_pan_left").unwrap();
-        tb_pan_left.connect_clicked(clone!(@strong app_state => move |_tb| {
-            app_state.borrow_mut().pan_left();
-        }));
-    }
-
-    // pan right:
-    {
-        let tb_pan_right: gtk::ToolButton = builder.get_object("tb_pan_right").unwrap();
-        tb_pan_right.connect_clicked(clone!(@strong app_state => move |_tb| {
-            app_state.borrow_mut().pan_right();
         }));
     }
 

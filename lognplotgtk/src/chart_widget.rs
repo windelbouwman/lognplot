@@ -28,14 +28,6 @@ pub struct ChartState {
     id: String,
 }
 
-fn new_chart() -> Chart {
-    let mut chart = Chart::default();
-    chart.set_xlabel("Time");
-    chart.set_ylabel("Value");
-    chart.set_title("W00tie");
-    chart
-}
-
 /// category10 color wheel
 ///
 /// See also: https://matplotlib.org/users/dflt_style_changes.html#colors-in-default-property-cycle
@@ -46,7 +38,7 @@ pub const CATEGORY10_COLORS: &'static [&'static str] = &[
 
 impl ChartState {
     pub fn new(db: TsDbHandle, draw_area: gtk::DrawingArea, id: &str) -> Self {
-        let chart = new_chart();
+        let chart = Chart::default();
         // let color_wheel = vec!["blue".to_string(), "red".to_string(), "green".to_string()];
         let color_wheel: Vec<String> = CATEGORY10_COLORS.iter().map(|s| s.to_string()).collect();
 

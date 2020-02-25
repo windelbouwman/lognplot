@@ -74,18 +74,6 @@ impl GuiState {
         }
     }
 
-    pub fn pan_left(&self) {
-        for chart in &self.charts {
-            chart.borrow_mut().pan_left();
-        }
-    }
-
-    pub fn pan_right(&self) {
-        for chart in &self.charts {
-            chart.borrow_mut().pan_right();
-        }
-    }
-
     pub fn clear_curves(&self) {
         for chart in &self.charts {
             chart.borrow_mut().clear_curves();
