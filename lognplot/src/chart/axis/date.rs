@@ -6,7 +6,7 @@ use chrono::TimeZone;
 ///
 /// Strategies here:
 /// - First tick is full date time, subsequent ticks indicate +10s +20s
-pub fn calc_date_ticks(begin: f64, end: f64, n_ticks: usize) -> TickLabels {
+pub fn calc_date_ticks(begin: f64, end: f64, n_ticks: usize) -> (String, TickLabels) {
     let (scale, tick_step) = calc_tick_spacing(end - begin, n_ticks);
 
     let first_tick: f64 = ceil_to_multiple_of(begin, tick_step);
@@ -14,21 +14,18 @@ pub fn calc_date_ticks(begin: f64, end: f64, n_ticks: usize) -> TickLabels {
     let mut ticks = vec![];
     let mut x: f64 = first_tick;
     let mut counter: usize = 0;
+
+    let start = f64_to_datetime(x);
+    let prefix = start.format("%Y-%m-%d %H:%M:%S%.9f").to_string();
+
     while x < end {
-        let is_first: bool = ticks.is_empty();
-        let label: String = if is_first {
-            let start = f64_to_datetime(x);
-            start.format("%Y-%m-%d %H:%M:%S").to_string()
-        // start.format("%H:%M:%S").to_string()
-        } else {
-            let seconds_after_first: f64 = (counter as f64) * tick_step;
-            format!("+{0} s", format_at_scale(seconds_after_first, scale))
-        };
+        let seconds_after_first: f64 = (counter as f64) * tick_step;
+        let label: String = format!("+{0} s", format_at_scale(seconds_after_first, scale));
         ticks.push((x, label));
         x += tick_step;
         counter += 1;
     }
-    ticks
+    (prefix, ticks)
 }
 
 fn f64_to_datetime(timestamp: f64) -> chrono::DateTime<chrono::Local> {
@@ -41,17 +38,13 @@ fn f64_to_datetime(timestamp: f64) -> chrono::DateTime<chrono::Local> {
 pub mod tests {
     use super::super::tests::compare_ticks;
     use super::calc_date_ticks;
-    use chrono::TimeZone;
 
     #[test]
     fn date_ticks() {
-        let ticks = calc_date_ticks(1581610682.0, 1581610782.0, 7);
-
-        let start = chrono::Local.timestamp(1581610690, 0);
-        let label0 = start.format("%Y-%m-%d %H:%M:%S").to_string();
+        let (_, ticks) = calc_date_ticks(1581610682.0, 1581610782.0, 7);
 
         let expected_ticks = vec![
-            (1581610690.0, label0),
+            (1581610690.0, "+0 s".to_string()),
             (1581610700.0, "+10 s".to_string()),
             (1581610710.0, "+20 s".to_string()),
             (1581610720.0, "+30 s".to_string()),

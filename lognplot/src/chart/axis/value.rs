@@ -97,12 +97,13 @@ impl ValueAxis {
     }
 
     /// Calculate date time tick markers.
-    pub fn calc_date_tiks(&self, n_ticks: usize) -> TickLabels {
+    pub fn calc_date_tiks(&self, n_ticks: usize) -> (Option<String>, TickLabels) {
         let begin = self.range.begin();
         if begin > 1_581_715_634.0 {
-            calc_date_ticks(begin, self.range.end(), n_ticks)
+            let (prefix, labels) = calc_date_ticks(begin, self.range.end(), n_ticks);
+            (Some(prefix), labels)
         } else {
-            calc_tiks(begin, self.range.end(), n_ticks)
+            (None, calc_tiks(begin, self.range.end(), n_ticks))
         }
     }
 }

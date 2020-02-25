@@ -121,14 +121,13 @@ where
     /// Draw x and y axis with tick markers.
     fn draw_axis(&mut self) {
         let n_x_ticks = (self.layout.plot_width as usize / PIXELS_PER_X_TICK).max(2);
-        let x_ticks: Vec<(TimeStamp, String)> = self
-            .chart
-            .x_axis
-            .calc_date_tiks(n_x_ticks)
+        let (prefix, ticks) = self.chart.x_axis.calc_date_tiks(n_x_ticks);
+
+        let x_ticks: Vec<(TimeStamp, String)> = ticks
             .into_iter()
             .map(|(x, s)| (TimeStamp::new(x), s))
             .collect();
-        self.draw_x_axis(&x_ticks);
+        self.draw_x_axis(prefix, &x_ticks);
 
         let n_y_ticks = (self.layout.plot_height as usize / PIXELS_PER_Y_TICK).max(2);
         let y_ticks = self.chart.y_axis.calc_tiks(n_y_ticks);
@@ -140,7 +139,7 @@ where
     }
 
     // X axis:
-    fn draw_x_axis(&mut self, x_ticks: &[(TimeStamp, String)]) {
+    fn draw_x_axis(&mut self, prefix: Option<String>, x_ticks: &[(TimeStamp, String)]) {
         self.canvas.set_pen(Color::black(), 1.0);
         self.canvas.set_line_width(2.0);
 
@@ -148,6 +147,15 @@ where
             let p = Point::new(self.layout.width / 2.0, self.layout.height - 2.0);
             self.canvas
                 .print_text(&p, HorizontalAnchor::Middle, VerticalAnchor::Bottom, title);
+        }
+
+        if let Some(prefix) = prefix {
+            let p = Point::new(
+                self.options.padding,
+                self.layout.height - self.options.padding,
+            );
+            self.canvas
+                .print_text(&p, HorizontalAnchor::Left, VerticalAnchor::Bottom, &prefix);
         }
 
         let y = self.layout.plot_bottom + self.options.tick_size;
@@ -158,21 +166,13 @@ where
 
         self.canvas.draw_line(&baseline);
 
-        let mut first = true;
         for (p, label) in x_ticks.iter() {
             let x = self.x_domain_to_pixel(p);
             let p1 = Point::new(x, y + self.options.tick_size + 5.0);
             let p2 = Point::new(x, self.layout.plot_bottom + self.options.tick_size);
             let p3 = Point::new(x, y + self.options.tick_size);
-            let horizontal_anchor = if first && label.len() > 10 {
-                HorizontalAnchor::Right
-            } else {
-                HorizontalAnchor::Middle
-            };
+            let horizontal_anchor = HorizontalAnchor::Middle;
 
-            if first {
-                first = false;
-            }
             self.canvas
                 .print_text(&p1, horizontal_anchor, VerticalAnchor::Top, label);
             let line = vec![p2, p3];
