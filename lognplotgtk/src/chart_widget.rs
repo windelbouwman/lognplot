@@ -6,6 +6,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::time::Instant;
 
+use crate::meta_metrics::MetricRecorder;
 use crate::session::DashBoardItem;
 use lognplot::chart::{Chart, Curve, CurveData};
 use lognplot::geometry::Size;
@@ -21,9 +22,10 @@ pub struct ChartState {
     color_wheel: Vec<String>,
     color_index: usize,
     tailing: Option<f64>,
-
+    perf_tracer: MetricRecorder,
     drag: Option<(f64, f64)>,
     draw_area: gtk::DrawingArea,
+    id: String,
 }
 
 fn new_chart() -> Chart {
@@ -43,19 +45,21 @@ pub const CATEGORY10_COLORS: &'static [&'static str] = &[
 ];
 
 impl ChartState {
-    pub fn new(db: TsDbHandle, draw_area: gtk::DrawingArea) -> Self {
+    pub fn new(db: TsDbHandle, draw_area: gtk::DrawingArea, id: &str) -> Self {
         let chart = new_chart();
         // let color_wheel = vec!["blue".to_string(), "red".to_string(), "green".to_string()];
         let color_wheel: Vec<String> = CATEGORY10_COLORS.iter().map(|s| s.to_string()).collect();
 
         ChartState {
             chart,
-            db,
+            db: db.clone(),
             color_wheel,
             color_index: 0,
             tailing: None,
+            perf_tracer: MetricRecorder::new(db.clone()),
             drag: None,
             draw_area,
+            id: id.to_owned(),
         }
     }
 
@@ -258,21 +262,150 @@ impl ChartState {
             self.zoom_to_last(x);
         }
     }
+
+    fn on_scroll_event(&mut self, e: &gdk::EventScroll) -> Inhibit {
+        debug!(
+            "Scroll wheel event! {:?}, {:?}, {:?}",
+            e,
+            e.get_delta(),
+            e.get_direction()
+        );
+        let size = get_size(&self.draw_area);
+        let pixel_x_pos = e.get_position().0;
+        let around = Some((pixel_x_pos, size));
+        match e.get_direction() {
+            gdk::ScrollDirection::Up => {
+                self.zoom_in_horizontal(around);
+            }
+            gdk::ScrollDirection::Down => {
+                self.zoom_out_horizontal(around);
+            }
+            gdk::ScrollDirection::Left => {
+                self.pan_left();
+            }
+            gdk::ScrollDirection::Right => {
+                self.pan_right();
+            }
+            _ => {}
+        }
+        Inhibit(false)
+    }
+
+    fn draw_on_canvas(&self, canvas: &cairo::Context) -> Inhibit {
+        let size = get_size(&self.draw_area);
+
+        // println!("Draw, width = {:?}, height= {:?}", width, height);
+        canvas.set_font_size(14.0);
+        let mut canvas2 = CairoCanvas::new(&canvas);
+
+        let t1 = Instant::now();
+
+        draw_chart(&self.chart, &mut canvas2, size.clone());
+
+        let t2 = Instant::now();
+        let draw_duration = t2 - t1;
+        trace!("Drawing time: {:?}", draw_duration);
+
+        // TODO: re-enable this internal performance metric:
+        let draw_seconds: f64 = draw_duration.as_secs_f64();
+        self.perf_tracer.log_meta_metric(
+            &format!("META_chart_render_time_{}", self.id),
+            t1,
+            draw_seconds,
+        );
+
+        // Focus indicator!
+        let is_focus = self.draw_area.is_focus();
+        if is_focus {
+            let padding = 1.0;
+            gtk::render_focus(
+                &self.draw_area.get_style_context(),
+                &canvas,
+                padding,
+                padding,
+                size.width - 2.0 * padding,
+                size.height - 2.0 * padding,
+            );
+        }
+
+        Inhibit(false)
+    }
+
+    fn on_motion_event(&mut self, e: &gdk::EventMotion) -> Inhibit {
+        let pos = e.get_position();
+        debug!("Mouse motion! {:?}", pos);
+        let size = get_size(&self.draw_area);
+
+        self.set_cursor(Some((pos.0, size.clone())));
+
+        if e.get_state().contains(gdk::ModifierType::BUTTON1_MASK) {
+            self.move_drag(size, pos.0, pos.1);
+        }
+        self.repaint();
+
+        Inhibit(false)
+    }
+
+    fn on_key(&mut self, key: &gdk::EventKey) -> Inhibit {
+        self.disable_tailing();
+        match key.get_keyval() {
+            gdk::enums::key::Up | gdk::enums::key::w => {
+                self.pan_up();
+            }
+            gdk::enums::key::Down | gdk::enums::key::s => {
+                self.pan_down();
+            }
+            gdk::enums::key::Left | gdk::enums::key::a => {
+                self.pan_left();
+            }
+            gdk::enums::key::Right | gdk::enums::key::d => {
+                self.pan_right();
+            }
+            gdk::enums::key::i => {
+                self.zoom_in_vertical();
+            }
+            gdk::enums::key::k => {
+                self.zoom_out_vertical();
+            }
+            gdk::enums::key::KP_Add | gdk::enums::key::l => {
+                self.zoom_in_horizontal(None);
+            }
+            gdk::enums::key::KP_Subtract | gdk::enums::key::j => {
+                self.zoom_out_horizontal(None);
+            }
+            gdk::enums::key::Home | gdk::enums::key::Return => {
+                self.zoom_fit();
+            }
+            gdk::enums::key::BackSpace => {
+                self.clear_curves();
+            }
+
+            x => {
+                println!("Key! {:?}", x);
+            }
+        };
+
+        Inhibit(true)
+    }
 }
 
 pub type ChartStateHandle = Rc<RefCell<ChartState>>;
 
-pub fn setup_drawing_area(draw_area: gtk::DrawingArea, db: TsDbHandle) -> ChartStateHandle {
+pub fn setup_drawing_area(
+    draw_area: gtk::DrawingArea,
+    db: TsDbHandle,
+    chart_id: &str,
+) -> ChartStateHandle {
     // Always get mouse pointer motion:
     draw_area.add_events(gdk::EventMask::ENTER_NOTIFY_MASK);
     draw_area.add_events(gdk::EventMask::POINTER_MOTION_MASK);
     draw_area.add_events(gdk::EventMask::LEAVE_NOTIFY_MASK);
 
-    let chart_state = ChartState::new(db, draw_area.clone()).into_handle();
+    let chart_state = ChartState::new(db, draw_area.clone(), chart_id).into_handle();
 
     // Connect draw event:
     draw_area.connect_draw(
-        clone!(@strong chart_state => move |a, c| { draw_on_canvas(a, c, chart_state.clone()) } ),
+        clone!(@strong chart_state => move |_, c| { chart_state.borrow().draw_on_canvas(c) } ),
     );
 
     // Connect drop event:
@@ -308,23 +441,23 @@ pub fn setup_drawing_area(draw_area: gtk::DrawingArea, db: TsDbHandle) -> ChartS
         Inhibit(false)
     }));
 
-    draw_area.connect_leave_notify_event(clone!(@strong chart_state => move |_w, _e| {
+    draw_area.connect_leave_notify_event(clone!(@strong chart_state => move |_, _| {
         debug!("Mouse leave!");
         chart_state.borrow_mut().set_cursor(None);
         Inhibit(false)
     }));
 
-    draw_area.connect_motion_notify_event(clone!(@strong chart_state => move |w, e| {
-        on_motion_event(w, e, chart_state.clone())
+    draw_area.connect_motion_notify_event(clone!(@strong chart_state => move |_, e| {
+        chart_state.borrow_mut().on_motion_event(e)
     }));
 
-    draw_area.connect_scroll_event(clone!(@strong chart_state => move |w, e| {
-        on_scroll_event(w, e, chart_state.clone())
+    draw_area.connect_scroll_event(clone!(@strong chart_state => move |_, e| {
+        chart_state.borrow_mut().on_scroll_event(e)
     }));
 
     // Connect key event:
     draw_area.connect_key_press_event(
-        clone!(@strong chart_state => move |_a, k| { on_key(k, chart_state.clone()) } ),
+        clone!(@strong chart_state => move |_, k| { chart_state.borrow_mut().on_key(k) } ),
     );
 
     setup_tailing_timer(chart_state.clone());
@@ -332,105 +465,10 @@ pub fn setup_drawing_area(draw_area: gtk::DrawingArea, db: TsDbHandle) -> ChartS
     chart_state
 }
 
-fn on_motion_event(
-    drawing_area: &gtk::DrawingArea,
-    e: &gdk::EventMotion,
-    chart_state: ChartStateHandle,
-) -> Inhibit {
-    let pos = e.get_position();
-    debug!("Mouse motion! {:?}", pos);
-    let size = get_size(drawing_area);
-
-    chart_state
-        .borrow_mut()
-        .set_cursor(Some((pos.0, size.clone())));
-
-    if e.get_state().contains(gdk::ModifierType::BUTTON1_MASK) {
-        chart_state.borrow_mut().move_drag(size, pos.0, pos.1);
-    }
-    drawing_area.queue_draw();
-
-    Inhibit(false)
-}
-
-fn on_scroll_event(
-    drawing_area: &gtk::DrawingArea,
-    e: &gdk::EventScroll,
-    chart_state: ChartStateHandle,
-) -> Inhibit {
-    debug!(
-        "Scroll wheel event! {:?}, {:?}, {:?}",
-        e,
-        e.get_delta(),
-        e.get_direction()
-    );
-    let size = get_size(drawing_area);
-    let pixel_x_pos = e.get_position().0;
-    let around = Some((pixel_x_pos, size));
-    match e.get_direction() {
-        gdk::ScrollDirection::Up => {
-            chart_state.borrow_mut().zoom_in_horizontal(around);
-        }
-        gdk::ScrollDirection::Down => {
-            chart_state.borrow_mut().zoom_out_horizontal(around);
-        }
-        gdk::ScrollDirection::Left => {
-            chart_state.borrow_mut().pan_left();
-        }
-        gdk::ScrollDirection::Right => {
-            chart_state.borrow_mut().pan_right();
-        }
-        _ => {}
-    }
-    Inhibit(false)
-}
-
 fn get_size(drawing_area: &gtk::DrawingArea) -> Size {
     let width = drawing_area.get_allocated_width() as f64;
     let height = drawing_area.get_allocated_height() as f64;
     Size::new(width, height)
-}
-
-fn draw_on_canvas(
-    drawing_area: &gtk::DrawingArea,
-    canvas: &cairo::Context,
-    chart_state: ChartStateHandle,
-) -> Inhibit {
-    let size = get_size(drawing_area);
-
-    // println!("Draw, width = {:?}, height= {:?}", width, height);
-    canvas.set_font_size(14.0);
-    let mut canvas2 = CairoCanvas::new(&canvas);
-
-    let t1 = Instant::now();
-
-    draw_chart(&chart_state.borrow().chart, &mut canvas2, size.clone());
-
-    let t2 = Instant::now();
-    let draw_duration = t2 - t1;
-    trace!("Drawing time: {:?}", draw_duration);
-
-    // TODO: re-enable this internal performance metric:
-    // let draw_seconds: f64 = draw_duration.as_secs_f64();
-    // app_state
-    //     .borrow()
-    //     .log_meta_metric("META_chart_render_time", t1, draw_seconds);
-
-    // Focus indicator!
-    let is_focus = drawing_area.is_focus();
-    if is_focus {
-        let padding = 1.0;
-        gtk::render_focus(
-            &drawing_area.get_style_context(),
-            &canvas,
-            padding,
-            padding,
-            size.width - 2.0 * padding,
-            size.height - 2.0 * padding,
-        );
-    }
-
-    Inhibit(false)
 }
 
 /// Setup a timer to implement tailing of signals.
@@ -441,46 +479,4 @@ fn setup_tailing_timer(chart_state: ChartStateHandle) {
         gtk::prelude::Continue(true)
     };
     gtk::timeout_add(100, tick);
-}
-
-fn on_key(key: &gdk::EventKey, chart_state: ChartStateHandle) -> Inhibit {
-    chart_state.borrow_mut().disable_tailing();
-    match key.get_keyval() {
-        gdk::enums::key::Up | gdk::enums::key::w => {
-            chart_state.borrow_mut().pan_up();
-        }
-        gdk::enums::key::Down | gdk::enums::key::s => {
-            chart_state.borrow_mut().pan_down();
-        }
-        gdk::enums::key::Left | gdk::enums::key::a => {
-            chart_state.borrow_mut().pan_left();
-        }
-        gdk::enums::key::Right | gdk::enums::key::d => {
-            chart_state.borrow_mut().pan_right();
-        }
-        gdk::enums::key::i => {
-            chart_state.borrow_mut().zoom_in_vertical();
-        }
-        gdk::enums::key::k => {
-            chart_state.borrow_mut().zoom_out_vertical();
-        }
-        gdk::enums::key::KP_Add | gdk::enums::key::l => {
-            chart_state.borrow_mut().zoom_in_horizontal(None);
-        }
-        gdk::enums::key::KP_Subtract | gdk::enums::key::j => {
-            chart_state.borrow_mut().zoom_out_horizontal(None);
-        }
-        gdk::enums::key::Home | gdk::enums::key::Return => {
-            chart_state.borrow_mut().zoom_fit();
-        }
-        gdk::enums::key::BackSpace => {
-            chart_state.borrow_mut().clear_curves();
-        }
-
-        x => {
-            println!("Key! {:?}", x);
-        }
-    };
-
-    Inhibit(true)
 }

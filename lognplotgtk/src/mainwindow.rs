@@ -37,12 +37,12 @@ fn build_ui(app: &gtk::Application, app_state: GuiStateHandle) {
 
     // First chart:
     let draw_area: gtk::DrawingArea = builder.get_object("chart_control").unwrap();
-    let chart_state1 = setup_drawing_area(draw_area, db.clone());
+    let chart_state1 = setup_drawing_area(draw_area, db.clone(), "chart1");
     app_state.borrow_mut().add_chart(chart_state1);
 
     // Second chart:
     let draw_area2: gtk::DrawingArea = builder.get_object("chart_control2").unwrap();
-    let chart_state2 = setup_drawing_area(draw_area2, db);
+    let chart_state2 = setup_drawing_area(draw_area2, db, "chart2");
     app_state.borrow_mut().add_chart(chart_state2);
 
     setup_menus(&builder, app_state.clone());

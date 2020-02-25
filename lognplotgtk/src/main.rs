@@ -8,6 +8,7 @@ mod chart_widget;
 #[cfg(feature = "export-hdf5")]
 mod io;
 mod mainwindow;
+mod meta_metrics;
 mod mime_types;
 mod resources;
 mod session;

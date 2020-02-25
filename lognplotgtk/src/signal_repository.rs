@@ -151,7 +151,7 @@ fn setup_drag_drop(builder: &gtk::Builder) {
         &targets,
         gdk::DragAction::COPY,
     );
-    tree_view.connect_drag_data_get(|w, _dc, data, info, _time| {
+    tree_view.connect_drag_data_get(|w, _, data, info, _| {
         let selected_names = get_selected_signal_names(w);
         let mime_payload: String = serde_json::to_string(&selected_names).unwrap();
         let r = data.set_text(&mime_payload);
@@ -168,12 +168,7 @@ fn get_selected_signal_names(w: &gtk::TreeView) -> Vec<String> {
     let mut selected_names: Vec<String> = vec![];
     for selected_row in selected_rows {
         if let Some(tree_iter) = tree_model.get_iter(&selected_row) {
-            let value = tree_model
-                .get_value(&tree_iter, 0)
-                .get::<String>()
-                .unwrap()
-                .unwrap();
-            // let signal_name = &value;
+            let value = get_signal_name(&tree_model, &tree_iter);
             selected_names.push(value);
         }
     }
@@ -183,13 +178,18 @@ fn get_selected_signal_names(w: &gtk::TreeView) -> Vec<String> {
 fn setup_activate<F: Fn(&str) + 'static>(builder: &gtk::Builder, add_curve: F) {
     let tree_view: gtk::TreeView = builder.get_object("signal_tree_view").unwrap();
 
-    tree_view.connect_row_activated(move |tv, path, _column| {
+    tree_view.connect_row_activated(move |tv, path, _| {
         let model = tv.get_model().unwrap();
         let iter = model.get_iter(path).unwrap();
-        let value = model.get_value(&iter, 0).get::<String>().unwrap().unwrap();
+        let value = get_signal_name(&model, &iter);
 
         debug!("Signal activated: {}, adding to chart.", value);
         // Add activated signal to plot:
         add_curve(&value);
     });
+}
+
+/// Given a model and an iterator get the signal name.
+fn get_signal_name(model: &gtk::TreeModel, iter: &gtk::TreeIter) -> String {
+    model.get_value(iter, 0).get::<String>().unwrap().unwrap()
 }
