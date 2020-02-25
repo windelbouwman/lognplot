@@ -3,7 +3,7 @@
 use super::canvas::{HorizontalAnchor, VerticalAnchor};
 use super::Canvas;
 use super::{ChartLayout, ChartOptions};
-use crate::chart::{Chart, Curve};
+use crate::chart::{Chart, Cursor, Curve};
 use crate::geometry::{Point, Size};
 use crate::style::Color;
 use crate::time::TimeStamp;
@@ -260,8 +260,8 @@ where
     }
 
     /// Draw the cursor as a line on the data.
-    fn draw_cursor_line(&mut self, cursor: &TimeStamp) {
-        let x = self.x_domain_to_pixel(cursor);
+    fn draw_cursor_line(&mut self, cursor: &Cursor) {
+        let x = self.x_domain_to_pixel(&cursor.0);
         let top = Point::new(x, self.layout.plot_top);
         let bottom = Point::new(x, self.layout.plot_bottom);
         let points = vec![top, bottom];
@@ -271,43 +271,107 @@ where
         self.canvas.draw_line(&points);
     }
 
-    /// Draw values around cursor.
-    fn draw_cursor_values(&mut self, cursor: &TimeStamp) {
+    fn get_cursor_values(&self, cursor: &Cursor) -> Vec<(TimeStamp, f64, Vec<String>, Color)> {
+        let mut values = vec![];
         for curve in &self.chart.curves {
-            let optional_label = if let Some(curve_data) = self.query_curve_data(&curve).borrow() {
-                match curve_data {
+            if let Some(curve_data) = self.query_curve_data(&curve).borrow() {
+                let value = match curve_data {
                     RangeQueryResult::Aggregations(aggregations) => {
-                        find_closest_aggregation(&aggregations, cursor).map(|a| {
+                        find_closest_aggregation(&aggregations, &cursor.0).map(|a| {
                             let ts = a.timespan.middle_timestamp();
                             let metrics = a.metrics();
                             let max = metrics.max;
-                            let label =
-                                format!("mean={}, min={} max={}", metrics.mean(), metrics.min, max);
-                            (ts, max, label)
+                            let labels = vec![
+                                format!("mean={}", metrics.mean()),
+                                format!("min={}", metrics.min),
+                                format!("max={}", max),
+                            ];
+                            (ts, max, labels, curve.color())
                         })
                     }
                     RangeQueryResult::Observations(observations) => {
-                        find_closest_observation(&observations, cursor).map(|o| {
+                        find_closest_observation(&observations, &cursor.0).map(|o| {
                             let ts = o.timestamp.clone();
                             let value = o.value.value;
                             let label = format!("{}", value);
-                            (ts, value, label)
+                            (ts, value, vec![label], curve.color())
                         })
                     }
-                }
-            } else {
-                None
-            };
+                };
 
-            if let Some((ts, value, label)) = optional_label {
+                if let Some(value) = value {
+                    values.push(value);
+                }
+            }
+        }
+        values
+    }
+
+    /// Draw values around cursor.
+    fn draw_cursor_values(&mut self, cursor: &Cursor) {
+        let values = self.get_cursor_values(cursor);
+        if !values.is_empty() {
+            // Draw circle markers:
+            for (ts, value, _, color) in values.iter() {
                 let x = self.x_domain_to_pixel(&ts);
-                let y = self.y_domain_to_pixel(value);
+                let y = self.y_domain_to_pixel(*value);
                 let p1 = Point::new(x, y);
-                let p = Point::new(x + 5.0, y - 15.0);
-                self.canvas.set_pen(curve.color(), 1.0);
+                self.canvas.set_pen(color.clone(), 1.0);
                 self.canvas.draw_circle(&p1, 8.0);
+            }
+
+            let padding = 3.0;
+            let mut background_width: f64 = 0.0;
+            let mut background_height: f64 = 0.0;
+            let square_size: f64 = self.canvas.text_size("X").height;
+
+            for (_, _, labels, _) in values.iter() {
+                for label in labels {
+                    let text_size = self.canvas.text_size(&label);
+
+                    if text_size.width > background_width {
+                        background_width = text_size.width;
+                    }
+                    background_height += text_size.height + padding;
+                }
+            }
+
+            let x = self.x_domain_to_pixel(&cursor.0) + padding;
+            let mut y = self.y_domain_to_pixel(cursor.1);
+
+            background_width += padding * 3.0 + square_size;
+            background_height += padding;
+
+            self.canvas.set_pen(Color::white(), 1.0);
+            self.canvas
+                .fill_rect(x, y, background_width, background_height);
+            self.canvas.set_pen(Color::black(), 1.0);
+            self.canvas
+                .draw_rect(x, y, background_width, background_height);
+
+            // Draw background rectangle and labels
+            // let background_width = values.iter().map().max()
+            for (_, _, labels, color) in values {
+                // Draw color:
+                self.canvas.set_pen(color, 1.0);
                 self.canvas
-                    .print_text(&p, HorizontalAnchor::Left, VerticalAnchor::Bottom, &label);
+                    .fill_rect(x + padding, y + padding, square_size, square_size);
+
+                // Draw labels:
+                self.canvas.set_pen(Color::black(), 1.0);
+                for label in labels {
+                    let p = Point::new(
+                        x + square_size + padding * 2.0,
+                        y + padding + square_size / 2.0,
+                    );
+                    self.canvas.print_text(
+                        &p,
+                        HorizontalAnchor::Left,
+                        VerticalAnchor::Middle,
+                        &label,
+                    );
+                    y += square_size + padding;
+                }
             }
         }
     }

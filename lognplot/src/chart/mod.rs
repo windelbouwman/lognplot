@@ -13,8 +13,11 @@ pub use curve::{Curve, CurveData};
 
 use crate::geometry::Size;
 use crate::render::Canvas;
+use crate::time::TimeStamp;
 
 use crate::render::draw_chart;
+
+pub type Cursor = (TimeStamp, f64);
 
 /// Entry function to plot a series of x values versus a series of y values!
 pub fn plot<C>(canvas: &mut C, x: Vec<f64>, y: Vec<f64>, size: Size)

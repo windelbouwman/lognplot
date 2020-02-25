@@ -11,7 +11,7 @@ use crate::session::DashBoardItem;
 use lognplot::chart::{Chart, Curve, CurveData};
 use lognplot::geometry::Size;
 use lognplot::render::{draw_chart, CairoCanvas};
-use lognplot::render::{x_pixel_to_domain, x_pixels_to_domain};
+use lognplot::render::{x_pixel_to_domain, x_pixels_to_domain, y_pixel_to_domain};
 use lognplot::time::TimeStamp;
 use lognplot::tsdb::DataChangeEvent;
 use lognplot::tsdb::TsDbHandle;
@@ -202,11 +202,12 @@ impl ChartState {
         self.repaint();
     }
 
-    pub fn set_cursor(&mut self, loc: Option<(f64, Size)>) {
+    pub fn set_cursor(&mut self, loc: Option<((f64, f64), Size)>) {
         if let Some((pixel, size)) = loc {
-            let timestamp = x_pixel_to_domain(pixel, &self.chart.x_axis, size);
+            let timestamp = x_pixel_to_domain(pixel.0, &self.chart.x_axis, size.clone());
+            let value = y_pixel_to_domain(pixel.1, &self.chart.y_axis, size);
             let timestamp = TimeStamp::new(timestamp);
-            self.chart.cursor = Some(timestamp);
+            self.chart.cursor = Some((timestamp, value));
         } else {
             self.chart.cursor = None;
         }
@@ -336,7 +337,7 @@ impl ChartState {
         debug!("Mouse motion! {:?}", pos);
         let size = get_size(&self.draw_area);
 
-        self.set_cursor(Some((pos.0, size.clone())));
+        self.set_cursor(Some(((pos.0, pos.1), size.clone())));
 
         if e.get_state().contains(gdk::ModifierType::BUTTON1_MASK) {
             self.move_drag(size, pos.0, pos.1);

@@ -21,6 +21,10 @@ impl Color {
         Self::new(120, 120, 120)
     }
 
+    pub fn white() -> Self {
+        Self::new(255, 255, 255)
+    }
+
     pub fn r(&self) -> u8 {
         self.r
     }

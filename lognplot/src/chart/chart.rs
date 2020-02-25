@@ -2,7 +2,8 @@
 
 use super::axis::ValueAxis;
 use super::curve::Curve;
-use crate::time::{TimeSpan, TimeStamp};
+use super::Cursor;
+use crate::time::TimeSpan;
 use crate::tsdb::{Aggregation, Sample, SampleMetrics};
 
 /// A single 2D-chart
@@ -21,7 +22,7 @@ pub struct Chart {
     pub curves: Vec<Curve>,
 
     /// The position of the cursor.
-    pub cursor: Option<TimeStamp>,
+    pub cursor: Option<Cursor>,
 }
 
 impl Default for Chart {
