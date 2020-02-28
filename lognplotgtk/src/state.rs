@@ -65,8 +65,8 @@ impl GuiState {
     }
 
     pub fn delete_chart(&mut self, chart: &ChartStateHandle) {
-        // TODO?
-        // self.charts.remove_item(&chart);
+        self.charts
+            .retain(|e| e.borrow().id() != chart.borrow().id());
     }
 
     pub fn num_charts(&self) -> usize {

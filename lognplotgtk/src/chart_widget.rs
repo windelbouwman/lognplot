@@ -59,6 +59,10 @@ impl ChartState {
         Rc::new(RefCell::new(self))
     }
 
+    pub fn id(&self) -> &str {
+        &self.id
+    }
+
     pub fn add_curve(&mut self, name: &str) {
         // self.chart.add_curve(Curve::new());
         if !self.chart.has_signal(name) {

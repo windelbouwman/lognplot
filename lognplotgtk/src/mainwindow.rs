@@ -95,13 +95,6 @@ fn new_plot_window(app_state: GuiStateHandle, amount: usize) {
     let chart_id = format!("chart{}", app_state.borrow().num_charts() + 1);
     let new_window = gtk::WindowBuilder::new()
         .type_(gtk::WindowType::Toplevel)
-        .can_focus(true)
-        .can_default(true)
-        .has_focus(true)
-        .has_default(true)
-        .is_focus(true)
-        .receives_default(true)
-        .sensitive(true)
         .title(&format!("Lognplot {}", chart_id))
         .build();
     if let Ok(Some(icon)) = crate::resources::load_icon() {
@@ -116,7 +109,10 @@ fn new_plot_window(app_state: GuiStateHandle, amount: usize) {
         // Create grid of plots:
         for row in 0_i32..amount as i32 {
             for column in 0_i32..amount as i32 {
-                let chart_id = format!("chart{}", app_state.borrow().num_charts() + 1);
+                let chart_id = format!(
+                    "chart{}",
+                    app_state.borrow().num_charts() + 1 + charts.len()
+                );
                 // println!("Row: {}", row);
                 let new_chart_area = gtk::DrawingArea::new();
                 grid.attach(&new_chart_area, column, row, 1, 1);
@@ -157,6 +153,11 @@ fn massage_drawing_area(new_chart_area: &gtk::DrawingArea) {
     new_chart_area.show();
     new_chart_area.set_hexpand(true);
     new_chart_area.set_vexpand(true);
+
+    new_chart_area.set_can_focus(true);
+    new_chart_area.set_can_default(true);
+    new_chart_area.set_sensitive(true);
+    new_chart_area.set_receives_default(true);
 
     // Enable some events to allow scrolling by mouse.
     new_chart_area.add_events(gdk::EventMask::ENTER_NOTIFY_MASK);
