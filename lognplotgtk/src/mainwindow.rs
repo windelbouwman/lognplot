@@ -89,6 +89,89 @@ fn setup_about_dialog(about_dialog: &gtk::AboutDialog) {
     about_dialog.connect_response(|p, _| p.hide());
 }
 
+/// Construct new plot window with the given number of plots.
+fn new_plot_window(app_state: GuiStateHandle, amount: usize) {
+    info!("New window!");
+    let chart_id = format!("chart{}", app_state.borrow().num_charts() + 1);
+    let new_window = gtk::WindowBuilder::new()
+        .type_(gtk::WindowType::Toplevel)
+        .can_focus(true)
+        .can_default(true)
+        .has_focus(true)
+        .has_default(true)
+        .is_focus(true)
+        .receives_default(true)
+        .sensitive(true)
+        .title(&format!("Lognplot {}", chart_id))
+        .build();
+    if let Ok(Some(icon)) = crate::resources::load_icon() {
+        new_window.set_icon(Some(&icon));
+    }
+
+    let mut charts = vec![];
+    if amount > 1 {
+        let grid = gtk::Grid::new();
+        new_window.add(&grid);
+
+        // Create grid of plots:
+        for row in 0_i32..amount as i32 {
+            for column in 0_i32..amount as i32 {
+                let chart_id = format!("chart{}", app_state.borrow().num_charts() + 1);
+                // println!("Row: {}", row);
+                let new_chart_area = gtk::DrawingArea::new();
+                grid.attach(&new_chart_area, column, row, 1, 1);
+                massage_drawing_area(&new_chart_area);
+
+                let chart_n =
+                    setup_drawing_area(new_chart_area, app_state.borrow().db.clone(), &chart_id);
+                charts.push(chart_n);
+            }
+        }
+
+        grid.show();
+    } else {
+        let new_chart_area = gtk::DrawingArea::new();
+        new_window.add(&new_chart_area);
+        massage_drawing_area(&new_chart_area);
+
+        let chart_n = setup_drawing_area(new_chart_area, app_state.borrow().db.clone(), &chart_id);
+        charts.push(chart_n);
+    }
+
+    for chart_n in &charts {
+        app_state.borrow_mut().add_chart(chart_n.clone());
+    }
+
+    new_window.connect_delete_event(clone!(@strong app_state => move |_, _| {
+        // Remove all chart structs from the app state:
+        for chart_n in &charts {
+            app_state.borrow_mut().delete_chart(&chart_n);
+        }
+        Inhibit(false)
+    }));
+    new_window.show_all();
+}
+
+/// Apply various settings to the drawing area.
+fn massage_drawing_area(new_chart_area: &gtk::DrawingArea) {
+    new_chart_area.show();
+    new_chart_area.set_hexpand(true);
+    new_chart_area.set_vexpand(true);
+
+    // Enable some events to allow scrolling by mouse.
+    new_chart_area.add_events(gdk::EventMask::ENTER_NOTIFY_MASK);
+    new_chart_area.add_events(gdk::EventMask::POINTER_MOTION_MASK);
+    new_chart_area.add_events(gdk::EventMask::LEAVE_NOTIFY_MASK);
+    new_chart_area.add_events(gdk::EventMask::BUTTON_PRESS_MASK);
+    new_chart_area.add_events(gdk::EventMask::BUTTON_MOTION_MASK);
+    new_chart_area.add_events(gdk::EventMask::BUTTON_RELEASE_MASK);
+    new_chart_area.add_events(gdk::EventMask::FOCUS_CHANGE_MASK);
+    new_chart_area.add_events(gdk::EventMask::STRUCTURE_MASK);
+    new_chart_area.add_events(gdk::EventMask::EXPOSURE_MASK);
+    new_chart_area.add_events(gdk::EventMask::SCROLL_MASK);
+    new_chart_area.add_events(gdk::EventMask::KEY_PRESS_MASK);
+}
+
 fn setup_menus(builder: &gtk::Builder, app_state: GuiStateHandle) {
     let about_menu_item: gtk::MenuItem = builder.get_object("about_menu_item").unwrap();
     let about_dialog: gtk::AboutDialog = builder.get_object("about_dialog").unwrap();
@@ -97,6 +180,17 @@ fn setup_menus(builder: &gtk::Builder, app_state: GuiStateHandle) {
     about_menu_item.connect_activate(move |_| {
         about_dialog.show();
     });
+
+    let menu_new_plot_window: gtk::MenuItem = builder.get_object("menu_new_plot_window").unwrap();
+    menu_new_plot_window.connect_activate(clone!(@strong app_state => move |_| {
+        new_plot_window(app_state.clone(), 1);
+    }));
+
+    let menu_new_grid_plot_window: gtk::MenuItem =
+        builder.get_object("menu_new_grid_plot_window").unwrap();
+    menu_new_grid_plot_window.connect_activate(clone!(@strong app_state => move |_| {
+        new_plot_window(app_state.clone(), 2);
+    }));
 
     let top_level: gtk::Window = builder.get_object("top_unit").unwrap();
     let quit_menu: gtk::MenuItem = builder.get_object("menu_quit").unwrap();

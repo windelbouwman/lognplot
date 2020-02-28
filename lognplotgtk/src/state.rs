@@ -64,6 +64,15 @@ impl GuiState {
         self.charts.push(chart);
     }
 
+    pub fn delete_chart(&mut self, chart: &ChartStateHandle) {
+        // TODO?
+        // self.charts.remove_item(&chart);
+    }
+
+    pub fn num_charts(&self) -> usize {
+        self.charts.len()
+    }
+
     pub fn add_curve(&self, name: &str) {
         self.charts.first().unwrap().borrow_mut().add_curve(name);
     }
