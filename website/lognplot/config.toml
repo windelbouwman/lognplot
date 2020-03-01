@@ -1,0 +1,12 @@
+baseURL = "http://lognplot.org/"
+languageCode = "en-us"
+title = "Lognplot"
+# theme = "ananke"
+theme = "hugo-material-docs"
+
+# [params]
+
+[params.palette]
+primary = "green"
+accent  = "teal"
+

@@ -181,6 +181,7 @@ This is a list of things to do:
 There is an interesting list of similar projects. Do you know of another
 project? Please submit a pull request or an issue!
 
+- [Embedded debugger](https://github.com/DEMCON/EmbeddedDebugger)
 - [getcurve.io](https://getcurve.io/)
 - [grafana](https://grafana.com/)
     - Web based
