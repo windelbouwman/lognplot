@@ -7,8 +7,6 @@ use super::metrics::Metrics;
 use super::{Aggregation, Observation};
 use crate::time::TimeSpan;
 
-use std::cell::RefCell;
-
 /// This is the intermediate level fanout ratio.
 /// A higher number yields less overhead (zoom levels)
 const INTERMEDIATE_CHUNK_SIZE: usize = 4;
@@ -28,7 +26,7 @@ pub struct Btree<V, M>
 where
     M: Metrics<V> + From<V>,
 {
-    root: RefCell<Node<V, M>>,
+    root: Node<V, M>,
 }
 
 /// Create an empty b-tree
@@ -38,7 +36,7 @@ where
     V: Clone,
 {
     fn default() -> Self {
-        let root = RefCell::new(Node::new_leaf());
+        let root = Node::new_leaf();
         Btree { root }
     }
 }
@@ -49,35 +47,34 @@ where
     V: Clone,
 {
     /// Append a sample to the tree
-    pub fn append_sample(&self, observation: Observation<V>) {
+    pub fn append_sample(&mut self, observation: Observation<V>) {
         // Strategy, traverse down, until a leaf, and split on the way back upwards if
         // required.
         // Find proper chunk, or create one if required.
 
-        let optionally_root_split = self.root.borrow_mut().append_observation(observation);
+        let optionally_root_split = self.root.append_observation(observation);
 
         if let Some(root_sibling) = optionally_root_split {
             let new_root = Node::new_intermediate();
-            let old_root = self.root.replace(new_root);
-            self.root.borrow_mut().add_child(old_root);
-            self.root.borrow_mut().add_child(root_sibling);
+            let old_root = std::mem::replace(&mut self.root, new_root);
+            self.root.add_child(old_root);
+            self.root.add_child(root_sibling);
         }
     }
 
     /// Bulk import samples.
-    // pub fn append_samples(&self, samples: Vec<Sample>) {
-    //     for sample in samples {
-    //         self.append_sample(sample);
-    //     }
-    // }
+    pub fn append_samples(&mut self, samples: Vec<Observation<V>>) {
+        for sample in samples {
+            self.append_sample(sample);
+        }
+    }
 
     /// Query the tree for some data.
     ///
     /// This will go into deeper levels of detail, until a certain
     /// amount of data points is found.
     pub fn query_range(&self, timespan: &TimeSpan, max_items: usize) -> RangeQueryResult<V, M> {
-        let root_node = self.root.borrow();
-        let mut selection = root_node.select_range(timespan);
+        let mut selection = self.root.select_range(timespan);
 
         while selection.can_enhance() && selection.enhanced_size() < max_items {
             selection = selection.enhance(timespan);
@@ -93,8 +90,7 @@ where
     /// can be aggregated earlier on.
     pub fn range_summary(&self, timespan: &TimeSpan) -> Option<Aggregation<V, M>> {
         // Start with a selection in the root node
-        let root_node = self.root.borrow();
-        let mut partially_selected_nodes: Vec<&Node<V, M>> = vec![&root_node];
+        let mut partially_selected_nodes: Vec<&Node<V, M>> = vec![&self.root];
         let mut selected_nodes = vec![];
         let mut selected_observations: Vec<Observation<V>> = vec![];
         // let mut selection = root_node.select_range(timespan);
@@ -145,12 +141,12 @@ where
 
     /// Get a summary about all data in this tree.
     pub fn summary(&self) -> Option<Aggregation<V, M>> {
-        self.root.borrow().metrics()
+        self.root.metrics()
     }
 
     /// Get a flat list of all observation in this tree.
     pub fn to_vec(&self) -> Vec<Observation<V>> {
-        self.root.borrow().to_vec()
+        self.root.to_vec()
     }
 }
 
@@ -603,7 +599,7 @@ mod tests {
 
     #[test]
     fn btree_single_insertion() {
-        let tree = Btree::<Sample, SampleMetrics>::default();
+        let mut tree = Btree::<Sample, SampleMetrics>::default();
 
         // Insert some samples:
         let t1 = TimeStamp::from_seconds(1);
@@ -619,7 +615,7 @@ mod tests {
 
     #[test]
     fn btree_mutliple_insertions() {
-        let tree = Btree::<Sample, SampleMetrics>::default();
+        let mut tree = Btree::<Sample, SampleMetrics>::default();
 
         // Insert some samples:
         for i in 0..1000 {

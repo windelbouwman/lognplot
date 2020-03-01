@@ -5,7 +5,7 @@ use super::query::{Query, QueryResult};
 use super::trace::Trace;
 use super::ChangeSubscriber;
 use super::{Aggregation, Observation};
-use super::{Sample, SampleMetrics};
+use super::{QuickSummary, Sample, SampleMetrics};
 use crate::time::{TimeSpan, TimeStamp};
 use std::collections::HashMap;
 
@@ -51,8 +51,8 @@ impl TsDb {
     fn get_or_create_trace(&mut self, name: &str, first_timestamp: &TimeStamp) -> &mut Trace {
         if self.data.contains_key(name) {
             let trace = self.data.get(name).expect("name to be present");
-            if let Some(summary) = trace.summary(None) {
-                let last_saved_observation_time = summary.timespan.end;
+            if let Some(summary) = trace.quick_summary() {
+                let last_saved_observation_time = summary.last.timestamp;
 
                 if first_timestamp < &last_saved_observation_time {
                     // Copy trace into backup, and begin a new trace.
@@ -126,6 +126,10 @@ impl TsDb {
     // Download raw samples.
     pub fn get_raw_samples(&self, name: &str) -> Option<Vec<Observation<Sample>>> {
         self.data.get(name).map(|t| t.to_vec())
+    }
+
+    pub fn quick_summary(&self, name: &str) -> Option<QuickSummary> {
+        self.data.get(name)?.quick_summary()
     }
 
     /// Get a summary for a certain timerange (or all time) the given trace.

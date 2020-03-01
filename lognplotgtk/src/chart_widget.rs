@@ -31,7 +31,7 @@ pub struct ChartState {
 /// category10 color wheel
 ///
 /// See also: https://matplotlib.org/users/dflt_style_changes.html#colors-in-default-property-cycle
-pub const CATEGORY10_COLORS: &'static [&'static str] = &[
+pub const CATEGORY10_COLORS: &[&str] = &[
     "#1F77B4", "#FF7F0E", "#2CA02C", "#D62728", "#9467BD", "#8C564B", "#E377C2", "#7F7F7F",
     "#BCBD22", "#17BECF",
 ];
@@ -40,7 +40,7 @@ impl ChartState {
     pub fn new(db: TsDbHandle, draw_area: gtk::DrawingArea, id: &str) -> Self {
         let chart = Chart::default();
         // let color_wheel = vec!["blue".to_string(), "red".to_string(), "green".to_string()];
-        let color_wheel: Vec<String> = CATEGORY10_COLORS.iter().map(|s| s.to_string()).collect();
+        let color_wheel: Vec<String> = CATEGORY10_COLORS.iter().map(|s| (*s).to_string()).collect();
 
         ChartState {
             chart,
@@ -48,7 +48,7 @@ impl ChartState {
             color_wheel,
             color_index: 0,
             tailing: None,
-            perf_tracer: MetricRecorder::new(db.clone()),
+            perf_tracer: MetricRecorder::new(db),
             drag: None,
             draw_area,
             id: id.to_owned(),

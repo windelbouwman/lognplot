@@ -48,7 +48,7 @@ impl FromStr for Color {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let (r, g, b) = if s.starts_with("#") {
+        let (r, g, b) = if s.starts_with('#') {
             if s.len() != 7 {
                 return Err(format!("Color code {} must have 7 digits", s));
             }

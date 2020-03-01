@@ -22,7 +22,7 @@ pub use metrics::Metrics;
 pub use notify::{ChangeSubscriber, DataChangeEvent};
 pub use observation::Observation;
 pub use query::{Query, QueryResult};
-pub use sample::{Sample, SampleMetrics};
+pub use sample::{QuickSummary, Sample, SampleMetrics};
 pub use trace::Trace;
 
 #[cfg(test)]

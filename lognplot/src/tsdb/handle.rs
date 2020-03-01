@@ -1,7 +1,9 @@
 //! Thread usable handle. Wrapper around a database.
 
 use super::ChangeSubscriber;
-use super::{Aggregation, Observation, Query, QueryResult, Sample, SampleMetrics, TsDb};
+use super::{
+    Aggregation, Observation, Query, QueryResult, QuickSummary, Sample, SampleMetrics, TsDb,
+};
 use crate::time::TimeSpan;
 use std::sync::{Arc, Mutex};
 
@@ -49,6 +51,21 @@ impl LockedTsDb {
         self.db.lock().unwrap().get_raw_samples(name)
     }
 
+    /// Grab a quick data summary.
+    ///
+    /// This summary includes:
+    /// - sample count
+    /// - last observation
+    pub fn quick_summary(&self, name: &str) -> Option<QuickSummary> {
+        self.db.lock().unwrap().quick_summary(name)
+    }
+
+    /// Retrieve a detailed summary of the data.
+    ///
+    /// Summary includes:
+    /// - mean, min, max, standard deviation
+    /// - sample count
+    /// - first, last observations
     pub fn summary(
         &self,
         name: &str,

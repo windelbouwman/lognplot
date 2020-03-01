@@ -35,7 +35,7 @@ fn build_ui(app: &gtk::Application, app_state: GuiStateHandle) {
 
     let signal_pane = setup_signal_repository(&builder, db.clone(), add_curve);
 
-    setup_chart_area(&builder, app_state.clone(), db.clone());
+    setup_chart_area(&builder, app_state.clone(), db);
     setup_menus(&builder, app_state.clone());
     setup_toolbar_buttons(&builder, app_state.clone());
     setup_notify_change(app_state, signal_pane);
@@ -59,7 +59,7 @@ fn setup_chart_area(builder: &gtk::Builder, app_state: GuiStateHandle, db: TsDbH
 
     // Second chart:
     let draw_area2: gtk::DrawingArea = builder.get_object("chart_control2").unwrap();
-    let chart_state2 = setup_drawing_area(draw_area2.clone(), db, "chart2");
+    let chart_state2 = setup_drawing_area(draw_area2, db, "chart2");
     app_state.borrow_mut().add_chart(chart_state2);
 
     // Split handler:

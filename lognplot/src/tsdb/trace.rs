@@ -6,7 +6,7 @@
 
 // use std::cell::RefCell;
 use super::query::{Query, QueryResult};
-use super::sample::{Sample, SampleMetrics};
+use super::sample::{QuickSummary, Sample, SampleMetrics};
 use super::{Aggregation, Btree, Observation};
 use crate::time::TimeSpan;
 
@@ -14,20 +14,24 @@ use crate::time::TimeSpan;
 #[derive(Debug)]
 pub struct Trace {
     tree: Btree<Sample, SampleMetrics>,
+    count: usize,
+    last: Option<Observation<Sample>>,
 }
 
 impl Trace {
     /// Add a vector of values to this trace.
     pub fn add_values(&mut self, samples: Vec<Observation<Sample>>) {
-        for sample in samples {
-            self.add_sample(sample);
+        if !samples.is_empty() {
+            self.count += samples.len();
+            self.last = Some(samples.last().expect("At least a single sample.").clone());
+            self.tree.append_samples(samples);
         }
-
-        // self.tree.append_samples(samples);
     }
 
     /// Add a single sample.
     pub fn add_sample(&mut self, observation: Observation<Sample>) {
+        self.count += 1;
+        self.last = Some(observation.clone());
         self.tree.append_sample(observation);
     }
 
@@ -38,6 +42,14 @@ impl Trace {
         QueryResult {
             query,
             inner: Some(samples),
+        }
+    }
+
+    pub fn quick_summary(&self) -> Option<QuickSummary> {
+        if let Some(last) = &self.last {
+            Some(QuickSummary::new(self.count, last.clone()))
+        } else {
+            None
         }
     }
 
@@ -61,6 +73,10 @@ impl Default for Trace {
     fn default() -> Self {
         let tree = Default::default();
 
-        Self { tree }
+        Self {
+            tree,
+            count: 0,
+            last: None,
+        }
     }
 }

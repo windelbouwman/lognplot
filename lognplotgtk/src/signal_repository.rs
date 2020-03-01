@@ -41,14 +41,17 @@ impl SignalBrowser {
         I: Iterator<Item = &'a String>,
     {
         for signal_name in changed_signals {
-            if let Some(summary) = self.db.summary(&signal_name, None) {
+            if let Some(summary) = self.db.quick_summary(&signal_name) {
                 let row = self.model_map[signal_name];
                 let path: gtk::TreePath = gtk::TreePath::new_from_indicesv(&[row]);
                 if let Some(iter2) = self.model.get_iter(&path) {
                     self.model
                         .set_value(&iter2, 1, &summary.count.to_string().to_value());
-                    self.model
-                        .set_value(&iter2, 2, &summary.metrics().last.to_string().to_value());
+                    self.model.set_value(
+                        &iter2,
+                        2,
+                        &summary.last.value.value.to_string().to_value(),
+                    );
                 }
             }
         }
