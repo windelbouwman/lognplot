@@ -66,6 +66,11 @@ mod tests {
         let result = db.query(trace_name, query);
         assert_eq!(0, result.len());
 
+        // Summary info:
+        let quick_summary = db.quick_summary(trace_name).unwrap();
+        let summary = db.summary(trace_name, None).unwrap();
+        assert_eq!(quick_summary.count, summary.count);
+
         db.close();
     }
 }

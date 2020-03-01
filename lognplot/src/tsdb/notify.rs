@@ -10,6 +10,7 @@ use std::collections::HashSet;
 pub struct ChangeSubscriber {
     channel: mpsc::Sender<DataChangeEvent>,
     event: DataChangeEvent,
+    ready: bool,
 }
 
 impl ChangeSubscriber {
@@ -17,6 +18,7 @@ impl ChangeSubscriber {
         ChangeSubscriber {
             channel,
             event: DataChangeEvent::new(),
+            ready: false,
         }
     }
 
@@ -38,22 +40,22 @@ impl ChangeSubscriber {
     }
 
     pub fn poll_events(&mut self) {
+        self.ready = true;
         if !self.event.is_empty() {
             self.emit_event();
         }
     }
 
     fn emit_event(&mut self) {
-        if self.event.is_empty() {
-            return;
-        }
+        if self.ready {
+            if self.event.is_empty() {
+                return;
+            }
 
-        // TODO: if ready?
-        let ready = true;
-        if ready {
             match self.channel.try_send(self.event.clone()) {
                 Ok(()) => {
                     self.event = DataChangeEvent::new();
+                    self.ready = false;
                 }
                 Err(err) => {
                     if err.is_full() {
@@ -61,7 +63,6 @@ impl ChangeSubscriber {
                     }
                 }
             }
-            // println!("Send res: {:?}", res);
         }
     }
 }

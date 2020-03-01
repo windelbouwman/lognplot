@@ -144,7 +144,8 @@ impl TsDb {
     // Events
 
     /// Register a subscriber which will be notified of any change.
-    pub fn register_notifier(&mut self, subscriber: ChangeSubscriber) {
+    pub fn register_notifier(&mut self, mut subscriber: ChangeSubscriber) {
+        subscriber.poll_events();
         self.change_subscribers.push(subscriber);
     }
 
