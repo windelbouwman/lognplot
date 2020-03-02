@@ -8,7 +8,7 @@ description = "Connect to microcontroller via ST-link-v2 and read variable chang
 [dependencies]
 bytes = "0.5.3"
 clap = "2.33.0"
-gimli = "0.19.0"
+gimli = "0.20"
 log = "0.4.8"
 object = "0.17.0"
 rusb = "0.5.3"

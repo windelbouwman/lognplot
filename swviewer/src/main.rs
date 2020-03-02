@@ -3,10 +3,12 @@ extern crate log;
 
 mod coresight;
 mod stlink;
+mod symbolscanner;
 
 use coresight::{MemoryAccess, MemoryAddress, Target};
 use lognplot::net::TcpClient;
 use stlink::{StLink, StLinkMode, StLinkResult};
+use symbolscanner::{parse_elf_file, TraceVar};
 
 fn main() {
     // simple_logger::init().unwrap();
@@ -35,73 +37,12 @@ fn main() {
     info!("Log level: {}", log_level);
     info!("rusb version: {:?}", rusb::version());
 
-    parse_elf_file(elf_filename);
+    let trace_vars = parse_elf_file(elf_filename).unwrap();
 
-    if let Err(e) = do_magic() {
+    let trace_var = trace_vars.iter().find(|t| t.name == "a").unwrap();
+
+    if let Err(e) = do_magic(trace_var) {
         error!("An error occurred: {:?}", e);
-    }
-}
-
-fn parse_elf_file(elf_filename: String) {
-    info!("Parsing {}", elf_filename);
-
-    use object::Object;
-    let data = std::fs::read(elf_filename).unwrap();
-    let obj = object::File::parse(&data).unwrap();
-
-    // Copied from: https://github.com/gimli-rs/gimli/blob/master/examples/simple.rs
-    info!(
-        "Parsed obj file. Has debug syms: {:?}",
-        obj.has_debug_symbols()
-    );
-
-    let endian = if obj.is_little_endian() {
-        gimli::RunTimeEndian::Little
-    } else {
-        gimli::RunTimeEndian::Big
-    };
-
-    // Define some helper closures:
-    let load_section = |id: gimli::SectionId| -> Result<std::borrow::Cow<[u8]>, gimli::Error> {
-        Ok(obj
-            .section_data_by_name(id.name())
-            .unwrap_or(std::borrow::Cow::Borrowed(&[][..])))
-    };
-
-    let load_section_sup = |_| Ok(std::borrow::Cow::Borrowed(&[][..]));
-
-    let dwarf_cow = gimli::Dwarf::load(&load_section, &load_section_sup).unwrap();
-
-    let borrow_section: &dyn for<'a> Fn(
-        &'a std::borrow::Cow<[u8]>,
-    ) -> gimli::EndianSlice<'a, gimli::RunTimeEndian> =
-        &|section| gimli::EndianSlice::new(&*section, endian);
-
-    // Create `EndianSlice`s for all of the sections.
-    let dwarf = dwarf_cow.borrow(&borrow_section);
-
-    let mut iter = dwarf.units();
-    while let Some(header) = iter.next().unwrap() {
-        let unit = dwarf.unit(header).unwrap();
-        if let Some(name) = unit.name {
-            println!("Unit: {:?}", name.to_string());
-        }
-
-        let mut entries = unit.entries();
-        // entries.next_dfs().unwrap();
-        while let Some((depth, entry)) = entries.next_dfs().unwrap() {
-            // while let Some(entry) = entries.next_sibling().unwrap() {
-            let tag = entry.tag();
-            println!("  - entry: depth={}, tag={:?}", depth, entry.tag());
-            if tag == gimli::DW_TAG_variable {
-                println!("   -- it is a variable!");
-                let mut attrs = entry.attrs();
-                while let Some(attr) = attrs.next().unwrap() {
-                    println!("    --- attr name: {:?}", attr.name());
-                    println!("    --- attr value: {:?}", attr.value());
-                }
-            }
-        }
     }
 }
 
@@ -122,7 +63,7 @@ fn lsusb() -> StLinkResult<()> {
     Ok(())
 }
 
-fn do_magic() -> StLinkResult<()> {
+fn do_magic(trace_var: &TraceVar) -> StLinkResult<()> {
     lsusb()?;
     if let Some(st_link_device) = stlink::find_st_link()? {
         info!("ST link found!");
@@ -130,11 +71,11 @@ fn do_magic() -> StLinkResult<()> {
         interact(&sl)?;
         sl.cmd_x40()?;
 
-        if let Err(e) = interact2(&sl) {
+        if let Err(e) = interact2(&sl, trace_var) {
             error!("Error: {:?}", e);
         }
 
-        capture_trace_data(&sl)?;
+        capture_trace_data(&sl, trace_var)?;
     } else {
         warn!("No ST link found, please connect it?");
     }
@@ -180,7 +121,7 @@ fn interact(st_link: &StLink) -> StLinkResult<()> {
     Ok(())
 }
 
-fn interact2<M>(mem_access: &M) -> coresight::CoreSightResult<()>
+fn interact2<M>(mem_access: &M, trace_var: &TraceVar) -> coresight::CoreSightResult<()>
 where
     M: MemoryAccess,
 {
@@ -188,7 +129,7 @@ where
 
     target.read_debug_components()?;
     target.setup_tracing()?;
-    target.start_trace_memory_address(0x2000_0004)?;
+    target.start_trace_memory_address(trace_var.address)?; // 0x2000_0004
     for _a in 1..10 {
         target.poll()?;
     }
@@ -196,7 +137,7 @@ where
     Ok(())
 }
 
-fn capture_trace_data(st_link: &StLink) -> StLinkResult<()> {
+fn capture_trace_data(st_link: &StLink, trace_var: &TraceVar) -> StLinkResult<()> {
     use scroll::{Pread, LE};
     // Send data to lognplot GUI:
     let mut client = TcpClient::new("127.0.0.1:12345").unwrap();
@@ -242,7 +183,9 @@ fn capture_trace_data(st_link: &StLink) -> StLinkResult<()> {
 
                             let value: i32 = payload.pread(0).unwrap();
                             trace!("VAL={}", value);
-                            client.send_sample("a", timestamp, value as f64).unwrap();
+                            client
+                                .send_sample(&trace_var.name, timestamp, value as f64)
+                                .unwrap();
                         }
                     }
                     _ => {
