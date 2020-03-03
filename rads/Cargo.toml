@@ -1,0 +1,9 @@
+[package]
+name = "rads"
+version = "0.1.0"
+authors = ["Windel Bouwman <windel@windel.nl>"]
+edition = "2018"
+description = "Interface with Beckhoff via the ADS protocol"
+
+[dependencies]
+scroll = "0.10.1"
