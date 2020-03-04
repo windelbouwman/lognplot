@@ -4,6 +4,9 @@ extern crate log;
 mod coresight;
 mod stlink;
 mod symbolscanner;
+mod ui;
+
+use ui::run_tui;
 
 use coresight::{MemoryAccess, MemoryAddress, Target};
 use lognplot::net::TcpClient;
@@ -39,10 +42,12 @@ fn main() {
 
     let trace_vars = parse_elf_file(elf_filename).unwrap();
 
-    let trace_var = trace_vars.iter().find(|t| t.name == "a").unwrap();
+    let trace_var = run_tui(&trace_vars).unwrap();
 
-    if let Err(e) = do_magic(trace_var) {
-        error!("An error occurred: {:?}", e);
+    if let Some(v) = trace_var {
+        if let Err(e) = do_magic(v) {
+            error!("An error occurred: {:?}", e);
+        }
     }
 }
 
@@ -163,6 +168,7 @@ fn capture_trace_data(st_link: &StLink, trace_var: &TraceVar) -> StLinkResult<()
 
             decoder.feed(trace_data);
             while let Some(packet) = decoder.pull() {
+                // println!("Packet: {:?}", packet);
                 match packet {
                     coresight::TracePacket::TimeStamp { tc, ts } => {
                         debug!("Timestamp packet: tc={} ts={}", tc, ts);

@@ -55,8 +55,8 @@ pub fn parse_elf_file(elf_filename: String) -> gimli::Result<Vec<TraceVar>> {
             let tag = entry.tag();
             // println!("  - entry: depth={}, tag={:?}", depth, entry.tag());
             if tag == gimli::DW_TAG_variable {
-                println!("   -- it is a variable!");
-                if let Some(var) = analyze_variable_entry(entry, header.encoding())? {
+                // println!("   -- it is a variable!");
+                if let Some(var) = analyze_variable_entry(entry, &dwarf, header.encoding())? {
                     println!("Var: {} @ 0x{:08X}", var.name, var.address);
                     trace_vars.push(var);
                 }
@@ -74,6 +74,7 @@ pub fn parse_elf_file(elf_filename: String) -> gimli::Result<Vec<TraceVar>> {
 
 fn analyze_variable_entry<E>(
     entry: &gimli::DebuggingInformationEntry<gimli::EndianSlice<E>>,
+    dwarf: &gimli::Dwarf<gimli::EndianSlice<E>>,
     encoding: gimli::Encoding,
 ) -> gimli::Result<Option<TraceVar>>
 where
@@ -87,52 +88,70 @@ where
 
     let name: Option<String> =
         if let Some(value) = entry.attr_value(gimli::constants::DW_AT_name)? {
-            let name: String = match value {
-                gimli::AttributeValue::String(x) => x.to_string().unwrap().to_owned(),
-                _ => "??".to_owned(),
-            };
+            match value {
+                gimli::AttributeValue::String(x) => {
+                    let name: String = x.to_string().unwrap().to_owned();
+                    Some(name)
+                }
+                gimli::AttributeValue::DebugStrRef(str_ref) => {
+                    if let Ok(s) = dwarf.debug_str.get_str(str_ref) {
+                        let name: String = s.to_string().unwrap().to_owned();
+                        Some(name)
+                    } else {
+                        // str_ref
+                        None
+                    }
+                }
+                x => {
+                    // "??".to_owned()
+                    println!("Name: {:?}", x);
+                    None
+                }
+            }
 
-            // println!("Name = {}", name);
-            Some(name)
+        // println!("Name = {}", name);
         } else {
             None
         };
 
     let address: Option<u64> =
         if let Some(value) = entry.attr_value(gimli::constants::DW_AT_location)? {
-            let loc = value.exprloc_value().unwrap();
-            let mut eval = loc.evaluation(encoding);
-            let mut res = eval.evaluate()?;
-            while res != gimli::EvaluationResult::Complete {
-                match res {
-                    gimli::EvaluationResult::RequiresRelocatedAddress(addr) => {
-                        // TODO: relocate address?
-                        res = eval.resume_with_relocated_address(addr)?;
-                    }
-                    _ => {
-                        break;
+            if let Some(loc) = value.exprloc_value() {
+                let mut eval = loc.evaluation(encoding);
+                let mut res = eval.evaluate()?;
+                while res != gimli::EvaluationResult::Complete {
+                    match res {
+                        gimli::EvaluationResult::RequiresRelocatedAddress(addr) => {
+                            // TODO: relocate address?
+                            res = eval.resume_with_relocated_address(addr)?;
+                        }
+                        _ => {
+                            break;
+                        }
                     }
                 }
-            }
 
-            match res {
-                gimli::EvaluationResult::Complete => {
-                    let x = eval.result();
-                    // println!("Location = {:?}", x);
-                    if x.len() == 1 {
-                        let piece = x.first().unwrap();
-                        match piece.location {
-                            gimli::Location::Address { address } => Some(address),
-                            _ => None,
+                match res {
+                    gimli::EvaluationResult::Complete => {
+                        let x = eval.result();
+                        // println!("Location = {:?}", x);
+                        if x.len() == 1 {
+                            let piece = x.first().unwrap();
+                            match piece.location {
+                                gimli::Location::Address { address } => Some(address),
+                                _ => None,
+                            }
+                        } else {
+                            None
                         }
-                    } else {
+                    }
+                    _ => {
+                        // println!("Location = {:?}", res);
                         None
                     }
                 }
-                _ => {
-                    // println!("Location = {:?}", res);
-                    None
-                }
+            } else {
+                None
             }
         } else {
             None
