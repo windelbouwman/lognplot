@@ -28,6 +28,7 @@ pub struct Ads {
 #[derive(Debug)]
 pub enum AdsError {
     IoError(std::io::Error),
+    Other(String),
 }
 
 type AdsResult<T> = Result<T, AdsError>;
@@ -58,25 +59,22 @@ impl Ads {
         let data = vec![];
 
         let request = AmsRequest::new(source, target, ADS_READ_DEVICE_INFO, data);
-        self.send_request(request)?;
+        let response_data = self.send_request(request)?;
 
-        // Wait for response now.
-        let packet = self.receive_ams_packet()?;
+        self.check_response(&response_data)?;
 
-        // TODO: verify invoke ID?
+        assert!(response_data.len() == 24);
 
         let info = {
-            let result = packet.data.pread_with::<u32>(0, LE).expect("Works");
-            let major_version = packet.data.pread_with::<u8>(4, LE).expect("Works");
-            let minor_version = packet.data.pread_with::<u8>(5, LE).expect("Works");
-            let version_build = packet.data.pread_with::<u16>(6, LE).expect("Works");
+            let major_version = response_data.pread_with::<u8>(4, LE).expect("Works");
+            let minor_version = response_data.pread_with::<u8>(5, LE).expect("Works");
+            let version_build = response_data.pread_with::<u16>(6, LE).expect("Works");
 
             // TODO:
             // let name = packet.data[8..].to_vec();
             let device_name = "Dummy!".to_owned();
 
             AdsDeviceInfo {
-                result,
                 major_version,
                 minor_version,
                 version_build,
@@ -100,18 +98,29 @@ impl Ads {
         let source = AmsAddress::new(AmsNetId::from_str("127.0.0.1.2.3").unwrap(), 1337);
         let target = AmsAddress::new(AmsNetId::from_str("127.0.0.1.2.3").unwrap(), 1337);
 
-        let mut data = vec![12; 0];
-        data.pwrite_with::<u32>(index_group, 0, LE)
+        let mut request_data = vec![0; 12];
+        request_data
+            .pwrite_with::<u32>(index_group, 0, LE)
             .expect("Works fine.");
-        data.pwrite_with::<u32>(index_offset, 4, LE)
+        request_data
+            .pwrite_with::<u32>(index_offset, 4, LE)
             .expect("Works fine.");
-        data.pwrite_with::<u32>(length, 8, LE).expect("Works fine.");
+        request_data
+            .pwrite_with::<u32>(length, 8, LE)
+            .expect("Works fine.");
 
-        let request = AmsRequest::new(source, target, ADS_READ, data);
-        self.send_request(request)?;
+        let request = AmsRequest::new(source, target, ADS_READ, request_data);
+        let response_data = self.send_request(request)?;
 
-        unimplemented!("TODO!");
-        // Ok(())
+        self.check_response(&response_data)?;
+
+        assert!(response_data.len() >= 8);
+
+        let data_length = response_data.pread_with::<u32>(4, LE).expect("Works");
+        let data = response_data[8..].to_vec();
+        assert!(data.len() == data_length as usize);
+
+        Ok(data)
     }
 
     /// ADS Write
@@ -127,12 +136,32 @@ impl Ads {
         let source = AmsAddress::new(AmsNetId::from_str("127.0.0.1.2.3").unwrap(), 1337);
         let target = AmsAddress::new(AmsNetId::from_str("127.0.0.1.2.3").unwrap(), 1337);
 
-        // TODO: pack data?
-        unimplemented!("TODO!");
-        let request = AmsRequest::new(source, target, ADS_WRITE, data);
-        self.send_request(request)?;
+        // pack data:
+        let mut request_data = vec![0; 12];
+        request_data
+            .pwrite_with::<u32>(index_group, 0, LE)
+            .expect("Works fine.");
+        request_data
+            .pwrite_with::<u32>(index_offset, 4, LE)
+            .expect("Works fine.");
+        request_data
+            .pwrite_with::<u32>(data.len() as u32, 8, LE)
+            .expect("Works fine.");
+        request_data.append(&mut data.clone());
 
-        // Ok(())
+        let request = AmsRequest::new(source, target, ADS_WRITE, request_data);
+        let response_data = self.send_request(request)?;
+
+        self.check_response(&response_data)?;
+
+        Ok(())
+    }
+
+    /// Given some response data, extract the result field and check it.
+    fn check_response(&self, response_data: &[u8]) -> AdsResult<()> {
+        let result = response_data.pread_with::<u32>(0, LE).expect("Works");
+        assert!(result == 0);
+        Ok(())
     }
 
     pub fn ads_read_state(&self) {
@@ -146,7 +175,8 @@ impl Ads {
         invoke_id
     }
 
-    fn send_request(&mut self, request: AmsRequest) -> AdsResult<()> {
+    /// Send a request and receive a corresponding response.
+    fn send_request(&mut self, request: AmsRequest) -> AdsResult<Vec<u8>> {
         let invoke_id = self.get_invoke_id();
 
         // Bit 7 marks TCP(0) or UDP(1)
@@ -167,7 +197,21 @@ impl Ads {
             request.data,
         );
         self.send_ams_packet(packet)?;
-        Ok(())
+
+        // Wait for response now.
+        let packet = self.receive_ams_packet()?;
+
+        // verify invoke ID:
+        if packet.invoke_id != invoke_id {
+            panic!("invoke id is incorrect");
+        }
+
+        if packet.command_id != request.command_id {
+            panic!("Command id mismatch!");
+        }
+
+        let response_data = packet.data;
+        Ok(response_data)
     }
 
     /// Receive a single AMS packet.
@@ -181,7 +225,12 @@ impl Ads {
     fn receive_ams_tcp_frame(&mut self) -> AdsResult<Vec<u8>> {
         let mut header = vec![0; 6];
         self.socket.read_exact(&mut header)?;
-        let frame = vec![];
+        let _zero = header.pread_with::<u16>(0, LE).expect("Works!");
+        // TODO: check zero == 0?
+        let frame_size = header.pread_with::<u32>(2, LE).expect("Works!");
+
+        let mut frame = vec![0; frame_size as usize];
+        self.socket.read_exact(&mut frame)?;
         Ok(frame)
     }
 
@@ -418,7 +467,6 @@ impl AmsPacket {
 
 #[derive(Debug)]
 pub struct AdsDeviceInfo {
-    result: u32,
     major_version: u8,
     minor_version: u8,
     version_build: u16,
