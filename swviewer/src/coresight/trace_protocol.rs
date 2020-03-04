@@ -28,6 +28,16 @@ pub enum TracePacket {
         id: usize,
         payload: Vec<u8>,
     },
+
+    /// An extension packet.
+    Extension {
+        data: Vec<u8>,
+    },
+
+    /// A reserved packet.
+    Reserved {
+        data: Vec<u8>,
+    },
 }
 
 /// Trace data decoder.
@@ -53,6 +63,8 @@ enum DecoderState {
         payload: Vec<u8>,
         size: usize,
     },
+    Extension(Vec<u8>),
+    Reserved(Vec<u8>),
     TimeStamp {
         tc: usize,
         ts: Vec<u8>,
@@ -113,6 +125,14 @@ impl Decoder {
                 payload.push(b);
                 self.handle_dwt(id, payload, size);
             }
+            DecoderState::Extension(data) => {
+                let data = data.clone();
+                self.handle_extension(data, b);
+            }
+            DecoderState::Reserved(data) => {
+                let data = data.clone();
+                self.handle_reserved(data, b);
+            }
             DecoderState::TimeStamp { tc, ts } => {
                 let tc = *tc;
                 let ts = ts.clone();
@@ -161,12 +181,12 @@ impl Decoder {
                     }
                 }
                 0x4 => {
-                    info!("Reserverd");
-                    unimplemented!();
+                    trace!("Reserverd");
+                    self.state = DecoderState::Reserved(vec![header]);
                 }
                 0x8 => {
-                    info!("Extension!");
-                    unimplemented!();
+                    trace!("Extension!");
+                    self.state = DecoderState::Extension(vec![header]);
                 }
                 x => {
                     match extract_size(x) {
@@ -257,6 +277,28 @@ impl Decoder {
             self.state = DecoderState::Header;
         } else {
             self.state = DecoderState::DwtData { id, payload, size }
+        }
+    }
+
+    fn handle_extension(&mut self, mut data: Vec<u8>, b: u8) {
+        let is_continuation = (b & 0x80) > 0;
+        data.push(b);
+        if is_continuation && data.len() < 5 {
+            self.state = DecoderState::Extension(data);
+        } else {
+            self.emit(TracePacket::Extension { data });
+            self.state = DecoderState::Header;
+        }
+    }
+
+    fn handle_reserved(&mut self, mut data: Vec<u8>, b: u8) {
+        let is_continuation = (b & 0x80) > 0;
+        data.push(b);
+        if is_continuation && data.len() < 5 {
+            self.state = DecoderState::Reserved(data);
+        } else {
+            self.emit(TracePacket::Reserved { data });
+            self.state = DecoderState::Header;
         }
     }
 }
