@@ -480,13 +480,31 @@ where
         mean_line.push(first_point);
 
         for aggregation in aggregations {
-            let y_max = self.y_domain_to_pixel(aggregation.metrics().max);
-            let y_min = self.y_domain_to_pixel(aggregation.metrics().min);
+            let y_max_value = aggregation.metrics().max;
+            let y_min_value = aggregation.metrics().min;
+            let y_max = self.y_domain_to_pixel(y_max_value);
+            let y_min = self.y_domain_to_pixel(y_min_value);
             let mean = aggregation.metrics().mean();
             let stddev = aggregation.metrics().stddev();
             let y_mean = self.y_domain_to_pixel(mean);
-            let y_stddev_high = self.y_domain_to_pixel(mean + stddev);
-            let y_stddev_low = self.y_domain_to_pixel(mean - stddev);
+
+            let visually_nice = true;
+            let y_stddev_high_value = if visually_nice {
+                // Can the mean + stddev be higher than max? --> YES IT CAN :)
+                // Clip the mean + stddev to min and max values.
+                y_max_value.min(mean + stddev)
+            } else {
+                // scientifically more correct, but less nice visually:
+                mean + stddev
+            };
+            let y_stddev_high = self.y_domain_to_pixel(y_stddev_high_value);
+
+            let y_stddev_low_value = if visually_nice {
+                y_min_value.max(mean - stddev)
+            } else {
+                mean - stddev
+            };
+            let y_stddev_low = self.y_domain_to_pixel(y_stddev_low_value);
 
             // TBD: what is a good visualization of aggregations?
             // blocks or not?

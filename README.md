@@ -203,3 +203,32 @@ project? Please submit a pull request or an issue!
     - Eclipse based
     - Supports many trace formats
 - [tracy profiler](https://bitbucket.org/wolfpld/tracy)
+
+
+# Profiling
+
+To optimize the GUI experience, you can profile the rust
+lognplot gui by the following method.
+
+Modify the `Cargo.toml` file to include this snippet:
+
+```toml
+[profile.release]
+debug = true
+```
+
+This will build in release mode, but include debug symbols.
+
+Now, build in release mode:
+
+    $ cargo build --release
+
+Next up, use the linux perf tool to profile the application:
+
+    $ perf record -F 99 --call-graph dwarf target/release/lognplotgtk
+
+Now perform some intensive work. When done, close the gui.
+
+Analyze the perf results:
+
+    $ perf report
