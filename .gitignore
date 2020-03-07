@@ -2,3 +2,5 @@
 target
 plot.svg
 *.pyc
+
+gtkdist/
