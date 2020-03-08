@@ -74,8 +74,9 @@ impl LockedTsDb {
         self.db.lock().unwrap().summary(name, timespan)
     }
 
-    pub fn drop_all(&self) {
-        self.db.lock().unwrap().drop_all();
+    /// Delete all data from the database.
+    pub fn delete_all(&self) {
+        self.db.lock().unwrap().delete_all();
     }
 
     pub fn register_notifier(&self, subscriber: ChangeSubscriber) {

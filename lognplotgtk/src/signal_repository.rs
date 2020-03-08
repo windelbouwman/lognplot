@@ -1,6 +1,7 @@
 use gtk::prelude::*;
 use std::collections::HashMap;
 
+use crate::state::GuiStateHandle;
 use lognplot::tsdb::{DataChangeEvent, TsDbHandle};
 
 pub struct SignalBrowser {
@@ -14,8 +15,8 @@ pub struct SignalBrowser {
 impl SignalBrowser {
     /// Process a database data change event:
     pub fn handle_event(&mut self, event: &DataChangeEvent) {
-        if event.drop_all {
-            self.drop_all();
+        if event.delete_all {
+            self.delete_all();
         }
         self.add_new_signals(event.new_signals.iter());
         self.update_signals(event.changed_signals.iter());
@@ -57,18 +58,18 @@ impl SignalBrowser {
         }
     }
 
-    /// Drop all signals from the model
-    fn drop_all(&mut self) {
+    /// Delete all signals from the model
+    fn delete_all(&mut self) {
         self.model.clear();
         self.model_map.clear();
     }
 }
 
 /// Prepare a widget with a list of available signals.
-pub fn setup_signal_repository<F: Fn(&str) + 'static>(
+pub fn setup_signal_repository(
     builder: &gtk::Builder,
     db: TsDbHandle,
-    add_curve: F,
+    app_state: GuiStateHandle,
 ) -> SignalBrowser {
     let model = gtk::TreeStore::new(&[
         String::static_type(),
@@ -78,8 +79,10 @@ pub fn setup_signal_repository<F: Fn(&str) + 'static>(
 
     setup_columns(builder);
     setup_filter_model(builder, &model);
-    setup_drag_drop(builder);
-    setup_activate(builder, add_curve);
+    let tree_view: gtk::TreeView = builder.get_object("signal_tree_view").unwrap();
+    setup_drag_drop(&tree_view);
+    setup_activate(&tree_view, app_state.clone());
+    setup_key_press_handler(&tree_view, app_state);
 
     SignalBrowser {
         model,
@@ -138,9 +141,7 @@ fn signal_filter_func(model: &gtk::TreeModel, iter: &gtk::TreeIter, filter_txt: 
 }
 
 /// Connect drag signal.
-fn setup_drag_drop(builder: &gtk::Builder) {
-    let tree_view: gtk::TreeView = builder.get_object("signal_tree_view").unwrap();
-
+fn setup_drag_drop(tree_view: &gtk::TreeView) {
     let selection = tree_view.get_selection();
     selection.set_mode(gtk::SelectionMode::Multiple);
 
@@ -178,9 +179,7 @@ fn get_selected_signal_names(w: &gtk::TreeView) -> Vec<String> {
     selected_names
 }
 
-fn setup_activate<F: Fn(&str) + 'static>(builder: &gtk::Builder, add_curve: F) {
-    let tree_view: gtk::TreeView = builder.get_object("signal_tree_view").unwrap();
-
+fn setup_activate(tree_view: &gtk::TreeView, app_state: GuiStateHandle) {
     tree_view.connect_row_activated(move |tv, path, _| {
         let model = tv.get_model().unwrap();
         let iter = model.get_iter(path).unwrap();
@@ -188,7 +187,43 @@ fn setup_activate<F: Fn(&str) + 'static>(builder: &gtk::Builder, add_curve: F) {
 
         debug!("Signal activated: {}, adding to chart.", value);
         // Add activated signal to plot:
-        add_curve(&value);
+        app_state.borrow().add_curve(&value, None);
+    });
+}
+
+fn setup_key_press_handler(tree_view: &gtk::TreeView, app_state: GuiStateHandle) {
+    tree_view.connect_key_press_event(move |tv, key| {
+        let selected_signals = get_selected_signal_names(&tv);
+        let chart_target = match key.get_keyval() {
+            gdk::enums::key::_0 => Some(0),
+            gdk::enums::key::_1 => Some(1),
+            gdk::enums::key::_2 => Some(2),
+            gdk::enums::key::_3 => Some(3),
+            gdk::enums::key::_4 => Some(4),
+            gdk::enums::key::_5 => Some(5),
+            gdk::enums::key::_6 => Some(6),
+            gdk::enums::key::_7 => Some(7),
+            gdk::enums::key::_8 => Some(8),
+            gdk::enums::key::_9 => Some(9),
+            gdk::enums::key::A => Some(10),
+            gdk::enums::key::B => Some(11),
+            gdk::enums::key::C => Some(12),
+            gdk::enums::key::D => Some(13),
+            gdk::enums::key::E => Some(14),
+            gdk::enums::key::F => Some(15),
+            _ => None,
+        };
+        if chart_target.is_some() {
+            for signal_name in selected_signals {
+                debug!(
+                    "Signal activated: {}, adding to chart {}.",
+                    signal_name,
+                    chart_target.expect("some value")
+                );
+                app_state.borrow().add_curve(&signal_name, chart_target);
+            }
+        }
+        Inhibit(false)
     });
 }
 

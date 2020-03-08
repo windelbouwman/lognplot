@@ -34,8 +34,9 @@ impl ChangeSubscriber {
         self.emit_event();
     }
 
-    pub fn notify_drop_all(&mut self) {
-        self.event.add_drop_all();
+    /// Notification that all data was deleted.
+    pub fn notify_delete_all(&mut self) {
+        self.event.add_delete_all();
         self.emit_event();
     }
 
@@ -71,7 +72,7 @@ impl ChangeSubscriber {
 pub struct DataChangeEvent {
     pub new_signals: HashSet<String>,
     pub changed_signals: HashSet<String>,
-    pub drop_all: bool,
+    pub delete_all: bool,
 }
 
 impl DataChangeEvent {
@@ -79,12 +80,12 @@ impl DataChangeEvent {
         DataChangeEvent {
             new_signals: HashSet::new(),
             changed_signals: HashSet::new(),
-            drop_all: false,
+            delete_all: false,
         }
     }
 
     fn is_empty(&self) -> bool {
-        self.new_signals.is_empty() && self.changed_signals.is_empty() && !self.drop_all
+        self.new_signals.is_empty() && self.changed_signals.is_empty() && !self.delete_all
     }
 
     fn add_new_signal(&mut self, name: &str) {
@@ -95,12 +96,12 @@ impl DataChangeEvent {
         self.changed_signals.insert(name.to_owned());
     }
 
-    /// Add a dropped signal or all signals drop..
-    fn add_drop_all(&mut self) {
+    /// Add a delete all signals event
+    fn add_delete_all(&mut self) {
         // Drop all signals added so far:
         self.new_signals.clear();
         self.changed_signals.clear();
 
-        self.drop_all = true;
+        self.delete_all = true;
     }
 }

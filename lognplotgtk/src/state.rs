@@ -21,9 +21,9 @@ impl GuiState {
         Rc::new(RefCell::new(self))
     }
 
-    pub fn drop_data(&self) {
+    pub fn delete_all_data(&self) {
         info!("Drop all data from database, to start a new!");
-        self.db.drop_all();
+        self.db.delete_all();
     }
 
     #[cfg(feature = "export-hdf5")]
@@ -73,8 +73,17 @@ impl GuiState {
         self.charts.len()
     }
 
-    pub fn add_curve(&self, name: &str) {
-        self.charts.first().unwrap().borrow_mut().add_curve(name);
+    /// Add a curve with the given name to the first chart.
+    ///
+    /// Handy for double click / enter press on a signal.
+    pub fn add_curve(&self, name: &str, chart_index: Option<usize>) {
+        if let Some(index) = chart_index {
+            if index < self.charts.len() {
+                self.charts[index].borrow_mut().add_curve(name);
+            }
+        } else {
+            self.charts.first().unwrap().borrow_mut().add_curve(name);
+        };
     }
 
     pub fn zoom_fit(&self) {

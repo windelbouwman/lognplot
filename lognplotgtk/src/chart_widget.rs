@@ -9,16 +9,18 @@ use std::time::Instant;
 use crate::meta_metrics::MetricRecorder;
 use crate::session::DashBoardItem;
 use lognplot::chart::{Chart, Curve, CurveData};
+
 use lognplot::geometry::Size;
-use lognplot::render::{draw_chart, CairoCanvas};
+use lognplot::render::{draw_chart, CairoCanvas, ChartLayout, ChartOptions};
 use lognplot::render::{x_pixel_to_domain, x_pixels_to_domain, y_pixel_to_domain};
 use lognplot::time::TimeStamp;
 use lognplot::tsdb::DataChangeEvent;
 use lognplot::tsdb::TsDbHandle;
 
 pub struct ChartState {
-    pub chart: Chart,
-    pub db: TsDbHandle,
+    chart: Chart,
+    chart_options: ChartOptions,
+    db: TsDbHandle,
     color_wheel: Vec<String>,
     color_index: usize,
     tailing: Option<f64>,
@@ -44,6 +46,7 @@ impl ChartState {
 
         ChartState {
             chart,
+            chart_options: ChartOptions::default(),
             db: db.clone(),
             color_wheel,
             color_index: 0,
@@ -145,7 +148,10 @@ impl ChartState {
     fn do_drag(&mut self, size: Size, dx: f64, dy: f64) {
         debug!("Drag! {}, {} ", dx, dy);
 
-        let amount = x_pixels_to_domain(size, &self.chart.x_axis, dx);
+        let mut layout = ChartLayout::new(size);
+        layout.layout(&self.chart_options);
+
+        let amount = x_pixels_to_domain(&layout, &self.chart.x_axis, dx);
 
         self.chart.pan_horizontal_absolute(-amount);
         // TODO: pan vertical as well?
@@ -190,7 +196,11 @@ impl ChartState {
     fn zoom_horizontal(&mut self, amount: f64, around: Option<(f64, Size)>) {
         let around = around.map(|p| {
             let (pixel, size) = p;
-            x_pixel_to_domain(pixel, &self.chart.x_axis, size)
+
+            let mut layout = ChartLayout::new(size);
+            layout.layout(&self.chart_options);
+
+            x_pixel_to_domain(pixel, &self.chart.x_axis, &layout)
         });
         self.disable_tailing();
         self.chart.zoom_horizontal(amount, around);
@@ -200,8 +210,11 @@ impl ChartState {
 
     pub fn set_cursor(&mut self, loc: Option<((f64, f64), Size)>) {
         if let Some((pixel, size)) = loc {
-            let timestamp = x_pixel_to_domain(pixel.0, &self.chart.x_axis, size.clone());
-            let value = y_pixel_to_domain(pixel.1, &self.chart.y_axis, size);
+            let mut layout = ChartLayout::new(size.clone());
+            layout.layout(&self.chart_options);
+
+            let timestamp = x_pixel_to_domain(pixel.0, &self.chart.x_axis, &layout);
+            let value = y_pixel_to_domain(pixel.1, &self.chart.y_axis, &layout);
             let timestamp = TimeStamp::new(timestamp);
             self.chart.cursor = Some((timestamp, value));
         } else {
@@ -297,7 +310,10 @@ impl ChartState {
 
         let t1 = Instant::now();
 
-        draw_chart(&self.chart, &mut canvas2, size.clone());
+        let mut layout = ChartLayout::new(size.clone());
+        layout.layout(&self.chart_options);
+
+        draw_chart(&self.chart, &mut canvas2, &layout, &self.chart_options);
 
         let t2 = Instant::now();
         let draw_duration = t2 - t1;

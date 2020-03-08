@@ -15,7 +15,7 @@ use crate::geometry::Size;
 use crate::render::Canvas;
 use crate::time::TimeStamp;
 
-use crate::render::draw_chart;
+use crate::render::{draw_chart, ChartLayout, ChartOptions};
 
 pub type Cursor = (TimeStamp, f64);
 
@@ -33,5 +33,8 @@ where
     let curve = Curve::new(curve_data, "red");
     chart.add_curve(curve);
     chart.autoscale();
-    draw_chart(&chart, canvas, size);
+    let options = ChartOptions::default();
+    let mut layout = ChartLayout::new(size);
+    layout.layout(&options);
+    draw_chart(&chart, canvas, &layout, &options);
 }

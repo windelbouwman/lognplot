@@ -1,10 +1,11 @@
 //! Functionality to emit a plot to a canvas.
 
 use super::canvas::{HorizontalAnchor, VerticalAnchor};
+use super::transform;
 use super::Canvas;
 use super::{ChartLayout, ChartOptions};
 use crate::chart::{Chart, Cursor, Curve};
-use crate::geometry::{Point, Size};
+use crate::geometry::Point;
 use crate::style::Color;
 use crate::time::TimeStamp;
 use crate::tsdb::{Aggregation, Observation, RangeQueryResult, Sample, SampleMetrics};
@@ -15,11 +16,11 @@ use std::rc::Rc;
 use superslice::Ext;
 
 /// Draw the given chart onto the canvas!
-pub fn draw_chart<C>(chart: &Chart, canvas: &mut C, size: Size)
+pub fn draw_chart<C>(chart: &Chart, canvas: &mut C, layout: &ChartLayout, options: &ChartOptions)
 where
     C: Canvas,
 {
-    let mut renderer = ChartRenderer::new(chart, canvas, size);
+    let mut renderer = ChartRenderer::new(chart, canvas, layout, options);
     renderer.draw();
 }
 
@@ -46,10 +47,10 @@ where
     canvas: &'a mut C,
 
     // Layout:
-    layout: ChartLayout,
+    layout: &'a ChartLayout,
 
     // Parameters:
-    options: ChartOptions,
+    options: &'a ChartOptions,
 
     curve_data_cache: HashMap<String, Rc<CurveData>>,
 }
@@ -58,9 +59,12 @@ impl<'a, C> ChartRenderer<'a, C>
 where
     C: Canvas,
 {
-    pub fn new(chart: &'a Chart, canvas: &'a mut C, size: Size) -> Self {
-        let options = ChartOptions::default();
-        let layout = ChartLayout::new(size);
+    pub fn new(
+        chart: &'a Chart,
+        canvas: &'a mut C,
+        layout: &'a ChartLayout,
+        options: &'a ChartOptions,
+    ) -> Self {
         ChartRenderer {
             chart,
             canvas,
@@ -71,7 +75,6 @@ where
     }
 
     fn draw(&mut self) {
-        self.layout.layout(&self.options);
         self.fetch_curve_data();
         self.draw_axis();
         self.draw_box();
@@ -280,13 +283,15 @@ where
                         find_closest_aggregation(&aggregations, &cursor.0).map(|a| {
                             let ts = a.timespan.middle_timestamp();
                             let metrics = a.metrics();
+                            let min = metrics.min;
+                            let mean = metrics.mean();
                             let max = metrics.max;
                             let labels = vec![
-                                format!("mean={}", metrics.mean()),
-                                format!("min={}", metrics.min),
+                                format!("mean={}", mean),
+                                format!("min={}", min),
                                 format!("max={}", max),
                             ];
-                            (ts, max, labels, curve.color())
+                            (ts, mean, labels, curve.color())
                         })
                     }
                     RangeQueryResult::Observations(observations) => {
@@ -575,30 +580,12 @@ where
 
     /// Transform x-value to pixel/point location.
     fn x_domain_to_pixel(&self, t: &TimeStamp) -> f64 {
-        let x = t.amount;
-        let domain = self.chart.x_axis.domain();
-        let a = (self.layout.plot_width) / domain;
-        let x_pixel = a * (x - self.chart.x_axis.begin()) + self.layout.plot_left;
-        clip(x_pixel, self.layout.plot_left, self.layout.plot_right)
+        transform::x_domain_to_pixel(t, &self.chart.x_axis, self.layout)
     }
 
     /// Convert a y value into a proper pixel y value.
     fn y_domain_to_pixel(&self, y: f64) -> f64 {
-        let domain = self.chart.y_axis.domain();
-        let a = self.layout.plot_height / domain;
-        let y_pixel = self.layout.plot_bottom - a * (y - self.chart.y_axis.begin());
-        clip(y_pixel, self.layout.plot_top, self.layout.plot_bottom)
-    }
-}
-
-/// Clip a value between bounds
-fn clip(value: f64, lower: f64, upper: f64) -> f64 {
-    if value < lower {
-        lower
-    } else if value > upper {
-        upper
-    } else {
-        value
+        transform::y_domain_to_pixel(y, &self.chart.y_axis, self.layout)
     }
 }
 

@@ -1,6 +1,9 @@
 use super::ChartOptions;
 use crate::geometry::Size;
 
+/// Chart layout in pixels.
+///
+/// This struct has the various elements where parts of the chart are located.
 pub struct ChartLayout {
     pub width: f64,
     pub height: f64,

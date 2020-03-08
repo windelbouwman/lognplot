@@ -95,23 +95,24 @@ impl TsDb {
         // self.get_trace(name)
     }
 
+    /// Add a single observation to the database.
     pub fn add_value(&mut self, name: &str, observation: Observation<Sample>) {
         let trace = self.get_or_create_trace(name, &observation.timestamp);
         trace.add_sample(observation);
         self.new_data_event(name);
     }
 
-    /// Drop all data from the database.
-    pub fn drop_all(&mut self) {
+    /// Delete all data from the database.
+    pub fn delete_all(&mut self) {
         self.data.clear();
         self.data.shrink_to_fit();
-        self.drop_all_event();
+        self.delete_all_event();
     }
 
-    /// Drop a single trace from the database.
-    pub fn drop(&mut self, name: &str) {
+    /// Delete a single trace from the database.
+    pub fn delete(&mut self, name: &str) {
         self.data.remove(name);
-        self.drop_event(name);
+        self.delete_event(name);
     }
 
     /// Query the given trace for data.
@@ -169,13 +170,13 @@ impl TsDb {
         }
     }
 
-    fn drop_event(&mut self, _name: &str) {
+    fn delete_event(&mut self, _name: &str) {
         unimplemented!("TODO");
     }
 
-    fn drop_all_event(&mut self) {
+    fn delete_all_event(&mut self) {
         for subscriber in &mut self.change_subscribers {
-            subscriber.notify_drop_all();
+            subscriber.notify_delete_all();
         }
     }
 }

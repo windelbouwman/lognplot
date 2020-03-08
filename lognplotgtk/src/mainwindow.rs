@@ -5,8 +5,9 @@ use lognplot::tsdb::TsDbHandle;
 use lognplot::tsdb::{ChangeSubscriber, DataChangeEvent};
 
 use super::chart_widget::setup_drawing_area;
+use super::error_dialog::show_error;
+use super::session::{load_session, save_session};
 use super::signal_repository::{setup_signal_repository, SignalBrowser};
-
 use super::{GuiState, GuiStateHandle};
 
 pub fn open_gui(db_handle: TsDbHandle) {
@@ -27,13 +28,9 @@ fn build_ui(app: &gtk::Application, app_state: GuiStateHandle) {
     let builder = gtk::Builder::new_from_string(glade_src);
 
     // Connect the data set tree:
-    let app_state_add_curve = app_state.clone();
-    let add_curve = move |name: &str| {
-        app_state_add_curve.borrow_mut().add_curve(name);
-    };
     let db = { app_state.borrow().db.clone() };
 
-    let signal_pane = setup_signal_repository(&builder, db.clone(), add_curve);
+    let signal_pane = setup_signal_repository(&builder, db.clone(), app_state.clone());
 
     setup_chart_area(&builder, app_state.clone(), db);
     setup_menus(&builder, app_state.clone());
@@ -201,7 +198,7 @@ fn setup_menus(builder: &gtk::Builder, app_state: GuiStateHandle) {
 
     let menu_new: gtk::MenuItem = builder.get_object("menu_new").unwrap();
     menu_new.connect_activate(clone!(@strong app_state => move |_| {
-        app_state.borrow().drop_data();
+        app_state.borrow().delete_all_data();
     }));
 
     let menu_open: gtk::MenuItem = builder.get_object("menu_open").unwrap();
@@ -259,84 +256,12 @@ fn save_data_as_hdf5(top_level: &gtk::Window, app_state: &GuiStateHandle) {
     }
 }
 
-/// Popup a dialog to save session for later usage.
-fn save_session(top_level: &gtk::Window, app_state: &GuiStateHandle) {
-    let dialog = gtk::FileChooserDialog::with_buttons(
-        Some("Export session as JSON"),
-        Some(top_level),
-        gtk::FileChooserAction::Save,
-        &[
-            ("Cancel", gtk::ResponseType::Cancel),
-            ("Save", gtk::ResponseType::Accept),
-        ],
-    );
-    let res = dialog.run();
-    let filename = dialog.get_filename();
-    dialog.destroy();
-
-    if let gtk::ResponseType::Accept = res {
-        if let Some(filename) = filename {
-            info!("Saving session to filename: {:?}", filename);
-            let res = { app_state.borrow().save_session(&filename) };
-            if let Err(err) = res {
-                let error_message = format!("Error saving session to {:?}: {}", filename, err);
-                error!("{}", error_message);
-                show_error(top_level, &error_message);
-            } else {
-                info!("Session saved!");
-            }
-        }
-    }
-}
-
-/// Popup a dialog to restore a session from before.
-fn load_session(top_level: &gtk::Window, app_state: &GuiStateHandle) {
-    let dialog = gtk::FileChooserDialog::with_buttons(
-        Some("Import session from JSON file"),
-        Some(top_level),
-        gtk::FileChooserAction::Open,
-        &[
-            ("Cancel", gtk::ResponseType::Cancel),
-            ("Open", gtk::ResponseType::Accept),
-        ],
-    );
-
-    let res = dialog.run();
-    let filename = dialog.get_filename();
-    dialog.destroy();
-    if let gtk::ResponseType::Accept = res {
-        if let Some(filename) = filename {
-            info!("Loading session to filename: {:?}", filename);
-            let res = { app_state.borrow_mut().load_session(&filename) };
-            if let Err(err) = res {
-                let error_message = format!("Error loading session from {:?}: {}", filename, err);
-                error!("{}", error_message);
-                show_error(top_level, &error_message);
-            } else {
-                info!("Session loaded!");
-            }
-        }
-    }
-}
-
-fn show_error(top_level: &gtk::Window, message: &str) {
-    let error_dialog = gtk::MessageDialog::new(
-        Some(top_level),
-        gtk::DialogFlags::MODAL,
-        gtk::MessageType::Error,
-        gtk::ButtonsType::Ok,
-        &message,
-    );
-    error_dialog.run();
-    error_dialog.destroy();
-}
-
 fn setup_toolbar_buttons(builder: &gtk::Builder, app_state: GuiStateHandle) {
     // Drop database:
     {
-        let tb_drop_db: gtk::ToolButton = builder.get_object("tb_drop_all").unwrap();
-        tb_drop_db.connect_clicked(clone!(@strong app_state => move |_tb| {
-            app_state.borrow().drop_data();
+        let tb_delete_db: gtk::ToolButton = builder.get_object("tb_delete_all").unwrap();
+        tb_delete_db.connect_clicked(clone!(@strong app_state => move |_tb| {
+            app_state.borrow().delete_all_data();
         }));
     }
 
