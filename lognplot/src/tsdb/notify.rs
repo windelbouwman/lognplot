@@ -49,6 +49,15 @@ impl ChangeSubscriber {
 
     fn emit_event(&mut self) {
         if self.ready {
+            // Try a single time to emit the event.
+            // If this fails, do not try again, since this would invoke
+            // the expensive clone on the event, which potentially
+            // would have to clone a whole slew of signals in a hashmap.
+            // This takes a serious effort.
+            // This is safe, since we will call poll again when the queue
+            // was processed on the other end.
+
+            self.ready = false;
             if self.event.is_empty() {
                 return;
             }
@@ -56,7 +65,6 @@ impl ChangeSubscriber {
             match self.channel.try_send(self.event.clone()) {
                 Ok(()) => {
                     self.event = DataChangeEvent::new();
-                    self.ready = false;
                 }
                 Err(err) => {
                     if err.is_full() {

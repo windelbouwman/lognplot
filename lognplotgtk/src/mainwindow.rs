@@ -2,12 +2,11 @@ use gio::prelude::*;
 use gtk::prelude::*;
 use gtk::Application;
 use lognplot::tsdb::TsDbHandle;
-use lognplot::tsdb::{ChangeSubscriber, DataChangeEvent};
 
 use super::chart_widget::setup_drawing_area;
 use super::io::save_data_as_hdf5;
 use super::session::{load_session, save_session};
-use super::signal_repository::{setup_signal_repository, SignalBrowser};
+use super::signal_repository::setup_signal_repository;
 use super::{GuiState, GuiStateHandle};
 
 pub fn open_gui(db_handle: TsDbHandle) {
@@ -28,14 +27,12 @@ fn build_ui(app: &gtk::Application, app_state: GuiStateHandle) {
     let builder = gtk::Builder::new_from_string(glade_src);
 
     // Connect the data set tree:
-    let db = { app_state.borrow().db.clone() };
-
-    let signal_pane = setup_signal_repository(&builder, db.clone(), app_state.clone());
+    setup_signal_repository(&builder, app_state.clone());
 
     setup_chart_area(&builder, app_state.clone());
     setup_menus(&builder, app_state.clone());
     setup_toolbar_buttons(&builder, app_state.clone());
-    setup_notify_change(app_state, signal_pane);
+    setup_notify_change(app_state);
 
     // Connect application to window:
     let window: gtk::Window = builder.get_object("top_unit").unwrap();
@@ -287,14 +284,8 @@ fn setup_toolbar_buttons(builder: &gtk::Builder, app_state: GuiStateHandle) {
 }
 
 /// Subscribe to database changes and redraw correct things.
-fn setup_notify_change(app_state: GuiStateHandle, mut signal_pane: SignalBrowser) {
-    // Register change handler:
-    let (sender, mut receiver) = futures::channel::mpsc::channel::<DataChangeEvent>(0);
-    {
-        let db_handle = app_state.borrow_mut().db.clone();
-        let sub = ChangeSubscriber::new(sender);
-        db_handle.register_notifier(sub);
-    }
+fn setup_notify_change(app_state: GuiStateHandle) {
+    let mut receiver = app_state.borrow().db.new_notify_queue();
 
     // Insert async future function into the event loop:
     let main_context = glib::MainContext::default();
@@ -302,11 +293,10 @@ fn setup_notify_change(app_state: GuiStateHandle, mut signal_pane: SignalBrowser
         use futures::StreamExt;
         while let Some(event) = receiver.next().await {
             // println!("Event: {:?}", event);
-            signal_pane.handle_event(&event);
             app_state.borrow().handle_event(&event);
 
             // Delay to emulate rate limiting of events.
-            glib::timeout_future_with_priority(glib::Priority::default(), 100).await;
+            glib::timeout_future_with_priority(glib::Priority::default(), 200).await;
 
             // Re-query database for some extra samples:
             app_state.borrow().db.poll_events();

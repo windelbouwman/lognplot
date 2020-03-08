@@ -1,10 +1,11 @@
 //! Thread usable handle. Wrapper around a database.
 
-use super::ChangeSubscriber;
 use super::{
     Aggregation, Observation, Query, QueryResult, QuickSummary, Sample, SampleMetrics, TsDb,
 };
+use super::{ChangeSubscriber, DataChangeEvent};
 use crate::time::TimeSpan;
+use futures::channel::mpsc;
 use std::sync::{Arc, Mutex};
 
 pub type TsDbHandle = Arc<LockedTsDb>;
@@ -77,6 +78,14 @@ impl LockedTsDb {
     /// Delete all data from the database.
     pub fn delete_all(&self) {
         self.db.lock().unwrap().delete_all();
+    }
+
+    /// Register database change handler.
+    pub fn new_notify_queue(&self) -> mpsc::Receiver<DataChangeEvent> {
+        let (sender, receiver) = mpsc::channel::<DataChangeEvent>(0);
+        let sub = ChangeSubscriber::new(sender);
+        self.register_notifier(sub);
+        receiver
     }
 
     pub fn register_notifier(&self, subscriber: ChangeSubscriber) {

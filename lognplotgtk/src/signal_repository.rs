@@ -14,33 +14,43 @@ pub struct SignalBrowser {
 
 impl SignalBrowser {
     /// Process a database data change event:
-    pub fn handle_event(&mut self, event: &DataChangeEvent) {
+    async fn handle_event(&mut self, event: &DataChangeEvent) {
         if event.delete_all {
             self.delete_all();
         }
-        self.add_new_signals(event.new_signals.iter());
-        self.update_signals(event.changed_signals.iter());
+        self.add_new_signals(event.new_signals.iter()).await;
+        self.update_signals(event.changed_signals.iter()).await;
     }
 
     /// Create new signals
-    fn add_new_signals<'a, I>(&mut self, new_signals: I)
+    async fn add_new_signals<'a, I>(&mut self, new_signals: I)
     where
         I: Iterator<Item = &'a String>,
     {
+        let mut updates = 0;
         for signal_name in new_signals {
             let iter = self.model.append(None);
             let row = self.model_map.len() as i32;
             self.model_map.insert(signal_name.clone(), row);
             self.model
                 .set(&iter, &[0, 1, 2], &[&signal_name, &"-", &"-"]);
+
+            updates += 1;
+            if updates > 50 {
+                // Pfew, take a brake to allow GUI to be responsive.
+                debug!("Taking a break adding new signals in signal panel");
+                updates = 0;
+                glib::timeout_future_with_priority(glib::Priority::default(), 100).await;
+            }
         }
     }
 
     /// Update existing signals in the model
-    fn update_signals<'a, I>(&self, changed_signals: I)
+    async fn update_signals<'a, I>(&self, changed_signals: I)
     where
         I: Iterator<Item = &'a String>,
     {
+        let mut updates = 0;
         for signal_name in changed_signals {
             if let Some(summary) = self.db.quick_summary(&signal_name) {
                 let row = self.model_map[signal_name];
@@ -54,8 +64,17 @@ impl SignalBrowser {
                         &summary.last.value.value.to_string().to_value(),
                     );
                 }
+                updates += 1;
+                if updates > 50 {
+                    // Pfew, take a brake to allow GUI to be responsive.
+                    debug!("Taking a break updating signal changes in panel");
+                    updates = 0;
+                    glib::timeout_future_with_priority(glib::Priority::default(), 100).await;
+                }
             }
         }
+
+        debug!("Updates: {}", updates);
     }
 
     /// Delete all signals from the model
@@ -66,11 +85,7 @@ impl SignalBrowser {
 }
 
 /// Prepare a widget with a list of available signals.
-pub fn setup_signal_repository(
-    builder: &gtk::Builder,
-    db: TsDbHandle,
-    app_state: GuiStateHandle,
-) -> SignalBrowser {
+pub fn setup_signal_repository(builder: &gtk::Builder, app_state: GuiStateHandle) {
     let model = gtk::TreeStore::new(&[
         String::static_type(),
         String::static_type(),
@@ -82,13 +97,39 @@ pub fn setup_signal_repository(
     let tree_view: gtk::TreeView = builder.get_object("signal_tree_view").unwrap();
     setup_drag_drop(&tree_view);
     setup_activate(&tree_view, app_state.clone());
-    setup_key_press_handler(&tree_view, app_state);
+    setup_key_press_handler(&tree_view, app_state.clone());
 
-    SignalBrowser {
+    let db = { app_state.borrow().db.clone() };
+
+    let signal_browser = SignalBrowser {
         model,
         db,
         model_map: HashMap::new(),
-    }
+    };
+
+    setup_notify_change(signal_browser);
+}
+
+fn setup_notify_change(mut signal_pane: SignalBrowser) {
+    let mut receiver = signal_pane.db.new_notify_queue();
+
+    // Insert async future function into the event loop:
+    let main_context = glib::MainContext::default();
+    main_context.spawn_local(async move {
+        use futures::StreamExt;
+        while let Some(event) = receiver.next().await {
+            // println!("Event: {:?}", event);
+            signal_pane.handle_event(&event).await;
+            debug!("Done with updates!");
+
+            // Delay to emulate rate limiting of events.
+            glib::timeout_future_with_priority(glib::Priority::default(), 200).await;
+
+
+            // Re-query database for some extra samples:
+            signal_pane.db.poll_events();
+        }
+    });
 }
 
 fn setup_columns(builder: &gtk::Builder) {
