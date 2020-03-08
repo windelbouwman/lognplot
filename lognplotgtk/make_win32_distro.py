@@ -28,6 +28,7 @@ required_dlls = [
     "gobject-2",
     "gtk-3",
     "harfbuzz",
+    "hdf5",
     "libcharset",
     "libiconv",
     "libintl",
@@ -64,6 +65,9 @@ def build(lognplotgtk_folder, vcpkg_install_folder):
     new_env["GTK_LIB_DIR"] = os.path.join(vcpkg_install_folder, "lib")
     new_env["LIB"] = os.path.join(vcpkg_install_folder, "lib")
     new_env["PATH"] = os.path.join(vcpkg_install_folder, "bin") + ";" + new_env["PATH"]
+    # Allow hdf5 crate to build properly:
+    new_env["HDF5_DIR"] = vcpkg_install_folder
+    
     # set VCPKGDIR=c:\vcpkg
     # set GTK_LIB_DIR=%VCPKGDIR%\installed\x64-windows\lib
     # set LIB=%GTK_LIB_DIR%

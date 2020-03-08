@@ -5,9 +5,6 @@ version = "0.1.0"
 authors = ["Windel Bouwman <windel@windel.nl>"]
 edition = "2018"
 
-[features]
-export-hdf5 = ["hdf5"]
-
 [dependencies]
 clap = "2.33.0"
 cairo-rs = "0.8"
@@ -17,7 +14,7 @@ gio = "0.8"
 gtk = "0.8"
 gdk = "0.12"
 gdk-pixbuf = "0.8"
-hdf5 = { version = "0.6", optional = true }
+hdf5 = "0.6"
 lognplot = { path = "../lognplot", features=["cairo", "server"] }
 log = "0.4.8"
 ndarray = "0.12"

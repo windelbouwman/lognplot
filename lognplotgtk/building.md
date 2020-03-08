@@ -30,6 +30,7 @@ Next, setup some environment variables to allow the gtk-rs crate to pickup gtk:
     CMD> set GTK_LIB_DIR=%VCPKGDIR%\installed\x64-windows\lib
     CMD> set LIB=%GTK_LIB_DIR%
     CMD> set PATH=%VCPKGDIR%\installed\x64-windows\bin;%PATH%
+    CMD> set HDF5_DIR=%VCPKGDIR%\installed\x64-windows
 
 Then, build the application:
 
@@ -57,6 +58,10 @@ the folder structure:
 
 Now the app will contain the proper icons. To theme this further you could
 install a windows 10 or windows 7 theme.
+
+One further issue is the compiled settings, which have to be present.
+This issue will surface when you try to open a file save dialog.
+Make sure you have a file `share\glib-2.0\schemas\gschemas.compiled`.
 
 ## Distribution build script
 

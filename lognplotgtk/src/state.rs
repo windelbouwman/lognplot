@@ -26,19 +26,9 @@ impl GuiState {
         self.db.delete_all();
     }
 
-    #[cfg(feature = "export-hdf5")]
     pub fn save(&self, filename: &Path) -> Result<(), String> {
         info!("Save data to {:?}", filename);
         super::io::export_data(self.db.clone(), filename).map_err(|e| e.to_string())
-    }
-
-    #[cfg(not(feature = "export-hdf5"))]
-    pub fn save(&self, filename: &Path) -> Result<(), String> {
-        let msg = format!(
-            "Not saving to {:?}, since export-hdf5 feature is not enabled.",
-            filename
-        );
-        Err(msg)
     }
 
     pub fn save_session(&self, filename: &Path) -> std::io::Result<()> {

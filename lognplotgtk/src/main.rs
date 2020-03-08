@@ -6,7 +6,6 @@ extern crate glib;
 
 mod chart_widget;
 mod error_dialog;
-#[cfg(feature = "export-hdf5")]
 mod io;
 mod mainwindow;
 mod meta_metrics;
