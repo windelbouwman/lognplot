@@ -5,7 +5,7 @@ use lognplot::tsdb::TsDbHandle;
 use lognplot::tsdb::{ChangeSubscriber, DataChangeEvent};
 
 use super::chart_widget::setup_drawing_area;
-use super::error_dialog::show_error;
+use super::io::save_data_as_hdf5;
 use super::session::{load_session, save_session};
 use super::signal_repository::{setup_signal_repository, SignalBrowser};
 use super::{GuiState, GuiStateHandle};
@@ -32,7 +32,7 @@ fn build_ui(app: &gtk::Application, app_state: GuiStateHandle) {
 
     let signal_pane = setup_signal_repository(&builder, db.clone(), app_state.clone());
 
-    setup_chart_area(&builder, app_state.clone(), db);
+    setup_chart_area(&builder, app_state.clone());
     setup_menus(&builder, app_state.clone());
     setup_toolbar_buttons(&builder, app_state.clone());
     setup_notify_change(app_state, signal_pane);
@@ -48,15 +48,15 @@ fn build_ui(app: &gtk::Application, app_state: GuiStateHandle) {
     window.show_all();
 }
 
-fn setup_chart_area(builder: &gtk::Builder, app_state: GuiStateHandle, db: TsDbHandle) {
+fn setup_chart_area(builder: &gtk::Builder, app_state: GuiStateHandle) {
     // First chart:
     let draw_area: gtk::DrawingArea = builder.get_object("chart_control").unwrap();
-    let chart_state1 = setup_drawing_area(draw_area, db.clone(), "chart1");
+    let chart_state1 = setup_drawing_area(draw_area, app_state.clone(), "chart1");
     app_state.borrow_mut().add_chart(chart_state1);
 
     // Second chart:
     let draw_area2: gtk::DrawingArea = builder.get_object("chart_control2").unwrap();
-    let chart_state2 = setup_drawing_area(draw_area2, db, "chart2");
+    let chart_state2 = setup_drawing_area(draw_area2, app_state.clone(), "chart2");
     app_state.borrow_mut().add_chart(chart_state2);
 
     // Split handler:
@@ -115,8 +115,7 @@ fn new_plot_window(app_state: GuiStateHandle, amount: usize) {
                 grid.attach(&new_chart_area, column, row, 1, 1);
                 massage_drawing_area(&new_chart_area);
 
-                let chart_n =
-                    setup_drawing_area(new_chart_area, app_state.borrow().db.clone(), &chart_id);
+                let chart_n = setup_drawing_area(new_chart_area, app_state.clone(), &chart_id);
                 charts.push(chart_n);
             }
         }
@@ -127,7 +126,7 @@ fn new_plot_window(app_state: GuiStateHandle, amount: usize) {
         new_window.add(&new_chart_area);
         massage_drawing_area(&new_chart_area);
 
-        let chart_n = setup_drawing_area(new_chart_area, app_state.borrow().db.clone(), &chart_id);
+        let chart_n = setup_drawing_area(new_chart_area, app_state.clone(), &chart_id);
         charts.push(chart_n);
     }
 
@@ -227,35 +226,6 @@ fn setup_menus(builder: &gtk::Builder, app_state: GuiStateHandle) {
     }));
 }
 
-/// Popup a dialog and export data as HDF5 format.
-fn save_data_as_hdf5(top_level: &gtk::Window, app_state: &GuiStateHandle) {
-    let dialog = gtk::FileChooserDialog::with_buttons(
-        Some("Export data as HDF5"),
-        Some(top_level),
-        gtk::FileChooserAction::Save,
-        &[
-            ("Cancel", gtk::ResponseType::Cancel),
-            ("Save", gtk::ResponseType::Accept),
-        ],
-    );
-    let res = dialog.run();
-    let filename = dialog.get_filename();
-    dialog.destroy();
-    if let gtk::ResponseType::Accept = res {
-        if let Some(filename) = filename {
-            info!("Saving data to filename: {:?}", filename);
-            let res = { app_state.borrow().save(&filename) };
-            if let Err(err) = res {
-                let error_message = format!("Error saving data: {}", err);
-                error!("{}", error_message);
-                show_error(top_level, &error_message);
-            } else {
-                info!("Data saved success");
-            }
-        }
-    }
-}
-
 fn setup_toolbar_buttons(builder: &gtk::Builder, app_state: GuiStateHandle) {
     // Drop database:
     {
@@ -306,6 +276,13 @@ fn setup_toolbar_buttons(builder: &gtk::Builder, app_state: GuiStateHandle) {
                     .enable_tailing(tail_duration);
             }));
         }
+    }
+
+    {
+        let tb_link_x_axis: gtk::ToggleToolButton = builder.get_object("tb_link_x_axis").unwrap();
+        tb_link_x_axis.connect_toggled(clone!(@strong app_state => move |tb| {
+            app_state.borrow_mut().set_linked_x_axis(tb.get_active());
+        }));
     }
 }
 

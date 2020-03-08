@@ -1,7 +1,39 @@
 // Data IO. This could be moved to the lognplot crate?
 
+use super::error_dialog::show_error;
+use super::GuiStateHandle;
+use gtk::prelude::*;
 use lognplot::tsdb::TsDbHandle;
 use std::path::Path;
+
+/// Popup a dialog and export data as HDF5 format.
+pub fn save_data_as_hdf5(top_level: &gtk::Window, app_state: &GuiStateHandle) {
+    let dialog = gtk::FileChooserDialog::with_buttons(
+        Some("Export data as HDF5"),
+        Some(top_level),
+        gtk::FileChooserAction::Save,
+        &[
+            ("Cancel", gtk::ResponseType::Cancel),
+            ("Save", gtk::ResponseType::Accept),
+        ],
+    );
+    let res = dialog.run();
+    let filename = dialog.get_filename();
+    dialog.destroy();
+    if let gtk::ResponseType::Accept = res {
+        if let Some(filename) = filename {
+            info!("Saving data to filename: {:?}", filename);
+            let res = { app_state.borrow().save(&filename) };
+            if let Err(err) = res {
+                let error_message = format!("Error saving data: {}", err);
+                error!("{}", error_message);
+                show_error(top_level, &error_message);
+            } else {
+                info!("Data saved success");
+            }
+        }
+    }
+}
 
 pub fn export_data(db: TsDbHandle, filename: &Path) -> hdf5::Result<()> {
     let file = hdf5::File::create(filename)?;

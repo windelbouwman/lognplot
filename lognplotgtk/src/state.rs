@@ -4,17 +4,23 @@ use std::rc::Rc;
 
 use crate::chart_widget::ChartStateHandle;
 use crate::session;
+use lognplot::chart::ValueAxis;
 use lognplot::tsdb::{DataChangeEvent, TsDbHandle};
 
 /// Struct with some GUI state in it which will be shown in the GUI.
 pub struct GuiState {
     pub db: TsDbHandle,
     charts: Vec<ChartStateHandle>,
+    link_x_axis: bool,
 }
 
 impl GuiState {
     pub fn new(db: TsDbHandle) -> Self {
-        GuiState { db, charts: vec![] }
+        GuiState {
+            db,
+            charts: vec![],
+            link_x_axis: false,
+        }
     }
 
     pub fn into_handle(self) -> GuiStateHandle {
@@ -97,6 +103,25 @@ impl GuiState {
     pub fn handle_event(&self, event: &DataChangeEvent) {
         for chart in &self.charts {
             chart.borrow().handle_event(event);
+        }
+    }
+
+    pub fn set_linked_x_axis(&mut self, value: bool) {
+        self.link_x_axis = value;
+    }
+
+    pub fn sync_x_axis(&self, axis: &ValueAxis) {
+        if self.link_x_axis {
+            for chart in &self.charts {
+                // If chart is already borrowed, this is the sync call originating chart!
+                // TODO: this contraption does not seem right ..
+                match chart.try_borrow_mut() {
+                    Ok(mut h) => {
+                        h.sync_x_axis(axis);
+                    }
+                    Err(_) => {}
+                }
+            }
         }
     }
 }

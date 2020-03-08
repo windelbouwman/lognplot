@@ -29,6 +29,12 @@ impl ValueAxis {
         self.range.set_end(end);
     }
 
+    /// Take limit values from other axis.
+    pub fn copy_limits(&mut self, other: &Self) {
+        self.range.set_begin(other.begin());
+        self.range.set_end(other.end());
+    }
+
     pub fn begin(&self) -> f64 {
         self.range.begin()
     }

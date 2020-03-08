@@ -8,8 +8,8 @@ use std::time::Instant;
 
 use crate::meta_metrics::MetricRecorder;
 use crate::session::DashBoardItem;
-use lognplot::chart::{Chart, Curve, CurveData};
-
+use crate::state::GuiStateHandle;
+use lognplot::chart::{Chart, Curve, CurveData, ValueAxis};
 use lognplot::geometry::Size;
 use lognplot::render::{draw_chart, CairoCanvas, ChartLayout, ChartOptions};
 use lognplot::render::{x_pixel_to_domain, x_pixels_to_domain, y_pixel_to_domain};
@@ -21,6 +21,7 @@ pub struct ChartState {
     chart: Chart,
     chart_options: ChartOptions,
     db: TsDbHandle,
+    app_state: GuiStateHandle,
     color_wheel: Vec<String>,
     color_index: usize,
     tailing: Option<f64>,
@@ -39,7 +40,12 @@ pub const CATEGORY10_COLORS: &[&str] = &[
 ];
 
 impl ChartState {
-    pub fn new(db: TsDbHandle, draw_area: gtk::DrawingArea, id: &str) -> Self {
+    pub fn new(
+        db: TsDbHandle,
+        app_state: GuiStateHandle,
+        draw_area: gtk::DrawingArea,
+        id: &str,
+    ) -> Self {
         let chart = Chart::default();
         // let color_wheel = vec!["blue".to_string(), "red".to_string(), "green".to_string()];
         let color_wheel: Vec<String> = CATEGORY10_COLORS.iter().map(|s| (*s).to_string()).collect();
@@ -48,6 +54,7 @@ impl ChartState {
             chart,
             chart_options: ChartOptions::default(),
             db: db.clone(),
+            app_state,
             color_wheel,
             color_index: 0,
             tailing: None,
@@ -156,7 +163,7 @@ impl ChartState {
         self.chart.pan_horizontal_absolute(-amount);
         // TODO: pan vertical as well?
         // TODO: idea: auto fit vertically?
-        self.chart.fit_y_axis();
+        self.handle_x_axis_change();
         // self.chart.pan_vertical(dy* 0.001);
     }
 
@@ -204,8 +211,7 @@ impl ChartState {
         });
         self.disable_tailing();
         self.chart.zoom_horizontal(amount, around);
-        self.chart.fit_y_axis();
-        self.repaint();
+        self.handle_x_axis_change();
     }
 
     pub fn set_cursor(&mut self, loc: Option<((f64, f64), Size)>) {
@@ -227,16 +233,14 @@ impl ChartState {
         debug!("pan left!");
         self.disable_tailing();
         self.chart.pan_horizontal_relative(-0.1);
-        self.chart.fit_y_axis();
-        self.repaint();
+        self.handle_x_axis_change();
     }
 
     pub fn pan_right(&mut self) {
         debug!("Pan right!");
         self.disable_tailing();
         self.chart.pan_horizontal_relative(0.1);
-        self.chart.fit_y_axis();
-        self.repaint();
+        self.handle_x_axis_change();
     }
 
     pub fn pan_up(&mut self) {
@@ -271,6 +275,27 @@ impl ChartState {
         if let Some(x) = self.tailing {
             self.zoom_to_last(x);
         }
+    }
+
+    /// X axis has changed, either sync all axis, or redraw.
+    /// Sync of all x-axis also triggers a redraw on own chart.
+    fn handle_x_axis_change(&mut self) {
+        // Repaint self:
+        self.chart.fit_y_axis();
+        self.repaint();
+
+        // Adjust other axis:
+        // The below call will skip this chart, since we are already
+        // borrowed mutably here.
+        self.app_state.borrow().sync_x_axis(&self.chart.x_axis);
+    }
+
+    /// Called from outside to synchronize the x-axis of this plot.
+    pub fn sync_x_axis(&mut self, axis: &ValueAxis) {
+        self.disable_tailing();
+        self.chart.x_axis.copy_limits(axis);
+        self.chart.fit_y_axis();
+        self.repaint();
     }
 
     fn on_scroll_event(&mut self, e: &gdk::EventScroll) -> Inhibit {
@@ -406,7 +431,7 @@ pub type ChartStateHandle = Rc<RefCell<ChartState>>;
 
 pub fn setup_drawing_area(
     draw_area: gtk::DrawingArea,
-    db: TsDbHandle,
+    app_state: GuiStateHandle,
     chart_id: &str,
 ) -> ChartStateHandle {
     // Always get mouse pointer motion:
@@ -414,7 +439,9 @@ pub fn setup_drawing_area(
     draw_area.add_events(gdk::EventMask::POINTER_MOTION_MASK);
     draw_area.add_events(gdk::EventMask::LEAVE_NOTIFY_MASK);
 
-    let chart_state = ChartState::new(db, draw_area.clone(), chart_id).into_handle();
+    let db = { app_state.borrow().db.clone() };
+
+    let chart_state = ChartState::new(db, app_state, draw_area.clone(), chart_id).into_handle();
 
     // Connect draw event:
     draw_area.connect_draw(
