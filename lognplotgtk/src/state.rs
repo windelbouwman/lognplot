@@ -37,6 +37,10 @@ impl GuiState {
         super::io::export_data(self.db.clone(), filename).map_err(|e| e.to_string())
     }
 
+    pub fn load(&self, filename: &Path) -> Result<(), String> {
+        super::io::import_data(self.db.clone(), filename).map_err(|e| e.to_string())
+    }
+
     pub fn save_session(&self, filename: &Path) -> std::io::Result<()> {
         let mut s = session::Session::new();
         for chart in &self.charts {

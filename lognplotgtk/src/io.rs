@@ -3,7 +3,8 @@
 use super::error_dialog::show_error;
 use super::GuiStateHandle;
 use gtk::prelude::*;
-use lognplot::tsdb::TsDbHandle;
+use lognplot::time::TimeStamp;
+use lognplot::tsdb::{Observation, Sample, TsDbHandle};
 use std::path::Path;
 
 /// Popup a dialog and export data as HDF5 format.
@@ -26,7 +27,6 @@ pub fn save_data_as_hdf5(top_level: &gtk::Window, app_state: &GuiStateHandle) {
             let res = { app_state.borrow().save(&filename) };
             if let Err(err) = res {
                 let error_message = format!("Error saving data: {}", err);
-                error!("{}", error_message);
                 show_error(top_level, &error_message);
             } else {
                 info!("Data saved success");
@@ -35,12 +35,39 @@ pub fn save_data_as_hdf5(top_level: &gtk::Window, app_state: &GuiStateHandle) {
     }
 }
 
-pub fn export_data(db: TsDbHandle, filename: &Path) -> hdf5::Result<()> {
-    let file = hdf5::File::create(filename)?;
-    export_db(db, file)
+pub fn load_data_from_hdf5(top_level: &gtk::Window, app_state: &GuiStateHandle) {
+    let dialog = gtk::FileChooserDialog::with_buttons(
+        Some("Import data from HDF5 file"),
+        Some(top_level),
+        gtk::FileChooserAction::Open,
+        &[
+            ("Cancel", gtk::ResponseType::Cancel),
+            ("Open", gtk::ResponseType::Accept),
+        ],
+    );
+
+    let res = dialog.run();
+    let filename = dialog.get_filename();
+    dialog.destroy();
+    if let (gtk::ResponseType::Accept, Some(filename)) = (res, filename) {
+        info!("Loading data from filename: {:?}", filename);
+        let res = { app_state.borrow().load(&filename) };
+        if let Err(err) = res {
+            let error_message = format!("Error loading data from {:?}: {}", filename, err);
+            show_error(top_level, &error_message);
+        } else {
+            info!("Data loaded!");
+        }
+    }
 }
 
-fn export_db(db: TsDbHandle, file: hdf5::File) -> hdf5::Result<()> {
+pub fn export_data(db: TsDbHandle, filename: &Path) -> hdf5::Result<()> {
+    let file = hdf5::File::create(filename)?;
+    export_db(db, &file)
+}
+
+/// Export all signals from the database into a HDF5 file.
+fn export_db(db: TsDbHandle, file: &hdf5::File) -> hdf5::Result<()> {
     let group = file.create_group("my_datorz")?;
 
     let signal_names = db.get_signal_names();
@@ -72,9 +99,47 @@ fn export_db(db: TsDbHandle, file: hdf5::File) -> hdf5::Result<()> {
     Ok(())
 }
 
+/// Import data from file into the database.
+pub fn import_data(db: TsDbHandle, filename: &Path) -> hdf5::Result<()> {
+    let file = hdf5::File::open(filename)?;
+    import_data_inner(db, &file)
+}
+
+fn import_data_inner(db: TsDbHandle, file: &hdf5::File) -> hdf5::Result<()> {
+    // TODO: determine internal storage schema
+    let group = file.group("my_datorz")?;
+    for name in group.member_names()? {
+        debug!("Importing signal with name: {}", name);
+        let dataset = group.dataset(&name)?;
+
+        let data = dataset.read_2d::<f64>()?;
+
+        let shape = data.shape();
+        debug!("Signal data shape: {:?}", shape);
+
+        if shape[1] == 2 {
+            // println!("Let go!");
+            let mut samples = vec![];
+            for row in data.genrows() {
+                assert!(row.len() == 2);
+                let timestamp = TimeStamp::new(row[0]);
+                let value = Sample::new(row[1]);
+                let observation = Observation::new(timestamp, value);
+                samples.push(observation);
+            }
+
+            db.add_values(&name, samples);
+        } else {
+            warn!("Skipping signal due to shape: {:?}", shape);
+        }
+    }
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
-    use super::export_db;
+    use super::{export_db, import_data_inner};
     use lognplot::time::TimeStamp;
     use lognplot::tsdb::{Observation, Sample, TsDb};
 
@@ -97,7 +162,16 @@ mod tests {
 
         let db_handle = db.into_handle();
 
+        // Export data:
         let file = hdf5::File::create("export_test.h5")?;
-        export_db(db_handle, file)
+        export_db(db_handle, &file)?;
+
+        // Import the data back:
+        let db2_handle = TsDb::default().into_handle();
+        import_data_inner(db2_handle.clone(), &file)?;
+
+        assert_eq!(vec![trace_name], db2_handle.get_signal_names());
+        assert_eq!(7, db2_handle.quick_summary(trace_name).unwrap().count);
+        Ok(())
     }
 }

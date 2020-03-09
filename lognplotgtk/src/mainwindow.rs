@@ -4,7 +4,7 @@ use gtk::Application;
 use lognplot::tsdb::TsDbHandle;
 
 use super::chart_widget::setup_drawing_area;
-use super::io::save_data_as_hdf5;
+use super::io::{load_data_from_hdf5, save_data_as_hdf5};
 use super::session::{load_session, save_session};
 use super::signal_repository::setup_signal_repository;
 use super::{GuiState, GuiStateHandle};
@@ -197,11 +197,12 @@ fn setup_menus(builder: &gtk::Builder, app_state: GuiStateHandle) {
         app_state.borrow().delete_all_data();
     }));
 
+    let top_level: gtk::Window = builder.get_object("top_unit").unwrap();
     let menu_open: gtk::MenuItem = builder.get_object("menu_open").unwrap();
-    menu_open.set_sensitive(false);
-    menu_open.connect_activate(move |_| {
-        unimplemented!("TODO: implement open");
-    });
+    menu_open.set_sensitive(true);
+    menu_open.connect_activate(clone!(@strong app_state => move |_| {
+        load_data_from_hdf5(&top_level, &app_state);
+    }));
 
     let top_level: gtk::Window = builder.get_object("top_unit").unwrap();
     let menu_save: gtk::MenuItem = builder.get_object("menu_save").unwrap();

@@ -1,6 +1,8 @@
 use gtk::prelude::*;
 use std::collections::HashMap;
 
+// TODO
+// use crate::error_dialog::show_error;
 use crate::state::GuiStateHandle;
 use lognplot::tsdb::{DataChangeEvent, TsDbHandle};
 
@@ -96,6 +98,7 @@ pub fn setup_signal_repository(builder: &gtk::Builder, app_state: GuiStateHandle
     setup_filter_model(builder, &model);
     let tree_view: gtk::TreeView = builder.get_object("signal_tree_view").unwrap();
     setup_drag_drop(&tree_view);
+    setup_dropping(&tree_view, app_state.clone());
     setup_activate(&tree_view, app_state.clone());
     setup_key_press_handler(&tree_view, app_state.clone());
 
@@ -124,7 +127,6 @@ fn setup_notify_change(mut signal_pane: SignalBrowser) {
 
             // Delay to emulate rate limiting of events.
             glib::timeout_future_with_priority(glib::Priority::default(), 200).await;
-
 
             // Re-query database for some extra samples:
             signal_pane.db.poll_events();
@@ -205,6 +207,46 @@ fn setup_drag_drop(tree_view: &gtk::TreeView) {
         }
         debug!("GET DATA {} {}", info, r);
     });
+}
+
+/// Enable files to be dropped on the widget:
+fn setup_dropping(tree_view: &gtk::TreeView, app_state: GuiStateHandle) {
+    let targets = vec![gtk::TargetEntry::new(
+        "text/uri-list",
+        gtk::TargetFlags::empty(),
+        0,
+    )];
+    tree_view.drag_dest_set(gtk::DestDefaults::ALL, &targets, gdk::DragAction::COPY);
+
+    tree_view.connect_drag_data_received(move |_w, _dc, _x, _y, data, _info, _time| {
+        let uris: Vec<String> = data.get_uris().iter().map(|u| u.to_string()).collect();
+        info!("DROP {:?}", uris);
+        for uri in uris {
+            if let Err(err) = handle_drop_uri(uri, &app_state) {
+                error!("Loading failed: {}", err);
+            // TODO: show dialog box:
+            // let toplevel = w.get_toplevel();
+            // show_error(top_level, &err);
+            } else {
+                info!("Loaded!");
+            }
+        }
+    });
+}
+
+fn handle_drop_uri(uri: String, app_state: &GuiStateHandle) -> Result<(), String> {
+    info!("Loading uri {}", uri);
+    let u = url::Url::parse(&uri).map_err(|e| e.to_string())?;
+
+    if u.scheme() == "file" {
+        let filepath = u
+            .to_file_path()
+            .map_err(|_| format!("Invalid file path url: {}", uri))?;
+        info!("Loading file: {:?}", filepath);
+        app_state.borrow().load(&filepath)
+    } else {
+        Err(format!("Wrong scheme for uri: {}", u.scheme()))
+    }
 }
 
 fn get_selected_signal_names(w: &gtk::TreeView) -> Vec<String> {
