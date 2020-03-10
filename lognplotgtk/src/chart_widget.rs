@@ -9,7 +9,7 @@ use std::time::Instant;
 use crate::meta_metrics::MetricRecorder;
 use crate::session::DashBoardItem;
 use crate::state::GuiStateHandle;
-use lognplot::chart::{Chart, Curve, CurveData, ValueAxis};
+use lognplot::chart::{Chart, Curve, CurveData};
 use lognplot::geometry::Size;
 use lognplot::render::{draw_chart, CairoCanvas, ChartLayout, ChartOptions};
 use lognplot::render::{x_pixel_to_domain, x_pixels_to_domain, y_pixel_to_domain};
@@ -287,13 +287,13 @@ impl ChartState {
         // Adjust other axis:
         // The below call will skip this chart, since we are already
         // borrowed mutably here.
-        self.app_state.borrow().sync_x_axis(&self.chart.x_axis);
+        self.app_state.borrow().sync_x_axis(&self);
     }
 
     /// Called from outside to synchronize the x-axis of this plot.
-    pub fn sync_x_axis(&mut self, axis: &ValueAxis) {
+    pub fn sync_x_axis(&mut self, other_chart: &Self) {
         self.disable_tailing();
-        self.chart.x_axis.copy_limits(axis);
+        self.chart.x_axis.copy_limits(&other_chart.chart.x_axis);
         self.chart.fit_y_axis();
         self.repaint();
     }

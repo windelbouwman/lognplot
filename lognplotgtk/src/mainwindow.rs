@@ -199,14 +199,12 @@ fn setup_menus(builder: &gtk::Builder, app_state: GuiStateHandle) {
 
     let top_level: gtk::Window = builder.get_object("top_unit").unwrap();
     let menu_open: gtk::MenuItem = builder.get_object("menu_open").unwrap();
-    menu_open.set_sensitive(true);
     menu_open.connect_activate(clone!(@strong app_state => move |_| {
         load_data_from_hdf5(&top_level, &app_state);
     }));
 
     let top_level: gtk::Window = builder.get_object("top_unit").unwrap();
     let menu_save: gtk::MenuItem = builder.get_object("menu_save").unwrap();
-    menu_save.set_sensitive(true);
     menu_save.connect_activate(clone!(@strong app_state => move |_| {
         save_data_as_hdf5(&top_level, &app_state);
     }));

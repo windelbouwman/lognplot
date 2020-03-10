@@ -2,9 +2,8 @@ use std::cell::RefCell;
 use std::path::Path;
 use std::rc::Rc;
 
-use crate::chart_widget::ChartStateHandle;
+use crate::chart_widget::{ChartState, ChartStateHandle};
 use crate::session;
-use lognplot::chart::ValueAxis;
 use lognplot::tsdb::{DataChangeEvent, TsDbHandle};
 
 /// Struct with some GUI state in it which will be shown in the GUI.
@@ -110,18 +109,27 @@ impl GuiState {
         }
     }
 
-    pub fn set_linked_x_axis(&mut self, value: bool) {
-        self.link_x_axis = value;
+    pub fn set_linked_x_axis(&mut self, link_axes: bool) {
+        self.link_x_axis = link_axes;
+
+        if link_axes {
+            if let Some((first, rest)) = self.charts.split_first() {
+                first.borrow_mut().disable_tailing();
+                for chart in rest {
+                    chart.borrow_mut().sync_x_axis(&first.borrow());
+                }
+            }
+        }
     }
 
-    pub fn sync_x_axis(&self, axis: &ValueAxis) {
+    pub fn sync_x_axis(&self, source_chart: &ChartState) {
         if self.link_x_axis {
             for chart in &self.charts {
                 // If chart is already borrowed, this is the sync call originating chart!
                 // TODO: this contraption does not seem right ..
                 match chart.try_borrow_mut() {
                     Ok(mut h) => {
-                        h.sync_x_axis(axis);
+                        h.sync_x_axis(source_chart);
                     }
                     Err(_) => {}
                 }

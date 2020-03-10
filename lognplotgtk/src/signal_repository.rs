@@ -219,6 +219,7 @@ fn setup_dropping(tree_view: &gtk::TreeView, app_state: GuiStateHandle) {
     tree_view.drag_dest_set(gtk::DestDefaults::ALL, &targets, gdk::DragAction::COPY);
 
     tree_view.connect_drag_data_received(move |_w, _dc, _x, _y, data, _info, _time| {
+        _w.stop_signal_emission("drag_data_received");
         let uris: Vec<String> = data.get_uris().iter().map(|u| u.to_string()).collect();
         info!("DROP {:?}", uris);
         for uri in uris {
