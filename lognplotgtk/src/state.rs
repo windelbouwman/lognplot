@@ -77,8 +77,8 @@ impl GuiState {
     /// Handy for double click / enter press on a signal.
     pub fn add_curve(&self, name: &str, chart_index: Option<usize>) {
         if let Some(index) = chart_index {
-            if index < self.charts.len() {
-                self.charts[index].borrow_mut().add_curve(name);
+            if index > 0 && index <= self.charts.len() {
+                self.charts[index - 1].borrow_mut().add_curve(name);
             }
         } else {
             self.charts.first().unwrap().borrow_mut().add_curve(name);
@@ -133,6 +133,20 @@ impl GuiState {
                     }
                     Err(_) => {}
                 }
+            }
+        }
+    }
+
+    /// Distribute cursor position over other charts.
+    pub fn sync_cursor(&self, source_chart: &ChartState) {
+        for chart in &self.charts {
+            // If chart is already borrowed, this is the sync call originating chart!
+            // TODO: this contraption does not seem right ..
+            match chart.try_borrow_mut() {
+                Ok(mut h) => {
+                    h.sync_cursor(source_chart);
+                }
+                Err(_) => {}
             }
         }
     }

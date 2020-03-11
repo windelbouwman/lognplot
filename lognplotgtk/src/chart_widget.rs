@@ -226,6 +226,10 @@ impl ChartState {
         } else {
             self.chart.cursor = None;
         }
+
+        // Sync cursor to other plots:
+        self.app_state.borrow().sync_cursor(&self);
+
         self.repaint();
     }
 
@@ -295,6 +299,13 @@ impl ChartState {
         self.disable_tailing();
         self.chart.x_axis.copy_limits(&other_chart.chart.x_axis);
         self.chart.fit_y_axis();
+        self.repaint();
+    }
+
+    /// Sync the cursor location from another chart.
+    pub fn sync_cursor(&mut self, other_chart: &Self) {
+        self.chart.cursor = other_chart.chart.cursor.clone();
+        // .map(|(ts, _)| (ts, self.chart.y_axis.end()));
         self.repaint();
     }
 

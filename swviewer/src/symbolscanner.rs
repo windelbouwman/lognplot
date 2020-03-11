@@ -2,7 +2,7 @@
 //!
 //!
 
-pub fn parse_elf_file(elf_filename: String) -> gimli::Result<Vec<TraceVar>> {
+pub fn parse_elf_file(elf_filename: &str) -> gimli::Result<Vec<TraceVar>> {
     info!("Parsing {}", elf_filename);
 
     use object::Object;
@@ -57,12 +57,15 @@ pub fn parse_elf_file(elf_filename: String) -> gimli::Result<Vec<TraceVar>> {
             if tag == gimli::DW_TAG_variable {
                 // println!("   -- it is a variable!");
                 if let Some(var) = analyze_variable_entry(entry, &dwarf, header.encoding())? {
-                    println!("Var: {} @ 0x{:08X}", var.name, var.address);
+                    // println!("Var: {} @ 0x{:08X}", var.name, var.address);
                     trace_vars.push(var);
                 }
             }
         }
     }
+
+    // Sort variables by name:
+    trace_vars.sort_by_key(|v| v.name.clone());
 
     println!("Detected {} variables", trace_vars.len());
     for var in &trace_vars {
@@ -172,6 +175,7 @@ where
 /// A potential variable to trace.
 ///
 /// This has a name, a memory address and all the other stuff required :)
+#[derive(Clone, Debug)]
 pub struct TraceVar {
     /// The name of the variable.
     pub name: String,

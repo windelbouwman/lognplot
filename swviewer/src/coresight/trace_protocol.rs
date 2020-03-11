@@ -24,6 +24,15 @@ pub enum TracePacket {
         payload: Vec<u8>,
     },
 
+    /// Hardware trace packet.
+    ///
+    /// Id indicates what's going on.
+    /// - 0: event counter wrapping
+    /// - 1: exception tracing
+    /// - 2: PC samping
+    /// - 0b10xxy: event packet
+    ///     - comparator xx (0..3) data
+    ///     - y=1 data was written, y=0 data was read
     DwtData {
         id: usize,
         payload: Vec<u8>,
@@ -44,7 +53,7 @@ pub enum TracePacket {
 ///
 /// This is a sans-io style decoder.
 /// See also: https://sans-io.readthedocs.io/how-to-sans-io.html
-pub struct Decoder {
+pub struct TraceDataDecoder {
     incoming: VecDeque<u8>,
     packets: VecDeque<TracePacket>,
     state: DecoderState,
@@ -71,9 +80,9 @@ enum DecoderState {
     },
 }
 
-impl Decoder {
+impl TraceDataDecoder {
     pub fn new() -> Self {
-        Decoder {
+        TraceDataDecoder {
             incoming: VecDeque::new(),
             packets: VecDeque::new(),
             state: DecoderState::Header,
@@ -174,10 +183,12 @@ impl Decoder {
                             self.emit(TracePacket::TimeStamp { tc, ts });
                         }
                         self.state = DecoderState::Header;
-                    } else {
-                        assert!(header & 0xc0 == 0xc0);
+                    } else if header & 0xc0 == 0xc0 {
                         let tc = ((header >> 4) & 0x3) as usize;
                         self.state = DecoderState::TimeStamp { tc, ts: vec![] };
+                    } else {
+                        warn!("Invalid data byte!");
+                        self.state = DecoderState::Header;
                     }
                 }
                 0x4 => {
@@ -314,7 +325,7 @@ fn extract_size(c: u8) -> Result<usize, String> {
 
 #[cfg(test)]
 mod tests {
-    use super::{Decoder, TracePacket};
+    use super::{TraceDataDecoder, TracePacket};
 
     #[test]
     fn example_capture1() {
@@ -324,7 +335,7 @@ mod tests {
             86, 0, 0, 8, 112, 143, 226, 239, 127, 91, 240, 196, 8,
         ];
 
-        let mut decoder = Decoder::new();
+        let mut decoder = TraceDataDecoder::new();
 
         decoder.feed(trace_data);
         assert_eq!(
@@ -387,7 +398,7 @@ mod tests {
             0, 0, 8, 112, 143, 216, 2, 0, 0, 240, 197,
         ];
 
-        let mut decoder = Decoder::new();
+        let mut decoder = TraceDataDecoder::new();
 
         decoder.feed(trace_data);
         assert_eq!(

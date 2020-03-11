@@ -13,7 +13,7 @@ mod trace_protocol;
 pub use memory::{MemoryAccess, MemoryAddress};
 pub use target::Target;
 
-use error::CoreSightError;
+pub use error::CoreSightError;
 use identification::ComponentIdentification;
 
 use component::Component;
@@ -24,7 +24,7 @@ use itm::Itm;
 use itm::ITM_PID;
 use romtable::read_rom_table;
 use tpiu::{Tpiu, TPIU_PID};
-pub use trace_protocol::{Decoder, TracePacket};
+pub use trace_protocol::{TraceDataDecoder, TracePacket};
 
 pub type CoreSightResult<T> = Result<T, CoreSightError>;
 

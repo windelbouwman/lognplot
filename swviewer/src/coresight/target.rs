@@ -116,15 +116,19 @@ where
         Ok(())
     }
 
-    pub fn setup_tracing(&self) -> CoreSightResult<()> {
+    /// Setup tracing via the TPIU.
+    ///
+    /// Arguments:
+    /// - uc_freq: frequency of the core CPU.
+    /// - swo_freq: frequency in Hz of the SWO data.
+    /// those values are used to calculate the prescaler for the TPIU
+    pub fn setup_tracing(&self, uc_freq: u32, swo_freq: u32) -> CoreSightResult<()> {
         // stm32 specific reg (DBGMCU_CR):
         self.access.write_u32(0xE004_2004, 0x27)?;
 
         // Config tpiu:
         let tpiu = self.grab_tpiu();
         tpiu.set_port_size(1)?;
-        let uc_freq = 16; // MHz (HSI frequency)
-        let swo_freq = 2; // MHz
         let prescaler = (uc_freq / swo_freq) - 1;
         tpiu.set_prescaler(prescaler)?;
         tpiu.set_pin_protocol(2)?;
@@ -142,13 +146,18 @@ where
         Ok(())
     }
 
-    pub fn start_trace_memory_address(&self, addr: u32) -> CoreSightResult<()> {
+    pub fn start_trace_memory_address(&self, addr: u32, channel: usize) -> CoreSightResult<()> {
         // config dwt:
         let dwt = self.grab_dwt();
         // Future:
-        dwt.enable_trace(addr)?;
-        // dwt.disable_memory_watch()?;
+        dwt.enable_trace(addr, channel)?;
 
+        Ok(())
+    }
+
+    pub fn stop_trace(&self, channel: usize) -> CoreSightResult<()> {
+        let dwt = self.grab_dwt();
+        dwt.disable_memory_watch(channel)?;
         Ok(())
     }
 

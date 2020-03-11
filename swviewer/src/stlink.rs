@@ -1,16 +1,20 @@
 //! Interfacing with ST-link v2 device!
+//!
+//! References:
+//! For an excellent reference, see stlink_usb.c in the openocd sourcecode.
 
-use bytes::{Buf, BufMut};
-use std::io::Cursor;
+use scroll::{Pread, Pwrite, LE};
 
 // ST-link v2 usb id's:
 const STLINK_VID: u16 = 0x0483;
-const STLINK_PID: u16 = 0x3748;
+const STLINK_V2_PID: u16 = 0x3748;
+const STLINK_V2_1_PID: u16 = 0x374B;
 
-pub fn find_st_link() -> rusb::Result<Option<rusb::Device<rusb::GlobalContext>>> {
+fn find_st_link() -> rusb::Result<Option<rusb::Device<rusb::GlobalContext>>> {
     let first_match = rusb::devices()?.iter().find(|d| {
         if let Ok(desc) = d.device_descriptor() {
-            desc.vendor_id() == STLINK_VID && desc.product_id() == STLINK_PID
+            desc.vendor_id() == STLINK_VID
+                && (desc.product_id() == STLINK_V2_PID || desc.product_id() == STLINK_V2_1_PID)
         } else {
             false
         }
@@ -19,7 +23,7 @@ pub fn find_st_link() -> rusb::Result<Option<rusb::Device<rusb::GlobalContext>>>
     Ok(first_match)
 }
 
-pub fn open_st_link(st_link_device: rusb::Device<rusb::GlobalContext>) -> StLinkResult<StLink> {
+fn open_st_link(st_link_device: rusb::Device<rusb::GlobalContext>) -> StLinkResult<StLink> {
     let desc = st_link_device.device_descriptor()?;
     info!("Device description: {:?}", desc);
     info!("Num configs: {}", desc.num_configurations());
@@ -39,13 +43,36 @@ pub fn open_st_link(st_link_device: rusb::Device<rusb::GlobalContext>) -> StLink
         st_link_handle.set_active_configuration(1)?;
     }
 
-    let st_link = StLink::new(st_link_handle);
+    let st_link = StLink::new(st_link_handle)?;
 
     Ok(st_link)
 }
 
+/// Try hard to get a handle to an st-link device.
+pub fn get_stlink() -> StLinkResult<StLink> {
+    if let Some(st_link_device) = find_st_link()? {
+        info!("ST link found!");
+        let st_link = open_st_link(st_link_device)?;
+        Ok(st_link)
+    } else {
+        Err(StLinkError::Other(
+            "No ST link found, please connect it?".to_owned(),
+        ))
+    }
+}
+
 pub struct StLink {
+    /// usb handle to use
     handle: rusb::DeviceHandle<rusb::GlobalContext>,
+
+    /// rx endpoint
+    rx_endpoint: u8,
+
+    /// tx usb endpoint
+    tx_endpoint: u8,
+
+    /// Trace data usb endpoint
+    trace_endpoint: u8,
 }
 
 #[derive(Debug)]
@@ -93,19 +120,43 @@ const CMD_GET_CURRENT_MODE: u8 = 0xf5;
 const DFU_EXIT: u8 = 0x7;
 
 // DEBUG COMMANDS:
+const DEBUG_RESET_SYS: u8 = 0x3;
 const DEBUG_READ_U32: u8 = 0x7;
 // const DEBUG_WRITE_U32: u8 = 0x8;
 const DEBUG_ENTER: u8 = 0x20;
-// const DEBUG_EXIT: u8 = 0x21;
+const DEBUG_EXIT: u8 = 0x21;
 const DEBUG_JTAG_WRITEDEBUG_32BIT: u8 = 0x35;
 const DEBUG_JTAG_READDEBUG_32BIT: u8 = 0x36;
+const DEBUG_START_TRACE_RX: u8 = 0x40;
 
 // debug mode enter parameters:
 const DEBUG_ENTER_MODE_SWD: u8 = 0xa3;
 
 impl StLink {
-    fn new(handle: rusb::DeviceHandle<rusb::GlobalContext>) -> Self {
-        StLink { handle }
+    fn new(handle: rusb::DeviceHandle<rusb::GlobalContext>) -> StLinkResult<Self> {
+        let rx_endpoint = 0x81;
+
+        // product ID determines what endpoints to use:
+        let pid = handle.device().device_descriptor()?.product_id();
+
+        let tx_endpoint = match pid {
+            STLINK_V2_PID => 2,
+            STLINK_V2_1_PID => 1,
+            _ => unimplemented!("invalid PID"),
+        };
+
+        let trace_endpoint = match pid {
+            STLINK_V2_PID => 0x83,
+            STLINK_V2_1_PID => 0x82,
+            _ => unimplemented!("invalid PID"),
+        };
+
+        Ok(StLink {
+            handle,
+            rx_endpoint,
+            tx_endpoint,
+            trace_endpoint,
+        })
     }
 
     /// Retrieve ST-link version.
@@ -133,7 +184,7 @@ impl StLink {
     }
 
     pub fn get_mode(&self) -> StLinkResult<StLinkMode> {
-        debug!("Reading current mode");
+        info!("Reading current mode");
         let mut cmd = [0; 16];
         cmd[0] = CMD_GET_CURRENT_MODE;
         let res = self.xfer_cmd(&cmd, 2)?.expect("2 bytes");
@@ -151,7 +202,7 @@ impl StLink {
 
     /// Execute leave DFU mode command
     pub fn leave_dfu_mode(&self) -> StLinkResult<()> {
-        debug!("Leaving dfu mode");
+        info!("Leaving dfu mode");
         let mut cmd = [0; 16];
         cmd[0] = CMD_DFU_COMMAND;
         cmd[1] = DFU_EXIT;
@@ -161,11 +212,29 @@ impl StLink {
 
     /// Enter debug mode!
     pub fn enter_debug_mode(&self) -> StLinkResult<()> {
-        debug!("Enter swo mode");
+        info!("Enter swo mode");
         let mut cmd = [0; 16];
         cmd[0] = CMD_DEBUG_COMMAND;
         cmd[1] = DEBUG_ENTER;
         cmd[2] = DEBUG_ENTER_MODE_SWD;
+        self.send_cmd(&cmd)?;
+        Ok(())
+    }
+
+    pub fn exit_debug_mode(&self) -> StLinkResult<()> {
+        info!("Exit debug mode");
+        let mut cmd = [0; 16];
+        cmd[0] = CMD_DEBUG_COMMAND;
+        cmd[1] = DEBUG_EXIT;
+        self.send_cmd(&cmd)?;
+        Ok(())
+    }
+
+    pub fn reset_core(&self) -> StLinkResult<()> {
+        info!("Reset core");
+        let mut cmd = [0; 16];
+        cmd[0] = CMD_DEBUG_COMMAND;
+        cmd[1] = DEBUG_RESET_SYS;
         self.send_cmd(&cmd)?;
         Ok(())
     }
@@ -210,16 +279,16 @@ impl StLink {
         Ok(())
     }
 
-    /// No clue what this command is. Required for tracing? Trace enable?
-    pub fn cmd_x40(&self) -> StLinkResult<()> {
+    /// Trace enable.
+    pub fn trace_enable(&self, trace_swo_freq: u32) -> StLinkResult<()> {
+        info!("Enabeling SWO trace capture at {} Hz", trace_swo_freq);
+        let trace_size = 4096;
+
         let mut cmd = [0; 16];
         cmd[0] = CMD_DEBUG_COMMAND;
-        cmd[1] = 0x40;
-        cmd[2] = 0x0;
-        cmd[3] = 0x10;
-        cmd[4] = 0x80;
-        cmd[5] = 0x84;
-        cmd[6] = 0x1e;
+        cmd[1] = DEBUG_START_TRACE_RX;
+        put_u16(&mut cmd, 2, trace_size);
+        put_u32(&mut cmd, 4, trace_swo_freq);
 
         let _res = self.xfer_cmd(&cmd, 2)?;
         // TODO: what does this response mean?
@@ -243,9 +312,9 @@ impl StLink {
     pub fn read_trace_data(&self, trace_bytes_count: usize) -> StLinkResult<Vec<u8>> {
         let timeout = std::time::Duration::from_millis(700);
         let mut trace_data_buffer = vec![0; trace_bytes_count];
-        let bytes_received = self
-            .handle
-            .read_bulk(0x83, &mut trace_data_buffer, timeout)?;
+        let bytes_received =
+            self.handle
+                .read_bulk(self.trace_endpoint, &mut trace_data_buffer, timeout)?;
         if bytes_received != trace_bytes_count {
             return Err(StLinkError::Other(format!(
                 "Mismatch in received bytes! (read {} bytes, but expected {} bytes)",
@@ -308,7 +377,7 @@ impl StLink {
         assert!(cmd.len() == 16);
         trace!("Sending command: {:?}", cmd);
         let timeout = std::time::Duration::from_millis(700);
-        let bytes_written = self.handle.write_bulk(2, cmd, timeout)?;
+        let bytes_written = self.handle.write_bulk(self.tx_endpoint, cmd, timeout)?;
         if bytes_written != cmd.len() {
             return Err(StLinkError::Other(format!(
                 "Mismatch in written bytes! (wrote {}, but wanted to write {})",
@@ -319,7 +388,9 @@ impl StLink {
 
         if rxsize > 0 {
             let mut response_buffer = vec![0; rxsize];
-            let bytes_received = self.handle.read_bulk(0x81, &mut response_buffer, timeout)?;
+            let bytes_received =
+                self.handle
+                    .read_bulk(self.rx_endpoint, &mut response_buffer, timeout)?;
             if bytes_received != rxsize {
                 return Err(StLinkError::Other(format!(
                     "Mismatch in received bytes! (read {} bytes, but expected {} bytes)",
@@ -335,31 +406,17 @@ impl StLink {
 }
 
 fn put_u32(cmd: &mut [u8], offset: usize, value: u32) {
-    // Ugh, this should be possible in a different manner.
-    let mut cmd2 = vec![];
-    cmd2.put_u32_le(value);
-    cmd[offset] = cmd2[0];
-    cmd[offset + 1] = cmd2[1];
-    cmd[offset + 2] = cmd2[2];
-    cmd[offset + 3] = cmd2[3];
+    cmd.pwrite_with::<u32>(value, offset, LE).unwrap();
 }
 
 fn get_u32(buffer: &[u8], offset: usize) -> u32 {
-    let mut cursor = Cursor::new(buffer);
-    cursor.set_position(offset as u64);
-    cursor.get_u32_le()
+    buffer.pread_with::<u32>(offset, LE).unwrap()
 }
 
 fn put_u16(cmd: &mut [u8], offset: usize, value: u16) {
-    // Ugh, this should be possible in a different manner.
-    let mut cmd2 = vec![];
-    cmd2.put_u16_le(value);
-    cmd[offset] = cmd2[0];
-    cmd[offset + 1] = cmd2[1];
+    cmd.pwrite_with::<u16>(value, offset, LE).unwrap();
 }
 
 fn get_u16(buffer: &[u8], offset: usize) -> u16 {
-    let mut cursor = Cursor::new(buffer);
-    cursor.set_position(offset as u64);
-    cursor.get_u16_le()
+    buffer.pread_with::<u16>(offset, LE).unwrap()
 }

@@ -256,9 +256,11 @@ where
     /// Draw a cursor and some values along it.
     fn draw_cursor(&mut self) {
         if let Some(cursor) = &self.chart.cursor {
-            self.draw_cursor_line(cursor);
-            // TBD: how usable / visually helpful is this??
-            self.draw_cursor_values(cursor);
+            if self.chart.x_axis.contains(&cursor.0) {
+                self.draw_cursor_line(cursor);
+                // TBD: how usable / visually helpful is this??
+                self.draw_cursor_values(cursor);
+            }
         }
     }
 

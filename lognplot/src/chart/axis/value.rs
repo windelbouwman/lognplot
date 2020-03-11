@@ -43,6 +43,10 @@ impl ValueAxis {
         self.range.end()
     }
 
+    pub fn contains(&self, t: &TimeStamp) -> bool {
+        self.range.contains(t.amount)
+    }
+
     /// Get the time selected by this axis!
     pub fn timespan(&self) -> TimeSpan {
         // TODO: temp hack?

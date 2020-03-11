@@ -7,8 +7,8 @@
 //! info about this stuff.
 
 use super::Component;
-use super::CoreSightResult;
 use super::MemoryAccess;
+use super::{CoreSightError, CoreSightResult};
 
 pub const DWT_PID: [u8; 8] = [0x2, 0xB0, 0x3b, 0x0, 0x4, 0x0, 0x0, 0x0];
 
@@ -60,20 +60,30 @@ where
     }
 
     /// Enable data monitor on a given user variable at some address
-    pub fn enable_trace(&self, var_address: u32) -> CoreSightResult<()> {
-        let mask = 0; // size of the ignore mask, ignore nothing!
-        let function: u32 = 3; // sample PC and data
-                               // function |= 0b10 << 10; // COMP register contains word sized unit.
+    pub fn enable_trace(&self, var_address: u32, comparator: usize) -> CoreSightResult<()> {
+        if comparator < 4 {
+            let mask = 0; // size of the ignore mask, ignore nothing!
+            let function: u32 = 3; // sample PC and data
+                                   // function |= 0b10 << 10; // COMP register contains word sized unit.
 
-        // entry 0:
-        self.component.write_reg(0x20, var_address)?; // COMp value
-        self.component.write_reg(0x24, mask)?; // mask
-        self.component.write_reg(0x28, function)?; // function
-        Ok(())
+            // entry x:
+            self.component
+                .write_reg(0x20 + comparator * 16, var_address)?; // COMp value
+            self.component.write_reg(0x24 + comparator * 16, mask)?; // mask
+            self.component.write_reg(0x28 + comparator * 16, function)?; // function
+
+            // Entry 1:
+            Ok(())
+        } else {
+            Err(CoreSightError::Other(format!(
+                "Channel out of bounds: {}",
+                comparator
+            )))
+        }
     }
 
-    pub fn disable_memory_watch(&self) -> CoreSightResult<()> {
-        self.component.write_reg(0x28, 0)?; // function, 0 is disabled.
+    pub fn disable_memory_watch(&self, channel: usize) -> CoreSightResult<()> {
+        self.component.write_reg(0x28 + channel * 16, 0)?; // function, 0 is disabled.
         Ok(())
     }
 

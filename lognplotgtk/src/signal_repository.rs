@@ -279,7 +279,6 @@ fn setup_key_press_handler(tree_view: &gtk::TreeView, app_state: GuiStateHandle)
     tree_view.connect_key_press_event(move |tv, key| {
         let selected_signals = get_selected_signal_names(&tv);
         let chart_target = match key.get_keyval() {
-            gdk::enums::key::_0 => Some(0),
             gdk::enums::key::_1 => Some(1),
             gdk::enums::key::_2 => Some(2),
             gdk::enums::key::_3 => Some(3),

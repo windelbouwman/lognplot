@@ -9,7 +9,7 @@ where
     end: T,
 }
 
-impl<T: Default + Copy> Range<T> {
+impl<T: Default + Copy + PartialOrd> Range<T> {
     pub fn new(begin: T, end: T) -> Self {
         Range { begin, end }
     }
@@ -28,5 +28,9 @@ impl<T: Default + Copy> Range<T> {
 
     pub fn set_end(&mut self, end: T) {
         self.end = end;
+    }
+
+    pub fn contains(&self, value: T) -> bool {
+        self.begin < value && value < self.end
     }
 }
