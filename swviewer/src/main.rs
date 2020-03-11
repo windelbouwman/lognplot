@@ -5,7 +5,9 @@ mod coresight;
 mod serial_wire_viewer;
 mod stlink;
 mod symbolscanner;
+mod trace_var;
 mod ui;
+mod ui_logger;
 mod usbutil;
 
 use serial_wire_viewer::do_magic;

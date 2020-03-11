@@ -5,8 +5,10 @@ use crate::coresight::{
     CoreSightError, MemoryAccess, MemoryAddress, Target, TraceDataDecoder, TracePacket,
 };
 use crate::stlink::{get_stlink, StLink, StLinkError, StLinkMode};
-use crate::symbolscanner::{parse_elf_file, TraceVar};
+use crate::symbolscanner::parse_elf_file;
+use crate::trace_var::TraceVar;
 use crate::ui::{run_tui, UiInput, UiThreadCommand};
+use crate::ui_logger::UiLogger;
 use crate::usbutil::lsusb;
 use lognplot::net::TcpClient;
 use scroll::{Pread, LE};
@@ -89,15 +91,6 @@ impl<'m> SerialWireViewer<'m> {
         Ok(())
     }
 
-    fn capture_trace_data(&mut self) -> SerialWireViewerResult<()> {
-        // Enter trace capture:
-        loop {
-            // std::thread::sleep(std::time::Duration::from_millis(60));
-            // self.poll_cmd_queue();
-            self.poll_trace_data()?;
-        }
-    }
-
     /// Perform a single poll action via USB.
     fn poll_trace_data(&mut self) -> SerialWireViewerResult<()> {
         let trace_byte_count = self.st_link.get_trace_count()?;
@@ -110,6 +103,7 @@ impl<'m> SerialWireViewer<'m> {
             self.decoder.feed(trace_data);
             while let Some(packet) = self.decoder.pull() {
                 // println!("Packet: {:?}", packet);
+                // info!("Packet: {:?}", packet);
                 self.process_packet(packet)?;
             }
         }
@@ -176,23 +170,23 @@ pub fn do_magic(
     let (cmd_tx, cmd_rx) = mpsc::channel::<UiThreadCommand>();
     let (event_tx, event_rx) = mpsc::channel::<UiInput>();
 
+    let tui_logger = UiLogger::new(event_tx.clone());
+    log::set_boxed_logger(Box::new(tui_logger)).unwrap();
+    log::set_max_level(log::Level::Info.to_level_filter());
+
     // Parse elf file:
     let trace_vars = parse_elf_file(elf_filename)?;
 
     let t1 = std::thread::spawn(move || {
-        if let Err(err) = data_thread(&lognplot_uri, core_freq_hz, cmd_rx, event_tx.clone()) {
-            // println!("Error: {:?}", err);
-            event_tx.send(UiInput::Log(format!("ERROR: {:?}", err)));
+        if let Err(err) = data_thread(&lognplot_uri, core_freq_hz, cmd_rx) {
+            error!("ERROR: {:?}", err);
         }
 
-        event_tx.send(UiInput::Log("Data thread finished".to_owned()));
+        info!("Data thread finished");
     });
-    // trace_var: &TraceVar
-    run_tui(trace_vars, cmd_tx, event_rx)?;
-    // app.trace_var = optional_trace_var.map(|v| v.clone());
 
-    // if let Some(trace_var) = optional_trace_var {
-    // }
+    run_tui(trace_vars, cmd_tx, event_rx)?;
+
     t1.join().unwrap();
 
     Ok(())
@@ -202,7 +196,6 @@ fn data_thread(
     lognplot_uri: &str,
     core_freq_hz: u32,
     cmd_rx: mpsc::Receiver<UiThreadCommand>,
-    event_tx: mpsc::Sender<UiInput>,
 ) -> SerialWireViewerResult<()> {
     // get st link:
     lsusb()?;
@@ -219,7 +212,7 @@ fn data_thread(
     // Create app contraption:
     let mut app = SerialWireViewer::new(&st_link, target, lognplot_client, core_freq_hz);
 
-    event_tx.send(UiInput::Log("All systems GO!".to_owned()));
+    info!("All systems GO!");
 
     app.trace_enable()?;
     loop {
@@ -230,13 +223,12 @@ fn data_thread(
                     break;
                 }
                 UiThreadCommand::ConfigChannel { var, channel } => {
-                    app.enable_trace_channel(Some(var), channel)?;
-                    event_tx.send(UiInput::Log(format!("Configured channel {}", channel)));
+                    app.enable_trace_channel(var, channel)?;
+                    info!("Configured channel {}", channel + 1);
                 }
             }
         }
     }
-    // app.capture_trace_data()?;
 
     app.st_link.reset_core()?;
     app.st_link.exit_debug_mode()?;
@@ -281,32 +273,6 @@ fn read_chip_id(st_link: &StLink) -> SerialWireViewerResult<()> {
     let value = st_link.read_debug32(address)?;
     info!("Chip ID is 0x{:08X}", value);
     Ok(())
-}
-
-fn configure_tracing_on_target_cpu<'m, M>(
-    mem_access: &'m M,
-    // trace_var: &TraceVar,
-    uc_freq_hz: u32,
-    swo_freq_hz: u32,
-) -> SerialWireViewerResult<Target<'m, M>>
-where
-    M: MemoryAccess,
-{
-    let mut target = Target::new(mem_access);
-
-    target.read_debug_components()?;
-    target.setup_tracing(uc_freq_hz, swo_freq_hz)?;
-    target.stop_trace(0)?;
-    target.stop_trace(1)?;
-    target.stop_trace(2)?;
-    target.stop_trace(3)?;
-
-    // target.start_trace_memory_address(trace_var.address, 1)?;
-    // for _a in 1..10 {
-    //     target.poll()?;
-    // }
-
-    Ok(target)
 }
 
 #[derive(Debug)]

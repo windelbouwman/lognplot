@@ -160,7 +160,7 @@ impl TraceDataDecoder {
         // Figure out what we are dealing with!
         // See table E-1
         if header == 0x70 {
-            debug!("Overflow!");
+            warn!("Overflow!");
             self.emit(TracePacket::Overflow);
         } else if header == 0x0 {
             info!("Sync!");

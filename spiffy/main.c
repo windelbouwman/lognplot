@@ -23,8 +23,10 @@ int main() {
 
         if (a > 0) {
             sienus += 1;
+            w00t -= 1;
         } else {
             sienus -= 1;
+            w00t -= 2;
         }
 
         // poor man delay:

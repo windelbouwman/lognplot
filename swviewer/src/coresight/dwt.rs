@@ -18,6 +18,9 @@ where
     M: MemoryAccess,
 {
     component: Component<'m, M>,
+
+    /// The number of comparators present in this device.
+    num_comparators: usize,
 }
 
 const REG_OFFSET_DWT_CTRL: usize = 0;
@@ -27,10 +30,13 @@ where
     M: MemoryAccess,
 {
     pub fn new(component: Component<'m, M>) -> Self {
-        Dwt { component }
+        Dwt {
+            component,
+            num_comparators: 0,
+        }
     }
 
-    pub fn info(&self) -> CoreSightResult<()> {
+    pub fn info(&mut self) -> CoreSightResult<()> {
         let ctrl = self.component.read_reg(REG_OFFSET_DWT_CTRL)?;
 
         let num_comparators_available: u8 = ((ctrl >> 28) & 0xf) as u8;
@@ -44,6 +50,7 @@ where
             " number of comparators available: {}",
             num_comparators_available
         );
+        self.num_comparators = num_comparators_available as usize;
         info!(" trace sampling support: {}", has_trace_sampling_support);
         info!(" compare match support: {}", has_compare_match_support);
         info!(" cyccnt support: {}", has_cyccnt_support);
@@ -61,10 +68,13 @@ where
 
     /// Enable data monitor on a given user variable at some address
     pub fn enable_trace(&self, var_address: u32, comparator: usize) -> CoreSightResult<()> {
-        if comparator < 4 {
+        if comparator < self.num_comparators {
             let mask = 0; // size of the ignore mask, ignore nothing!
-            let function: u32 = 3; // sample PC and data
-                                   // function |= 0b10 << 10; // COMP register contains word sized unit.
+                          // 3 - sample PC and data (and Read/Write access)
+                          // 0b1101 = 13 - sample data (write only access)
+                          //
+                          // function |= 0b10 << 10; // COMP register contains word sized unit.
+            let function: u32 = 13;
 
             // entry x:
             self.component
@@ -72,7 +82,6 @@ where
             self.component.write_reg(0x24 + comparator * 16, mask)?; // mask
             self.component.write_reg(0x28 + comparator * 16, function)?; // function
 
-            // Entry 1:
             Ok(())
         } else {
             Err(CoreSightError::Other(format!(
@@ -83,8 +92,15 @@ where
     }
 
     pub fn disable_memory_watch(&self, channel: usize) -> CoreSightResult<()> {
-        self.component.write_reg(0x28 + channel * 16, 0)?; // function, 0 is disabled.
-        Ok(())
+        if channel < self.num_comparators {
+            self.component.write_reg(0x28 + channel * 16, 0)?; // function, 0 is disabled.
+            Ok(())
+        } else {
+            Err(CoreSightError::Other(format!(
+                "Channel out of bounds: {}",
+                channel
+            )))
+        }
     }
 
     pub fn poll(&self) -> CoreSightResult<()> {

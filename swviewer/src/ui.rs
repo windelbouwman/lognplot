@@ -1,6 +1,6 @@
 //! Create an immersive console UI experience.
 
-use crate::symbolscanner::TraceVar;
+use crate::trace_var::TraceVar;
 use crossterm::event;
 use std::io;
 use std::sync::mpsc;
@@ -13,7 +13,10 @@ use tui::Terminal;
 /// Command send from the UI to the processing thread.
 pub enum UiThreadCommand {
     Stop,
-    ConfigChannel { var: TraceVar, channel: usize },
+    ConfigChannel {
+        var: Option<TraceVar>,
+        channel: usize,
+    },
 }
 
 /// Events to the UI
@@ -62,7 +65,8 @@ impl UiState {
                     'q' => self.quit(),
                     _ => {}
                 },
-                event::KeyCode::Enter => self.select_variable(1),
+                event::KeyCode::Enter => self.select_variable(0),
+                event::KeyCode::Backspace => self.clear_variables(),
                 event::KeyCode::Up => self.move_up(1),
                 event::KeyCode::Down => self.move_down(1),
                 event::KeyCode::PageUp => self.move_up(10),
@@ -107,8 +111,15 @@ impl UiState {
             self.configured_channels[channel] = Some(variable.clone());
             self.send_cmd(UiThreadCommand::ConfigChannel {
                 channel,
-                var: variable.clone(),
+                var: Some(variable.clone()),
             });
+        }
+    }
+
+    fn clear_variables(&mut self) {
+        for channel in 0..4 {
+            self.configured_channels[channel] = None;
+            self.send_cmd(UiThreadCommand::ConfigChannel { channel, var: None });
         }
     }
 
@@ -120,13 +131,14 @@ impl UiState {
     fn send_cmd(&self, cmd: UiThreadCommand) {
         if let Err(err) = self.cmd_tx.send(cmd) {
             // Oempf
+            error!("Sending command failed: {:?}", err);
         }
     }
 
     fn handle_background_event(&mut self, event: UiInput) {
         match event {
             UiInput::Log(txt) => {
-                self.logs.push(txt);
+                self.logs.insert(0, txt);
             }
         }
     }
@@ -137,18 +149,18 @@ impl UiState {
     {
         terminal.draw(|mut f| {
             let chunks = Layout::default()
-                .direction(Direction::Vertical)
+                .direction(Direction::Horizontal)
                 .constraints([Constraint::Percentage(50), Constraint::Percentage(50)].as_ref())
                 .split(f.size());
 
             let chunks2 = Layout::default()
-                .direction(Direction::Horizontal)
+                .direction(Direction::Vertical)
                 .constraints([Constraint::Percentage(50), Constraint::Percentage(50)].as_ref())
                 .split(chunks[0]);
 
             self.draw_variable_list(&mut f, chunks2[0]);
-            self.draw_logs(&mut f, chunks2[1]);
-            self.draw_channel_config(&mut f, chunks[1]);
+            self.draw_logs(&mut f, chunks[1]);
+            self.draw_channel_config(&mut f, chunks2[1]);
         })?;
 
         Ok(())
@@ -186,7 +198,7 @@ impl UiState {
             .enumerate()
             .map(|(i, v)| {
                 vec![
-                    format!("Channel {}", i),
+                    format!("Channel {}", i + 1),
                     match v {
                         None => "-".to_owned(),
                         Some(v) => v.name.clone(),
@@ -245,7 +257,7 @@ pub fn run_tui(
             ui_state.handle_event(input_event);
         }
 
-        if let Ok(event) = event_rx.try_recv() {
+        while let Ok(event) = event_rx.try_recv() {
             ui_state.handle_background_event(event);
         }
     }

@@ -74,9 +74,9 @@ where
 fn parse_component_id(component_id: &[u8]) -> Option<u8> {
     // Check component pre-amble:
     if component_id[0] == 0xD && component_id[2] == 0x5 && component_id[3] == 0xB1 {
-        info!("Pre-amble is OK.");
+        debug!("Pre-amble is OK.");
         let component_class: u8 = component_id[1] >> 4;
-        info!("Component class: {}", component_class);
+        debug!("Component class: {}", component_class);
         Some(component_class)
     } else {
         // Pre-amble is bad.
@@ -88,7 +88,7 @@ fn parse_component_id(component_id: &[u8]) -> Option<u8> {
 fn parse_pid(pid: &[u8]) {
     let part_number: u16 = ((pid[1] as u16 & 0xF) << 8) | (pid[0] as u16);
     let jep106_id_code: u8 = ((pid[2] & 0x7) << 4) | ((pid[1] & 0xF0) >> 4);
-    info!(
+    debug!(
         "part number: {}, jep106_id_code: {}",
         part_number, jep106_id_code
     );

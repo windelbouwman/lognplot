@@ -73,7 +73,7 @@ where
                     }
 
                     if self.dwt.is_none() {
-                        let dwt = Dwt::new(component);
+                        let mut dwt = Dwt::new(component);
                         dwt.info()?;
                         self.dwt = Some(dwt);
                     }
