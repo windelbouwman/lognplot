@@ -1,3 +1,4 @@
+
 [package]
 name = "swviewer"
 version = "0.1.0"
@@ -5,15 +6,26 @@ authors = ["Windel Bouwman <windel@windel.nl>"]
 edition = "2018"
 description = "Connect to microcontroller via ST-link-v2 and read variable changes via serial wire (SWV)"
 
+[features]
+default = ["textui"]
+gui = [ "gtk", "gio", "glib"]
+textui = ["tui", "crossterm"]
+
 [dependencies]
 clap = "2.33"
 gimli = "0.20"
 log = "0.4.8"
 object = "0.17"
-rusb = "0.5"
+rusb = "0.5.5"
 simple_logger = "1.6"
 scroll = "0.10"
 lognplot = { path = "../lognplot" }
 
-crossterm = "0.14"
-tui = { version = "0.8", default-features = false, features = ['crossterm'] }
+# GUI:
+glib = { version = "0.9", optional = true }
+gio = { version = "0.8", optional = true }
+gtk = { version = "0.8", optional = true }
+
+# TUI:
+crossterm = { version = "0.14", optional = true }
+tui = { version = "0.8", optional = true, default-features = false, features = ['crossterm'] }

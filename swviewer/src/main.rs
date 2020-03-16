@@ -6,13 +6,44 @@ mod serial_wire_viewer;
 mod stlink;
 mod symbolscanner;
 mod trace_var;
-mod ui;
-mod ui_logger;
+
+#[cfg(feature = "textui")]
+mod textui;
+
+#[cfg(feature = "gui")]
+#[macro_use]
+extern crate glib;
+
+#[cfg(feature = "gui")]
+mod gtkui;
+
 mod usbutil;
 
-use serial_wire_viewer::do_magic;
-
+#[cfg(feature = "gui")]
 fn main() {
+    let matches = clap::App::new("swviewer")
+        .arg(
+            clap::Arg::with_name("v")
+                .short("v")
+                .multiple(true)
+                .help("Sets the level of verbosity"),
+        )
+        .get_matches();
+
+    let log_level = match matches.occurrences_of("v") {
+        0 => log::Level::Info,
+        1 => log::Level::Debug,
+        2 | _ => log::Level::Trace,
+    };
+
+    simple_logger::init_with_level(log_level).unwrap();
+    gtkui::run_gtk_gui();
+}
+
+#[cfg(feature = "textui")]
+fn main() {
+    use textui::do_magic;
+
     let matches = clap::App::new("swviewer")
         .arg(
             clap::Arg::with_name("v")
@@ -47,8 +78,6 @@ fn main() {
         2 | _ => log::Level::Trace,
     };
 
-    // simple_logger::init_with_level(log_level).unwrap();
-
     let elf_filename: String = matches
         .value_of("elf")
         .expect("Mandatory argument")
@@ -71,7 +100,11 @@ fn main() {
     info!("CPU freq in Hz: {:?}", cpu_freq);
     info!("rusb version: {:?}", rusb::version());
 
-    if let Err(e) = do_magic(&elf_filename, lognplot_uri, cpu_freq) {
+    if let Err(e) = do_magic(
+        &std::path::PathBuf::from(elf_filename),
+        lognplot_uri,
+        cpu_freq,
+    ) {
         error!("An error occurred: {:?}", e);
     }
 }

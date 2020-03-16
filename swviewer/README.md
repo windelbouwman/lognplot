@@ -15,3 +15,9 @@ Example usage:
 This will load the firmware file, scan it for DWARF symbols and
 next connect to both st-link and lognplot. The cpu frequency
 must be given for proper results.
+
+# GTK ui
+
+A gtk GUI is a work in progress. You can run it via:
+
+    $  cargo run --no-default-features --features gui

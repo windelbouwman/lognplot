@@ -1,5 +1,6 @@
 //! Create an immersive console UI experience.
 
+use crate::serial_wire_viewer::{SerialWireViewerError, UiThreadCommand};
 use crate::trace_var::TraceVar;
 use crossterm::event;
 use std::io;
@@ -9,15 +10,6 @@ use tui::layout::{Constraint, Direction, Layout, Rect};
 use tui::style::{Color, Modifier, Style};
 use tui::widgets::{Block, Borders, List, Row, SelectableList, Table, Text, Widget};
 use tui::Terminal;
-
-/// Command send from the UI to the processing thread.
-pub enum UiThreadCommand {
-    Stop,
-    ConfigChannel {
-        var: Option<TraceVar>,
-        channel: usize,
-    },
-}
 
 /// Events to the UI
 pub enum UiInput {

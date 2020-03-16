@@ -1,6 +1,6 @@
 // IDEA: route log messages to event queue
 
-use crate::ui::UiInput;
+use super::ui::UiInput;
 use std::sync::mpsc;
 use std::sync::Mutex;
 

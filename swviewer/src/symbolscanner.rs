@@ -3,9 +3,10 @@
 //!
 
 use crate::trace_var::TraceVar;
+use std::path::PathBuf;
 
-pub fn parse_elf_file(elf_filename: &str) -> gimli::Result<Vec<TraceVar>> {
-    info!("Parsing {}", elf_filename);
+pub fn parse_elf_file(elf_filename: &PathBuf) -> gimli::Result<Vec<TraceVar>> {
+    info!("Parsing {}", elf_filename.display());
 
     use object::Object;
     let data = std::fs::read(elf_filename)?;

@@ -5,10 +5,8 @@ use crate::coresight::{
     CoreSightError, MemoryAccess, MemoryAddress, Target, TraceDataDecoder, TracePacket,
 };
 use crate::stlink::{get_stlink, StLink, StLinkError, StLinkMode};
-use crate::symbolscanner::parse_elf_file;
 use crate::trace_var::TraceVar;
-use crate::ui::{run_tui, UiInput, UiThreadCommand};
-use crate::ui_logger::UiLogger;
+// use crate::ui_logger::UiLogger;
 use crate::usbutil::lsusb;
 use lognplot::net::TcpClient;
 use scroll::{Pread, LE};
@@ -162,37 +160,7 @@ impl<'m> SerialWireViewer<'m> {
     }
 }
 
-pub fn do_magic(
-    elf_filename: &str,
-    lognplot_uri: String,
-    core_freq_hz: u32,
-) -> SerialWireViewerResult<()> {
-    let (cmd_tx, cmd_rx) = mpsc::channel::<UiThreadCommand>();
-    let (event_tx, event_rx) = mpsc::channel::<UiInput>();
-
-    let tui_logger = UiLogger::new(event_tx.clone());
-    log::set_boxed_logger(Box::new(tui_logger)).unwrap();
-    log::set_max_level(log::Level::Info.to_level_filter());
-
-    // Parse elf file:
-    let trace_vars = parse_elf_file(elf_filename)?;
-
-    let t1 = std::thread::spawn(move || {
-        if let Err(err) = data_thread(&lognplot_uri, core_freq_hz, cmd_rx) {
-            error!("ERROR: {:?}", err);
-        }
-
-        info!("Data thread finished");
-    });
-
-    run_tui(trace_vars, cmd_tx, event_rx)?;
-
-    t1.join().unwrap();
-
-    Ok(())
-}
-
-fn data_thread(
+pub fn data_thread(
     lognplot_uri: &str,
     core_freq_hz: u32,
     cmd_rx: mpsc::Receiver<UiThreadCommand>,
@@ -273,6 +241,15 @@ fn read_chip_id(st_link: &StLink) -> SerialWireViewerResult<()> {
     let value = st_link.read_debug32(address)?;
     info!("Chip ID is 0x{:08X}", value);
     Ok(())
+}
+
+/// Command send from the UI to the processing thread.
+pub enum UiThreadCommand {
+    Stop,
+    ConfigChannel {
+        var: Option<TraceVar>,
+        channel: usize,
+    },
 }
 
 #[derive(Debug)]

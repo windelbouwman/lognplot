@@ -1,3 +1,4 @@
+use super::tpiu::TpiuPinProtocol;
 use super::Dwt;
 use super::MemoryAccess;
 use super::{Itm, Tpiu};
@@ -131,7 +132,7 @@ where
         tpiu.set_port_size(1)?;
         let prescaler = (uc_freq / swo_freq) - 1;
         tpiu.set_prescaler(prescaler)?;
-        tpiu.set_pin_protocol(2)?;
+        tpiu.set_pin_protocol(TpiuPinProtocol::AsyncSwoNrz)?;
         tpiu.set_formatter(0x100)?;
 
         // Config itm:

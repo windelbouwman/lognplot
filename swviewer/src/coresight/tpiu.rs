@@ -44,7 +44,12 @@ where
     /// 1 = async SWO (manchester)
     /// 2 = async SWO (NRZ)
     /// 3 = reserved
-    pub fn set_pin_protocol(&self, value: u32) -> CoreSightResult<()> {
+    pub fn set_pin_protocol(&self, value: TpiuPinProtocol) -> CoreSightResult<()> {
+        let value: u32 = match value {
+            TpiuPinProtocol::Sync => 0,
+            TpiuPinProtocol::AsyncSwoManchester => 1,
+            TpiuPinProtocol::AsyncSwoNrz => 2,
+        };
         self.component.write_reg(REGISTER_OFFSET_TPIU_SPPR, value)?;
         Ok(())
     }
@@ -53,4 +58,15 @@ where
         self.component.write_reg(REGISTER_OFFSET_TPIU_FFCR, value)?;
         Ok(())
     }
+}
+
+pub enum TpiuPinProtocol {
+    // sync (0)
+    Sync,
+
+    // manchester encoding (1)
+    AsyncSwoManchester,
+
+    // non return to zero (2)
+    AsyncSwoNrz,
 }
