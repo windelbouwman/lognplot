@@ -30,6 +30,11 @@ impl ChartLayout {
         }
     }
 
+    pub fn resize(&mut self, width: f64, height: f64) {
+        self.width = width;
+        self.height = height;
+    }
+
     pub fn layout(&mut self, options: &ChartOptions) {
         self.plot_top = options.padding;
         self.plot_left = 140.0;

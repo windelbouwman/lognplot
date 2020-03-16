@@ -20,6 +20,7 @@ use lognplot::tsdb::TsDbHandle;
 pub struct ChartState {
     chart: Chart,
     chart_options: ChartOptions,
+    chart_layout: ChartLayout,
     db: TsDbHandle,
     app_state: GuiStateHandle,
     color_wheel: Vec<String>,
@@ -53,6 +54,7 @@ impl ChartState {
         ChartState {
             chart,
             chart_options: ChartOptions::default(),
+            chart_layout: ChartLayout::new(Size::new(250.0, 250.0)),
             db: db.clone(),
             app_state,
             color_wheel,
@@ -120,10 +122,11 @@ impl ChartState {
     /// Handle data change event from database.
     pub fn handle_event(&self, event: &DataChangeEvent) {
         // Check if we must update the chart:
-        let update = event
-            .changed_signals
-            .iter()
-            .any(|n| self.chart.has_signal(n));
+        let update = event.delete_all
+            || event
+                .changed_signals
+                .iter()
+                .any(|n| self.chart.has_signal(n));
         if update {
             self.repaint();
         }
@@ -141,24 +144,21 @@ impl ChartState {
     }
 
     /// Update drag of the mouse
-    pub fn move_drag(&mut self, size: Size, x: f64, y: f64) {
+    pub fn move_drag(&mut self, x: f64, y: f64) {
         self.disable_tailing();
         if let Some((prev_x, prev_y)) = self.drag {
             let dx = x - prev_x;
             let dy = y - prev_y;
-            self.do_drag(size, dx, dy);
+            self.do_drag(dx, dy);
         }
         self.drag = Some((x, y));
     }
 
     /// Drag the plot by the given amount.
-    fn do_drag(&mut self, size: Size, dx: f64, dy: f64) {
+    fn do_drag(&mut self, dx: f64, dy: f64) {
         debug!("Drag! {}, {} ", dx, dy);
 
-        let mut layout = ChartLayout::new(size);
-        layout.layout(&self.chart_options);
-
-        let amount = x_pixels_to_domain(&layout, &self.chart.x_axis, dx);
+        let amount = x_pixels_to_domain(&self.chart_layout, &self.chart.x_axis, dx);
 
         self.chart.pan_horizontal_absolute(-amount);
         // TODO: pan vertical as well?
@@ -190,37 +190,28 @@ impl ChartState {
         self.repaint();
     }
 
-    pub fn zoom_in_horizontal(&mut self, around: Option<(f64, Size)>) {
+    pub fn zoom_in_horizontal(&mut self, around: Option<f64>) {
         debug!("Zoom in horizontal");
         self.zoom_horizontal(-0.1, around);
     }
 
-    pub fn zoom_out_horizontal(&mut self, around: Option<(f64, Size)>) {
+    pub fn zoom_out_horizontal(&mut self, around: Option<f64>) {
         debug!("Zoom out horizontal");
         self.zoom_horizontal(0.1, around);
     }
 
-    fn zoom_horizontal(&mut self, amount: f64, around: Option<(f64, Size)>) {
-        let around = around.map(|p| {
-            let (pixel, size) = p;
-
-            let mut layout = ChartLayout::new(size);
-            layout.layout(&self.chart_options);
-
-            x_pixel_to_domain(pixel, &self.chart.x_axis, &layout)
-        });
+    fn zoom_horizontal(&mut self, amount: f64, around: Option<f64>) {
+        let around =
+            around.map(|pixel| x_pixel_to_domain(pixel, &self.chart.x_axis, &self.chart_layout));
         self.disable_tailing();
         self.chart.zoom_horizontal(amount, around);
         self.handle_x_axis_change();
     }
 
-    pub fn set_cursor(&mut self, loc: Option<((f64, f64), Size)>) {
-        if let Some((pixel, size)) = loc {
-            let mut layout = ChartLayout::new(size.clone());
-            layout.layout(&self.chart_options);
-
-            let timestamp = x_pixel_to_domain(pixel.0, &self.chart.x_axis, &layout);
-            let value = y_pixel_to_domain(pixel.1, &self.chart.y_axis, &layout);
+    pub fn set_cursor(&mut self, loc: Option<(f64, f64)>) {
+        if let Some((pixel_x, pixel_y)) = loc {
+            let timestamp = x_pixel_to_domain(pixel_x, &self.chart.x_axis, &self.chart_layout);
+            let value = y_pixel_to_domain(pixel_y, &self.chart.y_axis, &self.chart_layout);
             let timestamp = TimeStamp::new(timestamp);
             self.chart.cursor = Some((timestamp, value));
         } else {
@@ -316,9 +307,8 @@ impl ChartState {
             e.get_delta(),
             e.get_direction()
         );
-        let size = get_size(&self.draw_area);
         let pixel_x_pos = e.get_position().0;
-        let around = Some((pixel_x_pos, size));
+        let around = Some(pixel_x_pos);
         match e.get_direction() {
             gdk::ScrollDirection::Up => {
                 self.zoom_in_horizontal(around);
@@ -337,6 +327,12 @@ impl ChartState {
         Inhibit(false)
     }
 
+    fn on_resize_event(&mut self, allocation: &gdk::Rectangle) {
+        self.chart_layout
+            .resize(allocation.width as f64, allocation.height as f64);
+        self.chart_layout.layout(&self.chart_options);
+    }
+
     fn draw_on_canvas(&self, canvas: &cairo::Context) -> Inhibit {
         let size = get_size(&self.draw_area);
 
@@ -346,10 +342,12 @@ impl ChartState {
 
         let t1 = Instant::now();
 
-        let mut layout = ChartLayout::new(size.clone());
-        layout.layout(&self.chart_options);
-
-        draw_chart(&self.chart, &mut canvas2, &layout, &self.chart_options);
+        draw_chart(
+            &self.chart,
+            &mut canvas2,
+            &self.chart_layout,
+            &self.chart_options,
+        );
 
         let t2 = Instant::now();
         let draw_duration = t2 - t1;
@@ -383,12 +381,10 @@ impl ChartState {
     fn on_motion_event(&mut self, e: &gdk::EventMotion) -> Inhibit {
         let pos = e.get_position();
         debug!("Mouse motion! {:?}", pos);
-        let size = get_size(&self.draw_area);
-
-        self.set_cursor(Some(((pos.0, pos.1), size.clone())));
+        self.set_cursor(Some((pos.0, pos.1)));
 
         if e.get_state().contains(gdk::ModifierType::BUTTON1_MASK) {
-            self.move_drag(size, pos.0, pos.1);
+            self.move_drag(pos.0, pos.1);
         }
         self.repaint();
 
@@ -504,6 +500,10 @@ pub fn setup_drawing_area(
 
     draw_area.connect_scroll_event(clone!(@strong chart_state => move |_, e| {
         chart_state.borrow_mut().on_scroll_event(e)
+    }));
+
+    draw_area.connect_size_allocate(clone!(@strong chart_state => move |_, a| {
+        chart_state.borrow_mut().on_resize_event(a);
     }));
 
     // Connect key event:
