@@ -8,7 +8,6 @@ mod chart_widget;
 mod error_dialog;
 mod io;
 mod mainwindow;
-mod meta_metrics;
 mod mime_types;
 mod resources;
 mod session;
@@ -16,7 +15,9 @@ mod signal_repository;
 mod state;
 
 use lognplot::net::run_server;
+use lognplot::tracer::AnyTracer;
 use lognplot::tsdb::TsDb;
+use std::sync::Arc;
 
 pub use state::{GuiState, GuiStateHandle};
 
@@ -32,8 +33,20 @@ fn main() {
         .arg(
             clap::Arg::with_name("port")
                 .short("p")
+                .long("port")
                 .help("Port to listen on")
                 .default_value("12345"),
+        )
+        .arg(
+            clap::Arg::with_name("meta-trace")
+                .long("meta-trace")
+                .help("Trace internal performance metrics in the plot tool itself."),
+        )
+        .arg(
+            clap::Arg::with_name("meta-trace-remote")
+                .long("--meta-trace-remote")
+                .takes_value(true)
+                .help("Trace internal performance metrics to the given address (host:port)."),
         )
         .get_matches();
 
@@ -60,7 +73,25 @@ fn main() {
     let db = TsDb::default();
     let db_handle = db.into_handle();
 
-    let stop_token = run_server(db_handle.clone(), port);
-    mainwindow::open_gui(db_handle);
+    let perf_tracer = if matches.is_present("meta-trace-remote") {
+        let addr = matches.value_of("meta-trace-remote").unwrap();
+        info!("Setting up meta tracing to remote: {:?}", addr);
+        // let address = std::net::SocketAddr::from_str(addr);
+        match lognplot::net::TcpClient::new(addr) {
+            Ok(client) => Arc::new(AnyTracer::new_tcp(client)),
+            Err(err) => {
+                error!("Error setting up remote tracing: {:?}", err);
+                Arc::new(AnyTracer::new_void())
+            }
+        }
+    } else if matches.is_present("meta-trace") {
+        info!("Setting up meta tracing");
+        Arc::new(AnyTracer::new_db(db_handle.clone()))
+    } else {
+        Arc::new(AnyTracer::new_void())
+    };
+
+    let stop_token = run_server(db_handle.clone(), port, perf_tracer.clone());
+    mainwindow::open_gui(db_handle, perf_tracer);
     stop_token.stop();
 }

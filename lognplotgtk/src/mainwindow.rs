@@ -1,19 +1,23 @@
-use gio::prelude::*;
-use gtk::prelude::*;
-use gtk::Application;
-use lognplot::tsdb::TsDbHandle;
-
 use super::chart_widget::setup_drawing_area;
 use super::io::{load_data_from_hdf5, save_data_as_hdf5};
 use super::session::{load_session, save_session};
 use super::signal_repository::setup_signal_repository;
 use super::{GuiState, GuiStateHandle};
+use gio::prelude::*;
+use gtk::prelude::*;
+use gtk::Application;
+use lognplot::tracer::AnyTracer;
+use lognplot::tsdb::TsDbHandle;
+use std::sync::Arc;
 
-pub fn open_gui(db_handle: TsDbHandle) {
-    let app_state = GuiState::new(db_handle).into_handle();
+pub fn open_gui(db_handle: TsDbHandle, perf_tracer: Arc<AnyTracer>) {
+    let app_state = GuiState::new(db_handle, perf_tracer).into_handle();
 
-    let application = Application::new(Some("com.github.windelbouwman.quartz"), Default::default())
-        .expect("failed to initialize GTK application");
+    let application = Application::new(
+        Some("com.github.windelbouwman.quartz"),
+        gio::ApplicationFlags::NON_UNIQUE,
+    )
+    .expect("failed to initialize GTK application");
 
     application.connect_activate(move |app| build_ui(app, app_state.clone()));
 

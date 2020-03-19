@@ -6,7 +6,6 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::time::Instant;
 
-use crate::meta_metrics::MetricRecorder;
 use crate::session::DashBoardItem;
 use crate::state::GuiStateHandle;
 use lognplot::chart::{Chart, Curve, CurveData};
@@ -14,8 +13,10 @@ use lognplot::geometry::Size;
 use lognplot::render::{draw_chart, CairoCanvas, ChartLayout, ChartOptions};
 use lognplot::render::{x_pixel_to_domain, x_pixels_to_domain, y_pixel_to_domain};
 use lognplot::time::TimeStamp;
+use lognplot::tracer::{AnyTracer, Tracer};
 use lognplot::tsdb::DataChangeEvent;
 use lognplot::tsdb::TsDbHandle;
+use std::sync::Arc;
 
 pub struct ChartState {
     chart: Chart,
@@ -26,7 +27,7 @@ pub struct ChartState {
     color_wheel: Vec<String>,
     color_index: usize,
     tailing: Option<f64>,
-    perf_tracer: MetricRecorder,
+    perf_tracer: Arc<AnyTracer>,
     drag: Option<(f64, f64)>,
     draw_area: gtk::DrawingArea,
     id: String,
@@ -43,6 +44,7 @@ pub const CATEGORY10_COLORS: &[&str] = &[
 impl ChartState {
     pub fn new(
         db: TsDbHandle,
+        perf_tracer: Arc<AnyTracer>,
         app_state: GuiStateHandle,
         draw_area: gtk::DrawingArea,
         id: &str,
@@ -60,7 +62,7 @@ impl ChartState {
             color_wheel,
             color_index: 0,
             tailing: None,
-            perf_tracer: MetricRecorder::new(db),
+            perf_tracer,
             drag: None,
             draw_area,
             id: id.to_owned(),
@@ -353,7 +355,7 @@ impl ChartState {
         let draw_duration = t2 - t1;
         trace!("Drawing time: {:?}", draw_duration);
 
-        // TODO: re-enable this internal performance metric:
+        // internal performance metric:
         let draw_seconds: f64 = draw_duration.as_secs_f64();
         self.perf_tracer.log_meta_metric(
             &format!("META_chart_render_time_{}", self.id),
@@ -447,8 +449,10 @@ pub fn setup_drawing_area(
     draw_area.add_events(gdk::EventMask::LEAVE_NOTIFY_MASK);
 
     let db = { app_state.borrow().db.clone() };
+    let perf_tracer = app_state.borrow().get_perf_tracer();
 
-    let chart_state = ChartState::new(db, app_state, draw_area.clone(), chart_id).into_handle();
+    let chart_state =
+        ChartState::new(db, perf_tracer, app_state, draw_area.clone(), chart_id).into_handle();
 
     // Connect draw event:
     draw_area.connect_draw(

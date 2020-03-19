@@ -7,6 +7,7 @@ use std::thread;
 use tokio::net::TcpListener;
 
 use super::peer::{process_client, PeerHandle};
+use crate::tracer::AnyTracer;
 use crate::tsdb::TsDbHandle;
 
 /// This is a handle to a started TCP server.
@@ -26,7 +27,7 @@ impl ServerHandle {
     }
 }
 
-pub fn run_server(db: TsDbHandle, port: u16) -> ServerHandle {
+pub fn run_server(db: TsDbHandle, port: u16, perf_tracer: Arc<AnyTracer>) -> ServerHandle {
     let (kill_switch, kill_switch_receiver) = oneshot::channel::<()>();
     let thread = thread::spawn(move || {
         info!("Server thread begun!!!");
@@ -38,7 +39,9 @@ pub fn run_server(db: TsDbHandle, port: u16) -> ServerHandle {
             .unwrap();
 
         runtime.block_on(async {
-            server_prog(db, port, kill_switch_receiver).await.unwrap();
+            server_prog(db, port, perf_tracer, kill_switch_receiver)
+                .await
+                .unwrap();
         });
 
         info!("Server finished!!!");
@@ -53,6 +56,7 @@ pub fn run_server(db: TsDbHandle, port: u16) -> ServerHandle {
 async fn server_prog(
     db: TsDbHandle,
     port: u16,
+    _perf_tracer: Arc<AnyTracer>,
     kill_switch_receiver: oneshot::Receiver<()>,
 ) -> std::io::Result<()> {
     let peers: Arc<Mutex<Vec<PeerHandle>>> = Arc::new(Mutex::new(vec![]));

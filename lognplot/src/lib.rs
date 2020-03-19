@@ -16,4 +16,5 @@ pub mod net;
 pub mod render;
 pub mod style;
 pub mod time;
+pub mod tracer;
 pub mod tsdb;

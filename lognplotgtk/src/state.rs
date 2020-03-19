@@ -1,22 +1,26 @@
+use crate::chart_widget::{ChartState, ChartStateHandle};
+use crate::session;
+use lognplot::tracer::AnyTracer;
+use lognplot::tsdb::{DataChangeEvent, TsDbHandle};
 use std::cell::RefCell;
 use std::path::Path;
 use std::rc::Rc;
-
-use crate::chart_widget::{ChartState, ChartStateHandle};
-use crate::session;
-use lognplot::tsdb::{DataChangeEvent, TsDbHandle};
+use std::sync::Arc;
 
 /// Struct with some GUI state in it which will be shown in the GUI.
 pub struct GuiState {
     pub db: TsDbHandle,
+    perf_tracer: Arc<AnyTracer>,
     charts: Vec<ChartStateHandle>,
     link_x_axis: bool,
 }
 
 impl GuiState {
-    pub fn new(db: TsDbHandle) -> Self {
+    pub fn new(db: TsDbHandle, perf_tracer: Arc<AnyTracer>) -> Self {
+        // let perf_tracer = Arc::new(DbTracer::new(db.clone()));
         GuiState {
             db,
+            perf_tracer,
             charts: vec![],
             link_x_axis: false,
         }
@@ -24,6 +28,10 @@ impl GuiState {
 
     pub fn into_handle(self) -> GuiStateHandle {
         Rc::new(RefCell::new(self))
+    }
+
+    pub fn get_perf_tracer(&self) -> Arc<AnyTracer> {
+        self.perf_tracer.clone()
     }
 
     pub fn delete_all_data(&self) {

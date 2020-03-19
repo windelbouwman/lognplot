@@ -1,24 +1,29 @@
-use lognplot::time::TimeStamp;
-use lognplot::tsdb::{Observation, Sample, TsDbHandle};
+//! Trace events straight into a database.
+
+use super::Tracer;
+use crate::time::TimeStamp;
+use crate::tsdb::{Observation, Sample, TsDbHandle};
 use std::time::Instant;
 
-/// A helper struct which allows recording internal
-/// performance metrics.
-pub struct MetricRecorder {
+/// A struct which allows recording
+/// performance metrics to a database handle.
+pub struct DbTracer {
     gui_start_instant: Instant,
     db: TsDbHandle,
 }
 
-impl MetricRecorder {
+impl DbTracer {
     pub fn new(db: TsDbHandle) -> Self {
-        MetricRecorder {
+        DbTracer {
             gui_start_instant: Instant::now(),
             db,
         }
     }
+}
 
+impl Tracer for DbTracer {
     /// This is cool stuff, log metrics about render time for example to database itself :)
-    pub fn log_meta_metric(&self, name: &str, timestamp: Instant, value: f64) {
+    fn log_meta_metric(&self, name: &str, timestamp: Instant, value: f64) {
         let elapsed = timestamp.duration_since(self.gui_start_instant);
         let elapsed_seconds: f64 = elapsed.as_secs_f64();
         let timestamp = TimeStamp::new(elapsed_seconds);
