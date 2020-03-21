@@ -1,14 +1,14 @@
 //! TCP based server for data
 
-use futures::channel::oneshot;
+use super::peer::{process_client, PeerHandle};
+use super::peer_processor::start_peer_event_processor;
+use crate::tracer::{AnyTracer, Tracer};
+use crate::tsdb::TsDbHandle;
+use futures::channel::{mpsc, oneshot};
 use futures::{FutureExt, StreamExt};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use tokio::net::TcpListener;
-
-use super::peer::{process_client, PeerHandle};
-use crate::tracer::AnyTracer;
-use crate::tsdb::TsDbHandle;
 
 /// This is a handle to a started TCP server.
 /// You can use this handle to stop the server.
@@ -56,7 +56,7 @@ pub fn run_server(db: TsDbHandle, port: u16, perf_tracer: Arc<AnyTracer>) -> Ser
 async fn server_prog(
     db: TsDbHandle,
     port: u16,
-    _perf_tracer: Arc<AnyTracer>,
+    perf_tracer: Arc<AnyTracer>,
     kill_switch_receiver: oneshot::Receiver<()>,
 ) -> std::io::Result<()> {
     let peers: Arc<Mutex<Vec<PeerHandle>>> = Arc::new(Mutex::new(vec![]));
@@ -73,7 +73,16 @@ async fn server_prog(
     let mut kill_switch_receiver = kill_switch_receiver.fuse();
     let mut incoming = listener.incoming().fuse();
 
+    let (peer_event_sink, peer_event_rx) = mpsc::unbounded();
+    let peer_processor_handle = start_peer_event_processor(peer_event_rx, perf_tracer.clone());
+
     loop {
+        perf_tracer.log_metric(
+            "peers",
+            std::time::Instant::now(),
+            peers.lock().unwrap().len() as f64,
+        );
+
         futures::select! {
             x = kill_switch_receiver => {
                 info!("Server shutdown by kill switch.");
@@ -83,7 +92,7 @@ async fn server_prog(
                 if let Some(new_client) = optional_new_client {
                     let peer_socket = new_client?;
                     info!("Client connected!");
-                    let peer = process_client(peer_socket, db.clone());
+                    let peer = process_client(peer_socket, db.clone(), peer_event_sink.clone());
                     peers.lock().unwrap().push(peer);
                 } else {
                     info!("No more incoming connections.");
@@ -98,6 +107,8 @@ async fn server_prog(
     for peer in peers.lock().unwrap().drain(..) {
         peer.stop().await?;
     }
+
+    peer_processor_handle.stop().await?;
 
     Ok(())
 }

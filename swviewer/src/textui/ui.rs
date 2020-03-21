@@ -1,6 +1,6 @@
 //! Create an immersive console UI experience.
 
-use crate::serial_wire_viewer::{SerialWireViewerError, UiThreadCommand};
+use crate::serial_wire_viewer::UiThreadCommand;
 use crate::trace_var::TraceVar;
 use crossterm::event;
 use std::io;
@@ -103,7 +103,7 @@ impl UiState {
             self.configured_channels[channel] = Some(variable.clone());
             self.send_cmd(UiThreadCommand::ConfigChannel {
                 channel,
-                var: Some(variable.clone()),
+                var: Some(variable),
             });
         }
     }
@@ -219,7 +219,7 @@ impl UiState {
     where
         B: Backend,
     {
-        let items = self.logs.iter().map(|r| Text::raw(r));
+        let items = self.logs.iter().map(Text::raw);
         List::new(items)
             .block(Block::default().borders(Borders::ALL).title("logs"))
             .style(Style::default().fg(Color::Black).bg(Color::Gray))

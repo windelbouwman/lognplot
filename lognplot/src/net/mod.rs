@@ -11,6 +11,8 @@ mod payload;
 #[cfg(feature = "server")]
 mod peer;
 #[cfg(feature = "server")]
+mod peer_processor;
+#[cfg(feature = "server")]
 mod server;
 
 #[cfg(feature = "server")]

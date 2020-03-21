@@ -23,7 +23,7 @@ impl DbTracer {
 
 impl Tracer for DbTracer {
     /// This is cool stuff, log metrics about render time for example to database itself :)
-    fn log_meta_metric(&self, name: &str, timestamp: Instant, value: f64) {
+    fn log_metric(&self, name: &str, timestamp: Instant, value: f64) {
         let elapsed = timestamp.duration_since(self.gui_start_instant);
         let elapsed_seconds: f64 = elapsed.as_secs_f64();
         let timestamp = TimeStamp::new(elapsed_seconds);

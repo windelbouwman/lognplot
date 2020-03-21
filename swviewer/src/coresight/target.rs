@@ -62,8 +62,6 @@ where
             for component in components {
                 if component.is_peripheral(&DWT_PID) {
                     info!(" - Detected DWT component! {:?}", component);
-                    // TODO: assumption about dwt location:
-                    // self.access, 0xE000_1000
                     let dwt_expected_address = 0xE000_1000;
                     if component.address() != dwt_expected_address {
                         warn!(

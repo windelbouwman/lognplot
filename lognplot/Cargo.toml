@@ -28,4 +28,4 @@ cairo-rs = { version = "0.8", optional = true }
 
 # Dependencies when we require server feature:
 tokio = { version = "0.2", optional = true, features = ["tcp", "rt-core", "stream"] }
-tokio-util = { version = "0.2.0", optional = true, features = ["codec"] }
+tokio-util = { version = "0.3", optional = true, features = ["codec"] }

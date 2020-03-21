@@ -134,12 +134,8 @@ impl GuiState {
         if self.link_x_axis {
             for chart in &self.charts {
                 // If chart is already borrowed, this is the sync call originating chart!
-                // TODO: this contraption does not seem right ..
-                match chart.try_borrow_mut() {
-                    Ok(mut h) => {
-                        h.sync_x_axis(source_chart);
-                    }
-                    Err(_) => {}
+                if let Ok(mut h) = chart.try_borrow_mut() {
+                    h.sync_x_axis(source_chart);
                 }
             }
         }
@@ -149,12 +145,8 @@ impl GuiState {
     pub fn sync_cursor(&self, source_chart: &ChartState) {
         for chart in &self.charts {
             // If chart is already borrowed, this is the sync call originating chart!
-            // TODO: this contraption does not seem right ..
-            match chart.try_borrow_mut() {
-                Ok(mut h) => {
-                    h.sync_cursor(source_chart);
-                }
-                Err(_) => {}
+            if let Ok(mut h) = chart.try_borrow_mut() {
+                h.sync_cursor(source_chart);
             }
         }
     }

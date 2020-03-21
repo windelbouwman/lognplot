@@ -16,7 +16,7 @@ pub fn do_magic(
     let (cmd_tx, cmd_rx) = mpsc::channel::<UiThreadCommand>();
     let (event_tx, event_rx) = mpsc::channel::<UiInput>();
 
-    let tui_logger = UiLogger::new(event_tx.clone());
+    let tui_logger = UiLogger::new(event_tx);
     log::set_boxed_logger(Box::new(tui_logger)).unwrap();
     log::set_max_level(log::Level::Info.to_level_filter());
 

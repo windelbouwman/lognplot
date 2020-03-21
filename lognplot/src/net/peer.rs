@@ -1,13 +1,13 @@
 //! Handle a single peer via tcp socket.
 
-use futures::channel::oneshot;
+use super::payload::SampleBatch;
+use super::peer_processor::PeerEvent;
+use crate::tsdb::TsDbHandle;
+use futures::channel::{mpsc, oneshot};
 use futures::{FutureExt, StreamExt};
 use tokio::net::TcpStream;
 use tokio::task::JoinHandle;
 use tokio_util::codec::{Framed, LengthDelimitedCodec};
-
-use super::payload::SampleBatch;
-use crate::tsdb::TsDbHandle;
 
 /// A handle to a peer connection
 pub struct PeerHandle {
@@ -32,17 +32,27 @@ impl PeerHandle {
 }
 
 /// Handle a single client
-pub fn process_client(socket: TcpStream, db: TsDbHandle) -> PeerHandle {
+pub fn process_client(
+    socket: TcpStream,
+    db: TsDbHandle,
+    peer_event_sink: mpsc::UnboundedSender<PeerEvent>,
+) -> PeerHandle {
     info!("Got incoming socket! {:?}", socket);
     let (kill_switch, kill_switch_endpoint) = oneshot::channel::<()>();
-    let join_handle = tokio::spawn(async { peer_prog(db, socket, kill_switch_endpoint).await });
+    let join_handle =
+        tokio::spawn(async { peer_prog(db, socket, kill_switch_endpoint, peer_event_sink).await });
     PeerHandle {
         join_handle,
         kill_switch,
     }
 }
 
-async fn peer_prog(db: TsDbHandle, socket: TcpStream, kill_switch_endpoint: oneshot::Receiver<()>) {
+async fn peer_prog(
+    db: TsDbHandle,
+    socket: TcpStream,
+    kill_switch_endpoint: oneshot::Receiver<()>,
+    peer_event_sink: mpsc::UnboundedSender<PeerEvent>,
+) {
     let mut framed_stream = Framed::new(socket, LengthDelimitedCodec::new()).fuse();
     let mut kill_switch_endpoint = kill_switch_endpoint.fuse();
 
@@ -51,7 +61,7 @@ async fn peer_prog(db: TsDbHandle, socket: TcpStream, kill_switch_endpoint: ones
             optional_packet = framed_stream.next() => {
                 if let Some(packet) = optional_packet {
                     let packet = packet.unwrap();
-                    process_packet(&db, &packet);
+                    process_packet(&db, &packet, &peer_event_sink);
                 } else {
                     info!("Client disconnect!");
                     break;
@@ -66,15 +76,29 @@ async fn peer_prog(db: TsDbHandle, socket: TcpStream, kill_switch_endpoint: ones
 }
 
 /// Process a single message.
-fn process_packet(db: &TsDbHandle, packet: &[u8]) {
+fn process_packet(
+    db: &TsDbHandle,
+    packet: &[u8],
+    peer_event_sink: &mpsc::UnboundedSender<PeerEvent>,
+) {
     // debug!("Got: {:?}", &packet);
+
+    peer_event_sink
+        .unbounded_send(PeerEvent::BytesReceived(packet.len()))
+        .unwrap();
 
     // try to decode cbor package:
     let batch: SampleBatch = serde_cbor::from_slice(&packet).unwrap();
     // println!("DAATAA: {:?}", batch.size());
 
+    let samples = batch.to_samples();
+
+    peer_event_sink
+        .unbounded_send(PeerEvent::SamplesReceived(samples.len()))
+        .unwrap();
+
     // Append the samples to the database:
     // TODO: instead of direct database access
     // get access to a queue which is processed elsewhere into the database.
-    db.add_values(batch.name(), batch.to_samples());
+    db.add_values(batch.name(), samples);
 }

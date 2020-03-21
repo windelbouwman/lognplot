@@ -20,7 +20,7 @@ impl TcpTracer {
 }
 
 impl Tracer for TcpTracer {
-    fn log_meta_metric(&self, name: &str, timestamp: Instant, value: f64) {
+    fn log_metric(&self, name: &str, timestamp: Instant, value: f64) {
         let elapsed = timestamp.duration_since(self.gui_start_instant);
         let elapsed_seconds: f64 = elapsed.as_secs_f64();
         if let Err(err) = self

@@ -32,10 +32,10 @@ impl AnyTracer {
 }
 
 impl Tracer for AnyTracer {
-    fn log_meta_metric(&self, name: &str, timestamp: Instant, value: f64) {
+    fn log_metric(&self, name: &str, timestamp: Instant, value: f64) {
         match self {
-            AnyTracer::Net(t) => t.log_meta_metric(name, timestamp, value),
-            AnyTracer::Db(t) => t.log_meta_metric(name, timestamp, value),
+            AnyTracer::Net(t) => t.log_metric(name, timestamp, value),
+            AnyTracer::Db(t) => t.log_metric(name, timestamp, value),
             AnyTracer::Void => {}
         }
     }

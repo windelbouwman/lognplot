@@ -5,5 +5,5 @@ use std::time::Instant;
 /// Use this trait to be able to log metrics.
 pub trait Tracer {
     /// Log a single metric
-    fn log_meta_metric(&self, name: &str, timestamp: Instant, value: f64);
+    fn log_metric(&self, name: &str, timestamp: Instant, value: f64);
 }

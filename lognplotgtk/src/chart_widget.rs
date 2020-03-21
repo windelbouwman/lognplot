@@ -163,10 +163,7 @@ impl ChartState {
         let amount = x_pixels_to_domain(&self.chart_layout, &self.chart.x_axis, dx);
 
         self.chart.pan_horizontal_absolute(-amount);
-        // TODO: pan vertical as well?
-        // TODO: idea: auto fit vertically?
         self.handle_x_axis_change();
-        // self.chart.pan_vertical(dy* 0.001);
     }
 
     pub fn zoom_fit(&mut self) {
@@ -357,7 +354,7 @@ impl ChartState {
 
         // internal performance metric:
         let draw_seconds: f64 = draw_duration.as_secs_f64();
-        self.perf_tracer.log_meta_metric(
+        self.perf_tracer.log_metric(
             &format!("META_chart_render_time_{}", self.id),
             t1,
             draw_seconds,

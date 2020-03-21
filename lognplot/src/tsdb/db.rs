@@ -59,13 +59,17 @@ impl TsDb {
                     let trace = self.data.remove(name).unwrap();
                     let now = chrono::offset::Local::now();
                     let date_time_marker = now.format("%Y%m%d_%H%M%S");
-                    let new_name = format!("{}_BACKUP_{}", name, date_time_marker);
-                    // TODO: do not overwrite backup!
-                    // assert!(!self.data.contains_key(new_name));
+                    let mut new_name = format!("{}_BACKUP_{}", name, date_time_marker);
+
+                    while self.data.contains_key(&new_name) {
+                        new_name.push_str("_a");
+                    }
+
                     // Copy of the old data:
-                    self.data.insert(new_name.clone(), trace);
-                    self.new_signal_event(&new_name);
-                    self.new_data_event(&new_name);
+                    let no_data = self.data.insert(new_name.clone(), trace);
+                    assert!(no_data.is_none()); // "Name must not be present already."
+                    self.notify_signal_added(&new_name);
+                    self.notify_signal_changed(&new_name);
 
                     // New trace:
                     self.new_trace(name);
@@ -73,7 +77,7 @@ impl TsDb {
             }
         } else {
             self.new_trace(name);
-            self.new_signal_event(name);
+            self.notify_signal_added(name);
         }
 
         self.data.get_mut(name).unwrap()
@@ -85,7 +89,7 @@ impl TsDb {
             let first_observation = samples.first().expect("Must have an observation here.");
             let trace = self.get_or_create_trace(name, &first_observation.timestamp);
             trace.add_values(samples);
-            self.new_data_event(name);
+            self.notify_signal_changed(name);
         }
     }
 
@@ -99,14 +103,14 @@ impl TsDb {
     pub fn add_value(&mut self, name: &str, observation: Observation<Sample>) {
         let trace = self.get_or_create_trace(name, &observation.timestamp);
         trace.add_sample(observation);
-        self.new_data_event(name);
+        self.notify_signal_changed(name);
     }
 
     /// Delete all data from the database.
     pub fn delete_all(&mut self) {
         self.data.clear();
         self.data.shrink_to_fit();
-        self.delete_all_event();
+        self.notify_delete_all();
     }
 
     /// Delete a single trace from the database.
@@ -146,6 +150,16 @@ impl TsDb {
 
     /// Register a subscriber which will be notified of any change.
     pub fn register_notifier(&mut self, mut subscriber: ChangeSubscriber) {
+        // Add a new signal event for all currently present signals:
+        for signal_name in self.data.keys() {
+            subscriber.notify_signal_added(signal_name);
+            subscriber.notify_signal_changed(signal_name);
+        }
+
+        // Poll once to flush the above 'new' signals.
+        subscriber.poll_events();
+
+        // Poll twice to mark the event as ready to be sent:
         subscriber.poll_events();
         self.change_subscribers.push(subscriber);
     }
@@ -158,13 +172,13 @@ impl TsDb {
     }
 
     /// Notify listeners of the newly arrived data.
-    fn new_data_event(&mut self, name: &str) {
+    fn notify_signal_changed(&mut self, name: &str) {
         for subscriber in &mut self.change_subscribers {
             subscriber.notify_signal_changed(name);
         }
     }
 
-    fn new_signal_event(&mut self, name: &str) {
+    fn notify_signal_added(&mut self, name: &str) {
         for subscriber in &mut self.change_subscribers {
             subscriber.notify_signal_added(name);
         }
@@ -174,7 +188,7 @@ impl TsDb {
         unimplemented!("TODO");
     }
 
-    fn delete_all_event(&mut self) {
+    fn notify_delete_all(&mut self) {
         for subscriber in &mut self.change_subscribers {
             subscriber.notify_delete_all();
         }
