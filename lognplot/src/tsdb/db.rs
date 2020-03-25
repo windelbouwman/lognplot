@@ -1,11 +1,12 @@
 //! Time series database which uses B+ trees to store tha data.
 
 use super::handle::{make_handle, TsDbHandle};
-use super::query::{Query, QueryResult};
+use super::query::Query;
 use super::trace::Trace;
 use super::ChangeSubscriber;
 use super::{Aggregation, Observation};
-use super::{QuickSummary, Sample, SampleMetrics};
+use super::{CountMetrics, Text};
+use super::{QueryResult, QuickSummary, Sample, SampleMetrics};
 use crate::time::{TimeSpan, TimeStamp};
 use std::collections::HashMap;
 
@@ -15,7 +16,8 @@ use std::collections::HashMap;
 #[derive(Debug)]
 pub struct TsDb {
     path: String,
-    pub data: HashMap<String, Trace>,
+    data: HashMap<String, Trace<Sample, SampleMetrics>>,
+    text_signals: HashMap<String, Trace<Text, CountMetrics>>,
     change_subscribers: Vec<ChangeSubscriber>,
 }
 
@@ -29,10 +31,12 @@ impl Default for TsDb {
     fn default() -> Self {
         let path = "x".to_string();
         let data = HashMap::new();
+        let text_signals = HashMap::new();
         let change_subscribers = vec![];
         Self {
             path,
             data,
+            text_signals,
             change_subscribers,
         }
     }
@@ -48,7 +52,11 @@ impl TsDb {
         self.data.keys().cloned().collect()
     }
 
-    fn get_or_create_trace(&mut self, name: &str, first_timestamp: &TimeStamp) -> &mut Trace {
+    fn get_or_create_trace(
+        &mut self,
+        name: &str,
+        first_timestamp: &TimeStamp,
+    ) -> &mut Trace<Sample, SampleMetrics> {
         if self.data.contains_key(name) {
             let trace = self.data.get(name).expect("name to be present");
             if let Some(summary) = trace.quick_summary() {
@@ -88,22 +96,32 @@ impl TsDb {
         if !samples.is_empty() {
             let first_observation = samples.first().expect("Must have an observation here.");
             let trace = self.get_or_create_trace(name, &first_observation.timestamp);
-            trace.add_values(samples);
+            trace.add_observations(samples);
             self.notify_signal_changed(name);
         }
     }
 
-    pub fn new_trace(&mut self, name: &str) {
+    fn new_trace(&mut self, name: &str) {
         let trace = Trace::default();
-        self.data.insert(name.to_string(), trace);
-        // self.get_trace(name)
+        self.data.insert(name.to_owned(), trace);
     }
 
     /// Add a single observation to the database.
     pub fn add_value(&mut self, name: &str, observation: Observation<Sample>) {
         let trace = self.get_or_create_trace(name, &observation.timestamp);
-        trace.add_sample(observation);
+        trace.add_observation(observation);
         self.notify_signal_changed(name);
+    }
+
+    /// Add a text record.
+    pub fn add_text(&mut self, name: &str, observation: Observation<Text>) {
+        if !self.text_signals.contains_key(name) {
+            let trace = Trace::default();
+            self.text_signals.insert(name.to_owned(), trace);
+        }
+
+        let trace = self.text_signals.get_mut(name).expect("Present");
+        trace.add_observation(observation);
     }
 
     /// Delete all data from the database.
@@ -120,8 +138,17 @@ impl TsDb {
     }
 
     /// Query the given trace for data.
-    pub fn query(&self, name: &str, query: Query) -> QueryResult {
+    pub fn query(&self, name: &str, query: Query) -> QueryResult<Sample, SampleMetrics> {
         if let Some(trace) = self.data.get(name) {
+            trace.query(query)
+        } else {
+            QueryResult { query, inner: None }
+        }
+    }
+
+    /// Query text events in the given range.
+    pub fn query_text(&self, name: &str, query: Query) -> QueryResult<Text, CountMetrics> {
+        if let Some(trace) = self.text_signals.get(name) {
             trace.query(query)
         } else {
             QueryResult { query, inner: None }
@@ -133,7 +160,7 @@ impl TsDb {
         self.data.get(name).map(|t| t.to_vec())
     }
 
-    pub fn quick_summary(&self, name: &str) -> Option<QuickSummary> {
+    pub fn quick_summary(&self, name: &str) -> Option<QuickSummary<Sample>> {
         self.data.get(name)?.quick_summary()
     }
 

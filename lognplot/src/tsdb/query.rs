@@ -2,8 +2,6 @@
 //!
 //! The database can be queried, and will give a `QueryResult` back.
 
-use super::sample::{Sample, SampleMetrics};
-use super::RangeQueryResult;
 use crate::time::{Resolution, TimeSpan, TimeStamp};
 
 #[derive(Debug)]
@@ -73,21 +71,5 @@ impl QueryBuilder {
         let end = self.end.expect("No 'end' value given for the query!");
         let interval = TimeSpan::new(start, end);
         Query::new(interval, Resolution::NanoSeconds, self.amount)
-    }
-}
-
-/// This holds the result of a query to the database.
-/// The result can be several things, depending upon query type.
-/// It can be min/max/mean slices, or single values, if the data is present at the
-/// proper resolution.
-#[derive(Debug)]
-pub struct QueryResult {
-    pub query: Query,
-    pub inner: Option<RangeQueryResult<Sample, SampleMetrics>>,
-}
-
-impl QueryResult {
-    pub fn len(&self) -> usize {
-        self.inner.as_ref().map(|r| r.len()).unwrap_or(0)
     }
 }

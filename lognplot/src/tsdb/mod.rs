@@ -10,19 +10,24 @@ mod metrics;
 mod notify;
 mod observation;
 mod query;
+mod query_result;
 mod sample;
+mod summary;
+mod text;
 mod trace;
 
 pub use aggregation::Aggregation;
 use btree::Btree;
-pub use btree::RangeQueryResult;
 pub use db::TsDb;
 pub use handle::TsDbHandle;
-pub use metrics::Metrics;
+pub use metrics::{CountMetrics, Metrics};
 pub use notify::{ChangeSubscriber, DataChangeEvent};
 pub use observation::Observation;
-pub use query::{Query, QueryResult};
-pub use sample::{QuickSummary, Sample, SampleMetrics};
+pub use query::Query;
+pub use query_result::{QueryResult, RangeQueryResult};
+pub use sample::{Sample, SampleMetrics};
+pub use summary::QuickSummary;
+pub use text::Text;
 pub use trace::Trace;
 
 #[cfg(test)]
@@ -40,9 +45,6 @@ mod tests {
         let mut db = TsDb::default();
         db.open();
         let trace_name = "foo";
-
-        // Create a trace:
-        db.new_trace(trace_name);
 
         // Insert data:
         let ts = TimeStamp::from_seconds(0);

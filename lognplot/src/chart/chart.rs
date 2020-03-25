@@ -3,11 +3,11 @@
 use super::axis::ValueAxis;
 use super::curve::Curve;
 use super::Cursor;
+use super::TextTrack;
 use crate::time::TimeSpan;
 use crate::tsdb::{Aggregation, Sample, SampleMetrics};
 
 /// A single 2D-chart
-#[derive(Clone)]
 pub struct Chart {
     /// An optional title for the plot
     pub title: Option<String>,
@@ -21,6 +21,8 @@ pub struct Chart {
     /// The curves in the plot
     pub curves: Vec<Curve>,
 
+    pub text_tracks: Vec<TextTrack>,
+
     /// The position of the cursor.
     pub cursor: Option<Cursor>,
 }
@@ -33,6 +35,7 @@ impl Default for Chart {
             y_axis: ValueAxis::default(),
             grid: true,
             curves: vec![],
+            text_tracks: vec![],
             cursor: None,
         }
     }

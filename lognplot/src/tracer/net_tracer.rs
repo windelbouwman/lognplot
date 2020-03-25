@@ -32,4 +32,17 @@ impl Tracer for TcpTracer {
             error!("Error sending metric: {:?}", err);
         }
     }
+
+    fn log_text(&self, name: &str, timestamp: Instant, text: String) {
+        let elapsed = timestamp.duration_since(self.gui_start_instant);
+        let elapsed_seconds: f64 = elapsed.as_secs_f64();
+        if let Err(err) = self
+            .client
+            .lock()
+            .unwrap()
+            .send_text(name, elapsed_seconds, text)
+        {
+            error!("Error sending text: {:?}", err);
+        }
+    }
 }

@@ -1,7 +1,8 @@
 //! Thread usable handle. Wrapper around a database.
 
 use super::{
-    Aggregation, Observation, Query, QueryResult, QuickSummary, Sample, SampleMetrics, TsDb,
+    Aggregation, CountMetrics, Observation, Query, QueryResult, QuickSummary, Sample,
+    SampleMetrics, Text, TsDb,
 };
 use super::{ChangeSubscriber, DataChangeEvent};
 use crate::time::TimeSpan;
@@ -28,11 +29,6 @@ impl LockedTsDb {
         self.db.lock().unwrap().get_signal_names()
     }
 
-    /// Create a new trace.
-    pub fn new_trace(&self, name: &str) {
-        self.db.lock().unwrap().new_trace(name)
-    }
-
     /// Add a single observation.
     pub fn add_value(&self, name: &str, sample: Observation<Sample>) {
         self.db.lock().unwrap().add_value(name, sample);
@@ -43,9 +39,17 @@ impl LockedTsDb {
         self.db.lock().unwrap().add_values(name, samples);
     }
 
+    pub fn add_text(&self, name: &str, text: Observation<Text>) {
+        self.db.lock().unwrap().add_text(name, text);
+    }
+
     /// Query the database.
-    pub fn query(&self, name: &str, query: Query) -> QueryResult {
+    pub fn query(&self, name: &str, query: Query) -> QueryResult<Sample, SampleMetrics> {
         self.db.lock().unwrap().query(name, query)
+    }
+
+    pub fn query_text(&self, name: &str, query: Query) -> QueryResult<Text, CountMetrics> {
+        self.db.lock().unwrap().query_text(name, query)
     }
 
     pub fn get_raw_samples(&self, name: &str) -> Option<Vec<Observation<Sample>>> {
@@ -57,7 +61,7 @@ impl LockedTsDb {
     /// This summary includes:
     /// - sample count
     /// - last observation
-    pub fn quick_summary(&self, name: &str) -> Option<QuickSummary> {
+    pub fn quick_summary(&self, name: &str) -> Option<QuickSummary<Sample>> {
         self.db.lock().unwrap().quick_summary(name)
     }
 

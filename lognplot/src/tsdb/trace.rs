@@ -4,39 +4,48 @@
 //! or leaf chunks, with real data.
 //! Also: keep track of certain metrics, such as min, max and sum.
 
-// use std::cell::RefCell;
-use super::query::{Query, QueryResult};
-use super::sample::{QuickSummary, Sample, SampleMetrics};
-use super::{Aggregation, Btree, Observation};
+use super::{Aggregation, Btree, Metrics, Observation, Query, QueryResult, QuickSummary};
 use crate::time::TimeSpan;
 
 /// A trace is a single signal with a history in time.
 #[derive(Debug)]
-pub struct Trace {
-    tree: Btree<Sample, SampleMetrics>,
+pub struct Trace<V, M>
+where
+    M: Metrics<V> + From<V>,
+{
+    tree: Btree<V, M>,
     count: usize,
-    last: Option<Observation<Sample>>,
+    last: Option<Observation<V>>,
 }
 
-impl Trace {
+impl<V, M> Trace<V, M>
+where
+    V: Clone,
+    M: Metrics<V> + From<V> + Clone,
+{
     /// Add a vector of values to this trace.
-    pub fn add_values(&mut self, samples: Vec<Observation<Sample>>) {
-        if !samples.is_empty() {
-            self.count += samples.len();
-            self.last = Some(samples.last().expect("At least a single sample.").clone());
-            self.tree.append_samples(samples);
+    pub fn add_observations(&mut self, observations: Vec<Observation<V>>) {
+        if !observations.is_empty() {
+            self.count += observations.len();
+            self.last = Some(
+                observations
+                    .last()
+                    .expect("At least a single sample.")
+                    .clone(),
+            );
+            self.tree.append_samples(observations);
         }
     }
 
-    /// Add a single sample.
-    pub fn add_sample(&mut self, observation: Observation<Sample>) {
+    /// Add a single observation.
+    pub fn add_observation(&mut self, observation: Observation<V>) {
         self.count += 1;
         self.last = Some(observation.clone());
         self.tree.append_sample(observation);
     }
 
     /// Query this trace for some data.
-    pub fn query(&self, query: Query) -> QueryResult {
+    pub fn query(&self, query: Query) -> QueryResult<V, M> {
         let samples = self.tree.query_range(&query.interval, query.amount);
 
         QueryResult {
@@ -45,7 +54,7 @@ impl Trace {
         }
     }
 
-    pub fn quick_summary(&self) -> Option<QuickSummary> {
+    pub fn quick_summary(&self) -> Option<QuickSummary<V>> {
         if let Some(last) = &self.last {
             Some(QuickSummary::new(self.count, last.clone()))
         } else {
@@ -53,10 +62,7 @@ impl Trace {
         }
     }
 
-    pub fn summary(
-        &self,
-        timespan: Option<&TimeSpan>,
-    ) -> Option<Aggregation<Sample, SampleMetrics>> {
+    pub fn summary(&self, timespan: Option<&TimeSpan>) -> Option<Aggregation<V, M>> {
         if let Some(timespan) = timespan {
             self.tree.range_summary(timespan)
         } else {
@@ -64,12 +70,16 @@ impl Trace {
         }
     }
 
-    pub fn to_vec(&self) -> Vec<Observation<Sample>> {
+    pub fn to_vec(&self) -> Vec<Observation<V>> {
         self.tree.to_vec()
     }
 }
 
-impl Default for Trace {
+impl<V, M> Default for Trace<V, M>
+where
+    V: Clone,
+    M: Metrics<V> + From<V> + Clone,
+{
     fn default() -> Self {
         let tree = Default::default();
 

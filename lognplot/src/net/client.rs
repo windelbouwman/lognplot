@@ -37,6 +37,11 @@ impl TcpClient {
         self.write_sample_batch(payload)
     }
 
+    pub fn send_text(&mut self, name: &str, timestamp: f64, text: String) -> std::io::Result<()> {
+        let payload = SampleBatch::new_text(name.to_owned(), timestamp, text);
+        self.write_sample_batch(payload)
+    }
+
     fn write_sample_batch(&mut self, payload: SampleBatch) -> std::io::Result<()> {
         // Encode data
         let data = serde_cbor::to_vec(&payload).unwrap();

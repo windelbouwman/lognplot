@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use crate::time::TimeStamp;
-use crate::tsdb::{Observation, Sample};
+use crate::tsdb::{Observation, Sample, Text};
 
 /// A chunk of data at fixed sample rate.
 #[derive(Serialize, Deserialize, Debug)]
@@ -42,8 +42,41 @@ impl SampleBatch {
         }
     }
 
+    pub fn new_text(name: String, t: f64, text: String) -> Self {
+        SampleBatch {
+            name,
+            payload: SamplePayload::Text { t, text },
+        }
+    }
+
     pub fn name(&self) -> &str {
         &self.name
+    }
+
+    pub fn has_text(&self) -> bool {
+        match &self.payload {
+            SamplePayload::Text { .. } => true,
+            _ => false,
+        }
+    }
+
+    pub fn to_text(&self) -> Option<Observation<Text>> {
+        match &self.payload {
+            SamplePayload::Text { t, text } => {
+                let timestamp = TimeStamp::new(*t);
+                Some(Observation::new(timestamp, Text::new(text.to_owned())))
+            }
+            _ => None,
+        }
+    }
+
+    pub fn has_samples(&self) -> bool {
+        match &self.payload {
+            SamplePayload::Sampled { data, .. } => !data.is_empty(),
+            SamplePayload::Batch { samples } => !samples.is_empty(),
+            SamplePayload::Single { .. } => true,
+            _ => false,
+        }
     }
 
     /// Convert a batch of samples received over the wire to
@@ -70,7 +103,7 @@ impl SampleBatch {
                 let timestamp = TimeStamp::new(*t);
                 vec![Observation::new(timestamp, Sample::new(*value))]
             }
-            SamplePayload::Event { .. } => vec![],
+            SamplePayload::Event { .. } | SamplePayload::Text { .. } => vec![],
         }
     }
 }
@@ -106,6 +139,15 @@ enum SamplePayload {
 
         /// The sample value
         value: f64,
+    },
+
+    #[serde(rename = "text")]
+    Text {
+        /// Timestamp of the text
+        t: f64,
+
+        /// The text itself
+        text: String,
     },
 
     #[serde(rename = "event")]

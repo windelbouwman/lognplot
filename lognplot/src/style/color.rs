@@ -25,6 +25,14 @@ impl Color {
         Self::new(255, 255, 255)
     }
 
+    pub fn red() -> Self {
+        Self::new(255, 0, 0)
+    }
+
+    pub fn green() -> Self {
+        Self::new(0, 255, 0)
+    }
+
     pub fn r(&self) -> u8 {
         self.r
     }

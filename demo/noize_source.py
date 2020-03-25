@@ -62,6 +62,7 @@ def main():
         client.send_samples("SIGMA-DELTA", t0, dt, samples3)
         client.send_samples("RANDOM", t0, dt, samples4)
         client.send_samples("TEXT_BITS", t0, dt, samples5)
+        client.send_text("Log", t0, f"Log at {t0:.3}")
 
         time.sleep(n_samples * dt)
 

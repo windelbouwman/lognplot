@@ -39,4 +39,12 @@ impl Tracer for AnyTracer {
             AnyTracer::Void => {}
         }
     }
+
+    fn log_text(&self, name: &str, timestamp: Instant, text: String) {
+        match self {
+            AnyTracer::Net(t) => t.log_text(name, timestamp, text),
+            AnyTracer::Db(t) => t.log_text(name, timestamp, text),
+            AnyTracer::Void => {}
+        }
+    }
 }

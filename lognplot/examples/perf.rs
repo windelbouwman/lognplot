@@ -19,7 +19,6 @@ fn insertions(db: &mut TsDb) {
         num_insertions
     );
 
-    db.new_trace("fu");
     let t1 = Instant::now();
     for i in 0..num_insertions {
         let ts = TimeStamp::new(i as f64);

@@ -6,10 +6,12 @@
 mod axis;
 mod chart;
 mod curve;
+mod text_track;
 
 pub use axis::ValueAxis;
 pub use chart::Chart;
 pub use curve::{Curve, CurveData};
+pub use text_track::TextTrack;
 
 use crate::geometry::Size;
 use crate::render::Canvas;

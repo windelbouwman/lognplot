@@ -3,7 +3,6 @@
 //! This module enables logging of scalar values.
 
 use super::Metrics;
-use super::Observation;
 
 /// A simple scalar value.
 #[derive(Clone, Debug)]
@@ -14,19 +13,6 @@ pub struct Sample {
 impl Sample {
     pub fn new(value: f64) -> Self {
         Sample { value }
-    }
-}
-
-/// Less detailed summary, but easier to keep track of.
-#[derive(Debug, Clone)]
-pub struct QuickSummary {
-    pub count: usize,
-    pub last: Observation<Sample>,
-}
-
-impl QuickSummary {
-    pub fn new(count: usize, last: Observation<Sample>) -> Self {
-        QuickSummary { count, last }
     }
 }
 

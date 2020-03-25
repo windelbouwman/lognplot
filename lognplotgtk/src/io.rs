@@ -149,9 +149,6 @@ mod tests {
 
         let trace_name = "foo";
 
-        // Create a trace:
-        db.new_trace(trace_name);
-
         // Insert data:
         for x in 1..8 {
             let ts = TimeStamp::from_seconds(x);

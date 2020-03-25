@@ -8,7 +8,7 @@ use crate::chart::{Chart, Cursor, Curve};
 use crate::geometry::Point;
 use crate::style::Color;
 use crate::time::TimeStamp;
-use crate::tsdb::{Aggregation, Observation, RangeQueryResult, Sample, SampleMetrics};
+use crate::tsdb::{Aggregation, Observation, RangeQueryResult, Sample, SampleMetrics, Text};
 use std::borrow::Borrow;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -79,6 +79,7 @@ where
         self.draw_axis();
         self.draw_box();
         self.draw_curves();
+        self.draw_text_tracks();
         self.draw_cursor();
         self.draw_title();
         self.draw_legend();
@@ -578,6 +579,75 @@ where
         self.canvas.set_pen(color, 1.0);
         self.canvas.set_line_width(2.0);
         self.canvas.draw_line(&mean_line);
+    }
+
+    /// Draw textual tracks of events.
+    /// TODO: move this drawing to seperate chart?
+    fn draw_text_tracks(&mut self) {
+        let timespan = self.chart.x_axis.timespan();
+        let pixels: usize = self.layout.plot_width as usize;
+        let pixels_per_text_aggregation = 20;
+        let point_count = pixels / pixels_per_text_aggregation;
+
+        for text_track in &self.chart.text_tracks {
+            let color = Color::red();
+            let observations = text_track.query(&timespan, point_count);
+            if let Some(observations) = &observations {
+                match observations {
+                    RangeQueryResult::Aggregations(_aggregations) => {
+                        // TODO!
+                        // self.draw_aggregations(aggregations, color);
+                    }
+                    RangeQueryResult::Observations(observations) => {
+                        self.draw_text_observations(observations, color);
+                    }
+                }
+            }
+        }
+    }
+
+    /// Draw a single series of observed textual events.
+    fn draw_text_observations(&mut self, observations: &[Observation<Text>], color: Color) {
+        self.canvas.set_pen(color, 1.0);
+        self.canvas.set_line_width(2.0);
+
+        let track_y = self.layout.plot_bottom - 20.0;
+        let padding = 5.0;
+
+        let text_height = self.canvas.text_size("X").height;
+        let track_left = self.layout.plot_left;
+        let track_right = self.layout.plot_right;
+        let track_top = track_y - (text_height / 2.0) - padding;
+        let track_bottom = track_y + (text_height / 2.0) + padding;
+
+        // Draw top line:
+        self.canvas.draw_line(&[
+            Point::new(track_left, track_top),
+            Point::new(track_right, track_top),
+        ]);
+
+        // Draw bottom line:
+        self.canvas.draw_line(&[
+            Point::new(track_left, track_bottom),
+            Point::new(track_right, track_bottom),
+        ]);
+
+        // Draw text events:
+        for observation in observations {
+            let observation_x = self.x_domain_to_pixel(&observation.timestamp);
+            self.canvas.draw_line(&[
+                Point::new(observation_x, track_top),
+                Point::new(observation_x, track_bottom),
+            ]);
+
+            let point = Point::new(observation_x + padding, track_y);
+            self.canvas.print_text(
+                &point,
+                HorizontalAnchor::Left,
+                VerticalAnchor::Middle,
+                &observation.value.text,
+            );
+        }
     }
 
     /// Transform x-value to pixel/point location.

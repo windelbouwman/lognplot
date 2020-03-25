@@ -22,7 +22,14 @@ pub struct ServerHandle {
 
 impl ServerHandle {
     pub fn stop(self) {
-        self.kill_switch.send(()).unwrap();
+        match self.kill_switch.send(()) {
+            Err(_) => {
+                debug!("Server thread already stopped");
+            }
+            Ok(_) => {
+                debug!("Server thread stopped.");
+            }
+        }
         self.thread.join().unwrap();
     }
 }
@@ -39,9 +46,9 @@ pub fn run_server(db: TsDbHandle, port: u16, perf_tracer: Arc<AnyTracer>) -> Ser
             .unwrap();
 
         runtime.block_on(async {
-            server_prog(db, port, perf_tracer, kill_switch_receiver)
-                .await
-                .unwrap();
+            if let Err(err) = server_prog(db, port, perf_tracer, kill_switch_receiver).await {
+                error!("Server stopped with error: {}", err);
+            }
         });
 
         info!("Server finished!!!");

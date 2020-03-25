@@ -109,7 +109,8 @@ impl ValueAxis {
     /// Calculate date time tick markers.
     pub fn calc_date_tiks(&self, n_ticks: usize) -> (Option<String>, TickLabels) {
         let begin = self.range.begin();
-        if begin > 1_581_715_634.0 {
+        // If time in some range between 2001 and 2096, use data time stuff:
+        if 1.0e9 < begin && begin < 4.0e9 {
             let (prefix, labels) = calc_date_ticks(begin, self.range.end(), n_ticks);
             (Some(prefix), labels)
         } else {

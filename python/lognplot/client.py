@@ -66,6 +66,12 @@ class LognplotTcpClient:
         self._send_dict(
             {"name": name, "t": timestamp, "type": "event", "attributes": attributes}
         )
+    
+    def send_text(self, name, timestamp, text):
+        timestamp = coerce_timestamp(timestamp)
+        self._send_dict(
+            {"name": name, "t": timestamp, "type": "text", "text": text}
+        )
 
     def _send_dict(self, data):
         data2 = cbor.dumps(data)

@@ -4,7 +4,7 @@
 //! Leaf and intermediate nodes can have multiple child nodes.
 
 use super::metrics::Metrics;
-use super::{Aggregation, Observation};
+use super::{Aggregation, Observation, RangeQueryResult};
 use crate::time::TimeSpan;
 
 /// This is the intermediate level fanout ratio.
@@ -147,29 +147,6 @@ where
     /// Get a flat list of all observation in this tree.
     pub fn to_vec(&self) -> Vec<Observation<V>> {
         self.root.to_vec()
-    }
-}
-
-/// Inner results, can be either a series of single
-/// observations, or a series of aggregate observations.
-#[derive(Debug)]
-pub enum RangeQueryResult<V, M>
-where
-    M: Metrics<V> + From<V>,
-{
-    Observations(Vec<Observation<V>>),
-    Aggregations(Vec<Aggregation<V, M>>),
-}
-
-impl<V, M> RangeQueryResult<V, M>
-where
-    M: Metrics<V> + From<V>,
-{
-    pub fn len(&self) -> usize {
-        match self {
-            RangeQueryResult::Observations(observations) => observations.len(),
-            RangeQueryResult::Aggregations(aggregations) => aggregations.len(),
-        }
     }
 }
 
