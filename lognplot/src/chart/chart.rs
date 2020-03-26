@@ -3,9 +3,9 @@
 use super::axis::ValueAxis;
 use super::curve::Curve;
 use super::Cursor;
-use super::TextTrack;
+use crate::geometry::Range;
 use crate::time::TimeSpan;
-use crate::tsdb::{Aggregation, Sample, SampleMetrics};
+use crate::tsdb::Summary;
 
 /// A single 2D-chart
 pub struct Chart {
@@ -21,8 +21,6 @@ pub struct Chart {
     /// The curves in the plot
     pub curves: Vec<Curve>,
 
-    pub text_tracks: Vec<TextTrack>,
-
     /// The position of the cursor.
     pub cursor: Option<Cursor>,
 }
@@ -35,7 +33,6 @@ impl Default for Chart {
             y_axis: ValueAxis::default(),
             grid: true,
             curves: vec![],
-            text_tracks: vec![],
             cursor: None,
         }
     }
@@ -95,7 +92,9 @@ impl Chart {
         let timespan = self.x_axis.timespan();
 
         if let Some(summary) = self.data_summary(Some(&timespan)) {
-            self.fit_y_axis_to_metrics(summary.metrics());
+            if let Some(range) = summary.range {
+                self.fit_y_axis_to_range(&range);
+            }
         }
     }
 
@@ -110,14 +109,14 @@ impl Chart {
     }
 
     /// Adjust Y-axis such that we view the given metrics.
-    fn fit_y_axis_to_metrics(&mut self, metrics: &SampleMetrics) {
-        let mut domain = metrics.max - metrics.min;
+    fn fit_y_axis_to_range(&mut self, range: &Range<f64>) {
+        let mut domain = range.end() - range.begin();
         if domain.abs() < 1.0e-17 {
             domain = 1.0;
         }
 
-        let minimum = metrics.min - 0.05 * domain;
-        let maximum = metrics.max + 0.05 * domain;
+        let minimum = range.begin() - 0.05 * domain;
+        let maximum = range.end() + 0.05 * domain;
         self.y_axis.set_limits(minimum, maximum);
     }
 
@@ -133,27 +132,64 @@ impl Chart {
     }
 
     /// Retrieve meta-data from all curves.
-    fn data_summary(
-        &self,
-        timespan: Option<&TimeSpan>,
-    ) -> Option<Aggregation<Sample, SampleMetrics>> {
-        let summaries: Vec<Aggregation<Sample, SampleMetrics>> = self
+    fn data_summary(&self, timespan: Option<&TimeSpan>) -> Option<ChartDataSummary> {
+        let summaries: Vec<Summary> = self
             .curves
             .iter()
             .filter_map(|c| c.data_summary(timespan))
             .collect();
-        Aggregation::from_aggregations(&summaries)
+        ChartDataSummary::from_summaries(&summaries)
     }
 
     /// Adjust scale ranges so we fit all data in view.
     pub fn autoscale(&mut self) {
         if let Some(summary) = self.data_summary(None) {
             self.fit_x_axis_to_timespan(&summary.timespan);
-            self.fit_y_axis_to_metrics(summary.metrics());
+            if let Some(range) = summary.range {
+                self.fit_y_axis_to_range(&range);
+            }
         }
     }
 
     pub fn has_signal(&self, name: &str) -> bool {
         self.curves.iter().any(|c| c.name() == name)
+    }
+}
+
+struct ChartDataSummary {
+    timespan: TimeSpan,
+    range: Option<Range<f64>>,
+}
+
+impl ChartDataSummary {
+    fn from_summaries(summaries: &[Summary]) -> Option<Self> {
+        if summaries.is_empty() {
+            None
+        } else {
+            let mut timespan = summaries.first().unwrap().timespan().clone();
+            let mut metrics = vec![];
+
+            for summary in summaries {
+                timespan.extend_to_include_span(summary.timespan());
+                if let Summary::Value(value_summary) = summary {
+                    let min_value = value_summary.metrics().min;
+                    let max_value = value_summary.metrics().max;
+                    metrics.push((min_value, max_value));
+                }
+            }
+
+            let range: Option<Range<f64>> = if let Some((first, rest)) = metrics.split_first() {
+                let (mut begin, mut end) = *first;
+                for (min_value, max_value) in rest {
+                    begin = begin.min(*min_value);
+                    end = end.max(*max_value);
+                }
+                Some(Range::new(begin, end))
+            } else {
+                None
+            };
+
+            Some(ChartDataSummary { timespan, range })
+        }
     }
 }

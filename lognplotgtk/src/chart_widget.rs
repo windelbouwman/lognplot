@@ -8,7 +8,7 @@ use std::time::Instant;
 
 use crate::session::DashBoardItem;
 use crate::state::GuiStateHandle;
-use lognplot::chart::{Chart, Curve, CurveData, TextTrack};
+use lognplot::chart::{Chart, Curve, CurveData};
 use lognplot::geometry::Size;
 use lognplot::render::{draw_chart, CairoCanvas, ChartLayout, ChartOptions};
 use lognplot::render::{x_pixel_to_domain, x_pixels_to_domain, y_pixel_to_domain};
@@ -49,13 +49,9 @@ impl ChartState {
         draw_area: gtk::DrawingArea,
         id: &str,
     ) -> Self {
-        let mut chart = Chart::default();
+        let chart = Chart::default();
         // let color_wheel = vec!["blue".to_string(), "red".to_string(), "green".to_string()];
         let color_wheel: Vec<String> = CATEGORY10_COLORS.iter().map(|s| (*s).to_string()).collect();
-
-        chart
-            .text_tracks
-            .push(TextTrack::new("Log".to_owned(), db.clone()));
 
         ChartState {
             chart,

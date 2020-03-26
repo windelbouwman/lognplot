@@ -1,10 +1,7 @@
 //! Thread usable handle. Wrapper around a database.
 
-use super::{
-    Aggregation, CountMetrics, Observation, Query, QueryResult, QuickSummary, Sample,
-    SampleMetrics, Text, TsDb,
-};
 use super::{ChangeSubscriber, DataChangeEvent};
+use super::{Observation, Query, QueryResult, QuickSummary, Sample, Summary, Text, TsDb};
 use crate::time::TimeSpan;
 use futures::channel::mpsc;
 use std::sync::{Arc, Mutex};
@@ -44,12 +41,8 @@ impl LockedTsDb {
     }
 
     /// Query the database.
-    pub fn query(&self, name: &str, query: Query) -> QueryResult<Sample, SampleMetrics> {
+    pub fn query(&self, name: &str, query: Query) -> Option<QueryResult> {
         self.db.lock().unwrap().query(name, query)
-    }
-
-    pub fn query_text(&self, name: &str, query: Query) -> QueryResult<Text, CountMetrics> {
-        self.db.lock().unwrap().query_text(name, query)
     }
 
     pub fn get_raw_samples(&self, name: &str) -> Option<Vec<Observation<Sample>>> {
@@ -61,7 +54,7 @@ impl LockedTsDb {
     /// This summary includes:
     /// - sample count
     /// - last observation
-    pub fn quick_summary(&self, name: &str) -> Option<QuickSummary<Sample>> {
+    pub fn quick_summary(&self, name: &str) -> Option<QuickSummary> {
         self.db.lock().unwrap().quick_summary(name)
     }
 
@@ -71,11 +64,7 @@ impl LockedTsDb {
     /// - mean, min, max, standard deviation
     /// - sample count
     /// - first, last observations
-    pub fn summary(
-        &self,
-        name: &str,
-        timespan: Option<&TimeSpan>,
-    ) -> Option<Aggregation<Sample, SampleMetrics>> {
+    pub fn summary(&self, name: &str, timespan: Option<&TimeSpan>) -> Option<Summary> {
         self.db.lock().unwrap().summary(name, timespan)
     }
 

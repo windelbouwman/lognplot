@@ -46,9 +46,8 @@ fn do_query(db: &TsDb) {
         .start(TimeStamp::new(0.0))
         .end(TimeStamp::new(1000.0))
         .build();
-    let result = db.query("fu", query);
+    let result = db.query("fu", query).unwrap();
 
-    println!("Got result: {:?}", result.query);
     println!("Num result: {:?}", result.len());
     // let raw_samples = result.into_vec();
     // println!("Raw samples: {}", raw_samples.len());

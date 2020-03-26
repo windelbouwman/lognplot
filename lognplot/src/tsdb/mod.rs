@@ -15,6 +15,8 @@ mod sample;
 mod summary;
 mod text;
 mod trace;
+mod track;
+mod track_type;
 
 pub use aggregation::Aggregation;
 use btree::Btree;
@@ -26,9 +28,11 @@ pub use observation::Observation;
 pub use query::Query;
 pub use query_result::{QueryResult, RangeQueryResult};
 pub use sample::{Sample, SampleMetrics};
-pub use summary::QuickSummary;
+pub use summary::{QuickSummary, Summary};
 pub use text::Text;
 pub use trace::Trace;
+pub use track::Track;
+pub use track_type::TrackType;
 
 #[cfg(test)]
 mod tests {
@@ -57,7 +61,7 @@ mod tests {
             .start(ts.add_millis(-1))
             .end(ts.add_millis(1))
             .build();
-        let result = db.query(trace_name, query);
+        let result = db.query(trace_name, query).unwrap();
         assert_eq!(1, result.len());
 
         // Query empty range:
@@ -65,13 +69,13 @@ mod tests {
             .start(ts.add_millis(1))
             .end(ts.add_millis(3))
             .build();
-        let result = db.query(trace_name, query);
+        let result = db.query(trace_name, query).unwrap();
         assert_eq!(0, result.len());
 
         // Summary info:
         let quick_summary = db.quick_summary(trace_name).unwrap();
         let summary = db.summary(trace_name, None).unwrap();
-        assert_eq!(quick_summary.count, summary.count);
+        assert_eq!(quick_summary.count, summary.count());
 
         db.close();
     }

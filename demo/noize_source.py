@@ -63,6 +63,8 @@ def main():
         client.send_samples("RANDOM", t0, dt, samples4)
         client.send_samples("TEXT_BITS", t0, dt, samples5)
         client.send_text("Log", t0, f"Log at {t0:.3}")
+        client.send_text("Log2", t0, f"Another log at {t0:.3}")
+        client.send_text("Other TXT", t0, f"Yet {t0:.3} blah")
 
         time.sleep(n_samples * dt)
 

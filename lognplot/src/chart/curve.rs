@@ -1,8 +1,8 @@
 use crate::geometry::Point;
 use crate::style::{Color, Stroke};
 use crate::time::{TimeSpan, TimeStamp};
-use crate::tsdb::{Aggregation, Observation, Sample, SampleMetrics};
-use crate::tsdb::{Query, RangeQueryResult, TsDbHandle};
+use crate::tsdb::{Aggregation, Observation, Sample, SampleMetrics, Summary};
+use crate::tsdb::{Query, QueryResult, RangeQueryResult, TsDbHandle};
 use std::str::FromStr;
 
 /// A single curve with some stroke styling.
@@ -54,11 +54,7 @@ impl CurveData {
     }
 
     /// Pull data in for drawing the graph.
-    pub fn query(
-        &self,
-        timespan: &TimeSpan,
-        amount: usize,
-    ) -> Option<RangeQueryResult<Sample, SampleMetrics>> {
+    pub fn query(&self, timespan: &TimeSpan, amount: usize) -> Option<QueryResult> {
         match self {
             // In case of raw data, just return them all.
             CurveData::Points(points) => {
@@ -66,7 +62,9 @@ impl CurveData {
                     .iter()
                     .map(|p| Observation::new(TimeStamp::new(p.x()), Sample::new(p.y())))
                     .collect();
-                Some(RangeQueryResult::Observations(observations))
+                Some(QueryResult::Value(RangeQueryResult::Observations(
+                    observations,
+                )))
             }
 
             // In case of a trace, query database for points.
@@ -74,13 +72,12 @@ impl CurveData {
                 // Time for time series database benefit
                 // TODO: cache results?
                 let query = Query::create().amount(amount).span(&timespan).build();
-                let result = db.query(name, query);
-                result.inner
+                db.query(name, query)
             }
         }
     }
 
-    fn summary(&self, timespan: Option<&TimeSpan>) -> Option<Aggregation<Sample, SampleMetrics>> {
+    fn summary(&self, timespan: Option<&TimeSpan>) -> Option<Summary> {
         match &self {
             CurveData::Points(points) => {
                 if timespan.is_some() {
@@ -95,7 +92,7 @@ impl CurveData {
 }
 
 /// Calculate aggregate information about points.
-fn point_summary(points: &[Point]) -> Option<Aggregation<Sample, SampleMetrics>> {
+fn point_summary(points: &[Point]) -> Option<Summary> {
     if points.is_empty() {
         None
     } else {
@@ -120,7 +117,7 @@ fn point_summary(points: &[Point]) -> Option<Aggregation<Sample, SampleMetrics>>
 
         let count = points.len();
         let aggregation = Aggregation::new(timespan, metrics, count);
-        Some(aggregation)
+        Some(Summary::Value(aggregation))
     }
 }
 
@@ -145,19 +142,12 @@ impl Curve {
     }
 
     /// Retrieve a data summary of this curve.
-    pub fn data_summary(
-        &self,
-        timespan: Option<&TimeSpan>,
-    ) -> Option<Aggregation<Sample, SampleMetrics>> {
+    pub fn data_summary(&self, timespan: Option<&TimeSpan>) -> Option<Summary> {
         self.data.summary(timespan)
     }
 
     /// Pull data in for drawing the graph.
-    pub fn query(
-        &self,
-        timespan: &TimeSpan,
-        amount: usize,
-    ) -> Option<RangeQueryResult<Sample, SampleMetrics>> {
+    pub fn query(&self, timespan: &TimeSpan, amount: usize) -> Option<QueryResult> {
         self.data.query(timespan, amount)
     }
 }

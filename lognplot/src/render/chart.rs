@@ -8,7 +8,9 @@ use crate::chart::{Chart, Cursor, Curve};
 use crate::geometry::Point;
 use crate::style::Color;
 use crate::time::TimeStamp;
-use crate::tsdb::{Aggregation, Observation, RangeQueryResult, Sample, SampleMetrics, Text};
+use crate::tsdb::{
+    Aggregation, Observation, QueryResult, RangeQueryResult, Sample, SampleMetrics, Text,
+};
 use std::borrow::Borrow;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -33,7 +35,7 @@ const PIXELS_PER_Y_TICK: usize = 60;
 /// Divide the width of the plot by this value, and draw at least that many data points.
 const PIXELS_PER_AGGREGATION: usize = 5;
 
-type CurveData = Option<RangeQueryResult<Sample, SampleMetrics>>;
+type CurveData = Option<QueryResult>;
 
 /// This struct will be able to render the chart onto a canvas.
 struct ChartRenderer<'a, C>
@@ -53,6 +55,8 @@ where
     options: &'a ChartOptions,
 
     curve_data_cache: HashMap<String, Rc<CurveData>>,
+
+    text_track_y: f64,
 }
 
 impl<'a, C> ChartRenderer<'a, C>
@@ -71,6 +75,7 @@ where
             layout,
             options,
             curve_data_cache: HashMap::new(),
+            text_track_y: 0.0,
         }
     }
 
@@ -79,7 +84,6 @@ where
         self.draw_axis();
         self.draw_box();
         self.draw_curves();
-        self.draw_text_tracks();
         self.draw_cursor();
         self.draw_title();
         self.draw_legend();
@@ -281,34 +285,35 @@ where
         let mut values = vec![];
         for curve in &self.chart.curves {
             if let Some(curve_data) = self.query_curve_data(&curve).borrow() {
-                let value = match curve_data {
-                    RangeQueryResult::Aggregations(aggregations) => {
-                        find_closest_aggregation(&aggregations, &cursor.0).map(|a| {
-                            let ts = a.timespan.middle_timestamp();
-                            let metrics = a.metrics();
-                            let min = metrics.min;
-                            let mean = metrics.mean();
-                            let max = metrics.max;
-                            let labels = vec![
-                                format!("mean={}", mean),
-                                format!("min={}", min),
-                                format!("max={}", max),
-                            ];
-                            (ts, mean, labels, curve.color())
-                        })
+                match curve_data {
+                    QueryResult::Value(value_data) => match value_data {
+                        RangeQueryResult::Aggregations(aggregations) => {
+                            if let Some(a) = find_closest_aggregation(&aggregations, &cursor.0) {
+                                let ts = a.timespan.middle_timestamp();
+                                let metrics = a.metrics();
+                                let min = metrics.min;
+                                let mean = metrics.mean();
+                                let max = metrics.max;
+                                let labels = vec![
+                                    format!("mean={}", mean),
+                                    format!("min={}", min),
+                                    format!("max={}", max),
+                                ];
+                                values.push((ts, mean, labels, curve.color()));
+                            }
+                        }
+                        RangeQueryResult::Observations(observations) => {
+                            if let Some(o) = find_closest_observation(&observations, &cursor.0) {
+                                let ts = o.timestamp.clone();
+                                let value = o.value.value;
+                                let label = format!("{}", value);
+                                values.push((ts, value, vec![label], curve.color()));
+                            }
+                        }
+                    },
+                    QueryResult::Text(_text_data) => {
+                        // TODO!
                     }
-                    RangeQueryResult::Observations(observations) => {
-                        find_closest_observation(&observations, &cursor.0).map(|o| {
-                            let ts = o.timestamp.clone();
-                            let value = o.value.value;
-                            let label = format!("{}", value);
-                            (ts, value, vec![label], curve.color())
-                        })
-                    }
-                };
-
-                if let Some(value) = value {
-                    values.push(value);
                 }
             }
         }
@@ -394,13 +399,26 @@ where
             let color = curve.color();
             if let Some(curve_data) = self.query_curve_data(&curve).borrow() {
                 match curve_data {
-                    RangeQueryResult::Aggregations(aggregations) => {
-                        self.draw_aggregations(aggregations, color);
-                    }
-                    RangeQueryResult::Observations(observations) => {
-                        let draw_markers =
-                            observations.len() < pixels / (PIXELS_PER_AGGREGATION * 5);
-                        self.draw_observations(observations, color, draw_markers);
+                    QueryResult::Value(value_data) => match value_data {
+                        RangeQueryResult::Aggregations(aggregations) => {
+                            self.draw_aggregations(aggregations, color);
+                        }
+                        RangeQueryResult::Observations(observations) => {
+                            let draw_markers =
+                                observations.len() < pixels / (PIXELS_PER_AGGREGATION * 5);
+                            self.draw_observations(observations, color, draw_markers);
+                        }
+                    },
+                    QueryResult::Text(text_data) => {
+                        match text_data {
+                            RangeQueryResult::Aggregations(_aggregations) => {
+                                // TODO!
+                                // self.draw_aggregations(aggregations, color);
+                            }
+                            RangeQueryResult::Observations(observations) => {
+                                self.draw_text_observations(observations, color);
+                            }
+                        }
                     }
                 }
             }
@@ -581,40 +599,17 @@ where
         self.canvas.draw_line(&mean_line);
     }
 
-    /// Draw textual tracks of events.
-    /// TODO: move this drawing to seperate chart?
-    fn draw_text_tracks(&mut self) {
-        let timespan = self.chart.x_axis.timespan();
-        let pixels: usize = self.layout.plot_width as usize;
-        let pixels_per_text_aggregation = 20;
-        let point_count = pixels / pixels_per_text_aggregation;
-
-        for text_track in &self.chart.text_tracks {
-            let color = Color::red();
-            let observations = text_track.query(&timespan, point_count);
-            if let Some(observations) = &observations {
-                match observations {
-                    RangeQueryResult::Aggregations(_aggregations) => {
-                        // TODO!
-                        // self.draw_aggregations(aggregations, color);
-                    }
-                    RangeQueryResult::Observations(observations) => {
-                        self.draw_text_observations(observations, color);
-                    }
-                }
-            }
-        }
-    }
-
     /// Draw a single series of observed textual events.
     fn draw_text_observations(&mut self, observations: &[Observation<Text>], color: Color) {
         self.canvas.set_pen(color, 1.0);
         self.canvas.set_line_width(2.0);
 
-        let track_y = self.layout.plot_bottom - 20.0;
+        let text_height = self.canvas.text_size("X").height;
         let padding = 5.0;
 
-        let text_height = self.canvas.text_size("X").height;
+        let track_y = self.layout.plot_bottom - 20.0 - self.text_track_y;
+        self.text_track_y += text_height + padding * 3.0;
+
         let track_left = self.layout.plot_left;
         let track_right = self.layout.plot_right;
         let track_top = track_y - (text_height / 2.0) - padding;

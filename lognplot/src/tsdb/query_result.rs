@@ -1,26 +1,23 @@
 use super::metrics::Metrics;
-use super::query::Query;
 use super::{Aggregation, Observation};
+use super::{CountMetrics, Sample, SampleMetrics, Text};
 
 /// This holds the result of a query to the database.
 /// The result can be several things, depending upon query type.
 /// It can be min/max/mean slices, or single values, if the data is present at the
 /// proper resolution.
 #[derive(Debug)]
-pub struct QueryResult<V, M>
-where
-    M: Metrics<V> + From<V>,
-{
-    pub query: Query,
-    pub inner: Option<RangeQueryResult<V, M>>,
+pub enum QueryResult {
+    Value(RangeQueryResult<Sample, SampleMetrics>),
+    Text(RangeQueryResult<Text, CountMetrics>),
 }
 
-impl<V, M> QueryResult<V, M>
-where
-    M: Metrics<V> + From<V>,
-{
+impl QueryResult {
     pub fn len(&self) -> usize {
-        self.inner.as_ref().map(|r| r.len()).unwrap_or(0)
+        match self {
+            QueryResult::Value(r) => r.len(),
+            QueryResult::Text(r) => r.len(),
+        }
     }
 }
 

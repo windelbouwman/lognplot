@@ -1,14 +1,68 @@
-use super::Observation;
+use super::{Aggregation, Observation};
+use super::{CountMetrics, Sample, SampleMetrics, Text};
+use crate::time::{TimeSpan, TimeStamp};
+
+/// Data summary
+pub enum Summary {
+    Value(Aggregation<Sample, SampleMetrics>),
+    Text(Aggregation<Text, CountMetrics>),
+}
+
+impl Summary {
+    pub fn count(&self) -> usize {
+        match self {
+            Summary::Value(summary) => summary.count,
+            Summary::Text(summary) => summary.count,
+        }
+    }
+
+    pub fn timespan(&self) -> &TimeSpan {
+        match self {
+            Summary::Value(summary) => &summary.timespan,
+            Summary::Text(summary) => &summary.timespan,
+        }
+    }
+}
 
 /// Less detailed summary, but easier to keep track of.
 #[derive(Debug, Clone)]
-pub struct QuickSummary<V> {
+pub struct QuickSummary {
     pub count: usize,
-    pub last: Observation<V>,
+    pub last: LastValue,
 }
 
-impl<V> QuickSummary<V> {
-    pub fn new(count: usize, last: Observation<V>) -> Self {
-        QuickSummary { count, last }
+impl QuickSummary {
+    pub fn new_value(count: usize, last: Observation<Sample>) -> Self {
+        QuickSummary {
+            count,
+            last: LastValue::Value(last),
+        }
     }
+
+    pub fn new_text(count: usize, last: Observation<Text>) -> Self {
+        QuickSummary {
+            count,
+            last: LastValue::Text(last),
+        }
+    }
+
+    pub fn last_timestamp(&self) -> &TimeStamp {
+        match &self.last {
+            LastValue::Value(last) => &last.timestamp,
+            LastValue::Text(last) => &last.timestamp,
+        }
+    }
+
+    pub fn last_value(&self) -> String {
+        match &self.last {
+            LastValue::Value(last) => last.value.value.to_string(),
+            LastValue::Text(last) => last.value.text.clone(),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum LastValue {
+    Value(Observation<Sample>),
+    Text(Observation<Text>),
 }

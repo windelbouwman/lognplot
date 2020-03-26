@@ -60,11 +60,8 @@ impl SignalBrowser {
                 if let Some(iter2) = self.model.get_iter(&path) {
                     self.model
                         .set_value(&iter2, 1, &summary.count.to_string().to_value());
-                    self.model.set_value(
-                        &iter2,
-                        2,
-                        &summary.last.value.value.to_string().to_value(),
-                    );
+                    self.model
+                        .set_value(&iter2, 2, &summary.last_value().to_value());
                 }
                 updates += 1;
                 if updates > 50 {

@@ -4,7 +4,7 @@
 //! or leaf chunks, with real data.
 //! Also: keep track of certain metrics, such as min, max and sum.
 
-use super::{Aggregation, Btree, Metrics, Observation, Query, QueryResult, QuickSummary};
+use super::{Aggregation, Btree, Metrics, Observation, Query, RangeQueryResult};
 use crate::time::TimeSpan;
 
 /// A trace is a single signal with a history in time.
@@ -45,18 +45,13 @@ where
     }
 
     /// Query this trace for some data.
-    pub fn query(&self, query: Query) -> QueryResult<V, M> {
-        let samples = self.tree.query_range(&query.interval, query.amount);
-
-        QueryResult {
-            query,
-            inner: Some(samples),
-        }
+    pub fn query(&self, query: Query) -> RangeQueryResult<V, M> {
+        self.tree.query_range(&query.interval, query.amount)
     }
 
-    pub fn quick_summary(&self) -> Option<QuickSummary<V>> {
+    pub fn quick_summary(&self) -> Option<(usize, Observation<V>)> {
         if let Some(last) = &self.last {
-            Some(QuickSummary::new(self.count, last.clone()))
+            Some((self.count, last.clone()))
         } else {
             None
         }
