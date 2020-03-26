@@ -8,6 +8,8 @@
 #ifndef LOGNPLOT_H
 #define LOGNPLOT_H
 
+#include <stddef.h>
+
 typedef int* lognplot_client_t;
 
 /*
@@ -16,6 +18,11 @@ typedef int* lognplot_client_t;
     \param address the address of the server.
 */
 lognplot_client_t* lognplot_client_new(const char* address);
+
+/*
+  Close client connection gracefully.
+ */
+void lognplot_client_close(lognplot_client_t* client);
 
 /*
     Send a single sample to the server.
@@ -47,7 +54,7 @@ void lognplot_client_send_sample(
 void lognplot_client_send_samples(
     lognplot_client_t* client,
     const char* name,
-    const int size,
+    const size_t size,
     double* times,
     double* values
 );
@@ -71,8 +78,26 @@ void lognplot_client_send_sampled_samples(
     const char* name,
     double t0,
     double dt,
-    const int size,
+    const size_t size,
     double* values
+);
+
+/*
+    Send a text event.
+
+    Use this for example for log messages.
+
+    \param client the client structure
+    \name the name of the signal
+    \timestamp the timestamp of the event
+    \text the text message
+
+*/
+void lognplot_client_send_text(
+    lognplot_client_t* client,
+    const char* name,
+    double timestamp,
+    const char* text
 );
 
 #endif

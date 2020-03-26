@@ -55,13 +55,33 @@ void send_sampled(lognplot_client_t* client)
     free(values);
 }
 
+void send_texts(lognplot_client_t* client)
+{
+    const int amount = 200;
+    const double t0 = 20.0;
+    const double dt = 2.0;
+    double t;
+    t = t0;
+
+    for (int i = 0; i < amount; i++)
+    {
+        char buffer[200];
+        snprintf(buffer, 200, "Moi %i", i);
+        lognplot_client_send_text(client, "Log", t, buffer);
+        t += dt;
+    }
+}
+
 void main()
 {
-    lognplot_client_t* client = lognplot_client_new("127.0.0.1:12345");
+    lognplot_client_t* client = lognplot_client_new("localhost:12345");
     if (client) {
         send_single_samples(client);
         send_batch(client);
         send_sampled(client);
+        send_texts(client);
+		lognplot_client_close(client);
+		printf("Great success!\n");
     } else {
         printf("Could not connect to data sink!\n");
     }

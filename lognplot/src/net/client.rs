@@ -14,6 +14,10 @@ impl TcpClient {
         Ok(client)
     }
 
+    pub fn close(&self) -> std::io::Result<()> {
+        self.stream.shutdown(std::net::Shutdown::Both)
+    }
+
     /// Transmit a single sample over tha wire.
     pub fn send_sample(&mut self, name: &str, timestamp: f64, value: f64) -> std::io::Result<()> {
         let payload = SampleBatch::new_sample(name.to_owned(), timestamp, value);
