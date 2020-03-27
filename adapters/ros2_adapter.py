@@ -19,6 +19,7 @@ import numpy as np
 # ROS imports:
 import rclpy
 from rclpy.qos import qos_profile_sensor_data
+from rcl_interfaces.msg import Log
 
 from lognplot.client import LognplotTcpClient
 
@@ -67,8 +68,17 @@ class RosToLogNPlot:
     def run(self):
         self.node = rclpy.create_node("ros_to_lognplot")
         self.timer = self.node.create_timer(2.0, self._check_topics)
+        self.node.create_subscription(
+            Log, "/rosout", self.on_ros_out_msg, 0
+        )
         rclpy.spin(self.node)
         rclpy.shutdown()
+
+    def on_ros_out_msg(self, msg):
+        signal_name = f'/rosout/{msg.name}'
+        timestamp = time.time()
+        text = msg.msg
+        self.send_text(signal_name, timestamp, text)
 
     def _check_topics(self):
         """ Check which topics are present in the system, and subscribe to them all!
@@ -125,6 +135,11 @@ class RosToLogNPlot:
         """ Emit a single sample to the lognplot GUI. """
         if self._client:
             self._client.send_sample(signal_name, timestamp, value)
+
+    def send_text(self, signal_name: str, timestamp, text):
+        """ Emit a single text to the lognplot GUI. """
+        if self._client:
+            self._client.send_text(signal_name, timestamp, text)
 
 
 def load_type(type_name):

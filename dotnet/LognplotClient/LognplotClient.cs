@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 
-namespace LognplotClient
+namespace Lognplot
 {
     public class LognplotClient
     {
@@ -12,6 +12,10 @@ namespace LognplotClient
         public void Connect(string address)
         {
             handle = lognplot_client_new(address);
+            if (handle.Equals(IntPtr.Zero))
+            {
+                throw new Exception("Connection to lognplot GUI refused");
+            }
         }
 
         public void Disconnect()
@@ -30,17 +34,14 @@ namespace LognplotClient
             List<double> times = samples.Select(s => makeSeconds(s.Item1)).ToList();
             List<double> values = samples.Select(s => s.Item2).ToList();
             int amount = samples.Count;
-            throw new NotImplementedException();
-            // TODO
-            // lognplot_client_send_samples(handle, name, amount, times, values);
+            lognplot_client_send_samples(handle, name, (IntPtr)amount, times.ToArray(), values.ToArray());
         }
 
         public void SendSampled(string name, DateTime timestamp, double dt, List<double> values)
         {
             double seconds_since_epoch = makeSeconds(timestamp);
-            throw new NotImplementedException();
-            // TODO
-            // lognplot_client_send_sampled_samples(handle, name, seconds_since_epoch, dt, values.asArray());
+            int size = values.Count;
+            lognplot_client_send_sampled_samples(handle, name, seconds_since_epoch, dt, (IntPtr)size, values.ToArray());
         }
 
         public void SendText(string name, DateTime timestamp, string text)
@@ -64,13 +65,11 @@ namespace LognplotClient
         [DllImport("clognplot.dll")]
         private static extern void lognplot_client_send_sample(IntPtr handle, string name, double timestamp, double value);
 
-        // TODO:
-        // [DllImport("clognplot.dll")]
-        // private static extern void lognplot_client_send_samples(IntPtr handle, string name, size_t size, double[] times, double[] values);
+        [DllImport("clognplot.dll")]
+        private static extern void lognplot_client_send_samples(IntPtr handle, string name, IntPtr size, double[] times, double[] values);
 
-        // TODO:
-        // [DllImport("clognplot.dll")]
-        // private static extern void lognplot_client_send_sampled_samples(IntPtr handle, string name, double timestamp, double dt, size_t size, double[] values);
+        [DllImport("clognplot.dll")]
+        private static extern void lognplot_client_send_sampled_samples(IntPtr handle, string name, double timestamp, double dt, IntPtr size, double[] values);
 
         [DllImport("clognplot.dll")]
         private static extern void lognplot_client_send_text(IntPtr handle, string name, double timestamp, string text);
