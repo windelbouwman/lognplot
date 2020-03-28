@@ -3,6 +3,7 @@ use std::net::TcpStream;
 
 use super::payload::SampleBatch;
 
+/// A TCP client to send logging events over TCP.
 pub struct TcpClient {
     stream: TcpStream,
 }
@@ -14,6 +15,7 @@ impl TcpClient {
         Ok(client)
     }
 
+    /// Close the connection gracefully.
     pub fn close(&self) -> std::io::Result<()> {
         self.stream.shutdown(std::net::Shutdown::Both)
     }
@@ -30,6 +32,9 @@ impl TcpClient {
         self.write_sample_batch(payload)
     }
 
+    /// Send a batch equally spaced samples.
+    /// 
+    /// This can be useful if samples as gathered in batched.
     pub fn send_sampled_samples(
         &mut self,
         name: &str,
@@ -41,6 +46,7 @@ impl TcpClient {
         self.write_sample_batch(payload)
     }
 
+    /// Send a single text event
     pub fn send_text(&mut self, name: &str, timestamp: f64, text: String) -> std::io::Result<()> {
         let payload = SampleBatch::new_text(name.to_owned(), timestamp, text);
         self.write_sample_batch(payload)

@@ -9,7 +9,7 @@ use crate::geometry::Point;
 use crate::style::Color;
 use crate::time::TimeStamp;
 use crate::tsdb::{
-    Aggregation, Observation, QueryResult, RangeQueryResult, Sample, SampleMetrics, Text,
+    Aggregation, Observation, QueryResult, RangeQueryResult, Sample, SampleMetrics, Text, CountMetrics
 };
 use std::borrow::Borrow;
 use std::collections::HashMap;
@@ -281,7 +281,7 @@ where
         self.canvas.draw_line(&points);
     }
 
-    fn get_cursor_values(&self, cursor: &Cursor) -> Vec<(TimeStamp, f64, Vec<String>, Color)> {
+    fn get_cursor_values(&self, cursor: &Cursor) -> Vec<(Option<(TimeStamp, f64)>, Vec<String>, Color)> {
         let mut values = vec![];
         for curve in &self.chart.curves {
             if let Some(curve_data) = self.query_curve_data(&curve).borrow() {
@@ -299,7 +299,7 @@ where
                                     format!("min={}", min),
                                     format!("max={}", max),
                                 ];
-                                values.push((ts, mean, labels, curve.color()));
+                                values.push((Some((ts, mean)), labels, curve.color()));
                             }
                         }
                         RangeQueryResult::Observations(observations) => {
@@ -307,12 +307,23 @@ where
                                 let ts = o.timestamp.clone();
                                 let value = o.value.value;
                                 let label = format!("{}", value);
-                                values.push((ts, value, vec![label], curve.color()));
+                                values.push((Some((ts, value)), vec![label], curve.color()));
                             }
                         }
                     },
-                    QueryResult::Text(_text_data) => {
-                        // TODO!
+                    QueryResult::Text(text_data) => {
+                        match text_data {
+                            RangeQueryResult::Aggregations(_aggregations) => {
+                                // TODO
+                            },
+                            RangeQueryResult::Observations(observations) => {
+                                if let Some(o) = find_closest_observation(&observations, &cursor.0) {
+                                    let label = o.value.text.clone();
+                                    values.push((None, vec![label], curve.color()));
+                                }
+                            }
+                        }
+                    
                     }
                 }
             }
@@ -325,12 +336,14 @@ where
         let values = self.get_cursor_values(cursor);
         if !values.is_empty() {
             // Draw circle markers:
-            for (ts, value, _, color) in values.iter() {
-                let x = self.x_domain_to_pixel(&ts);
-                let y = self.y_domain_to_pixel(*value);
-                let p1 = Point::new(x, y);
-                self.canvas.set_pen(color.clone(), 1.0);
-                self.canvas.draw_circle(&p1, 8.0);
+            for (marker, _, color) in values.iter() {
+                if let Some((ts, value)) = marker {
+                    let x = self.x_domain_to_pixel(&ts);
+                    let y = self.y_domain_to_pixel(*value);
+                    let p1 = Point::new(x, y);
+                    self.canvas.set_pen(color.clone(), 1.0);
+                    self.canvas.draw_circle(&p1, 8.0);
+                }
             }
 
             let padding = 3.0;
@@ -338,7 +351,7 @@ where
             let mut background_height: f64 = 0.0;
             let square_size: f64 = self.canvas.text_size("X").height;
 
-            for (_, _, labels, _) in values.iter() {
+            for (_, labels, _) in values.iter() {
                 for label in labels {
                     let text_size = self.canvas.text_size(&label);
 
@@ -364,7 +377,7 @@ where
 
             // Draw background rectangle and labels
             // let background_width = values.iter().map().max()
-            for (_, _, labels, color) in values {
+            for (_, labels, color) in values {
                 // Draw color:
                 self.canvas.set_pen(color, 1.0);
                 self.canvas
@@ -411,9 +424,8 @@ where
                     },
                     QueryResult::Text(text_data) => {
                         match text_data {
-                            RangeQueryResult::Aggregations(_aggregations) => {
-                                // TODO!
-                                // self.draw_aggregations(aggregations, color);
+                            RangeQueryResult::Aggregations(aggregations) => {
+                                self.draw_text_aggregations(aggregations, color);
                             }
                             RangeQueryResult::Observations(observations) => {
                                 self.draw_text_observations(observations, color);
@@ -645,6 +657,51 @@ where
         }
     }
 
+    fn draw_text_aggregations(&mut self, aggregations: &[Aggregation<Text, CountMetrics>], color: Color) {
+        self.canvas.set_pen(color, 1.0);
+        self.canvas.set_line_width(2.0);
+
+        let text_height = self.canvas.text_size("X").height;
+        let padding = 5.0;
+
+        let track_y = self.layout.plot_bottom - 20.0 - self.text_track_y;
+        self.text_track_y += text_height + padding * 3.0;
+
+        let track_left = self.layout.plot_left;
+        let track_right = self.layout.plot_right;
+        let track_top = track_y - (text_height / 2.0) - padding;
+        let track_bottom = track_y + (text_height / 2.0) + padding;
+
+        // Draw top line:
+        self.canvas.draw_line(&[
+            Point::new(track_left, track_top),
+            Point::new(track_right, track_top),
+        ]);
+
+        // Draw bottom line:
+        self.canvas.draw_line(&[
+            Point::new(track_left, track_bottom),
+            Point::new(track_right, track_bottom),
+        ]);
+
+        // Draw text events:
+        for aggregation in aggregations {
+            let observation_x = self.x_domain_to_pixel(&aggregation.timespan.start);
+            self.canvas.draw_line(&[
+                Point::new(observation_x, track_top),
+                Point::new(observation_x, track_bottom),
+            ]);
+
+            let point = Point::new(observation_x + padding, track_y);
+            self.canvas.print_text(
+                &point,
+                HorizontalAnchor::Left,
+                VerticalAnchor::Middle,
+                &aggregation.metrics().count.to_string(),
+            );
+        }
+    }
+
     /// Transform x-value to pixel/point location.
     fn x_domain_to_pixel(&self, t: &TimeStamp) -> f64 {
         transform::x_domain_to_pixel(t, &self.chart.x_axis, self.layout)
@@ -657,10 +714,10 @@ where
 }
 
 /// Find the closest observation in a sorted list of observations.
-fn find_closest_observation<'o>(
-    observations: &'o [Observation<Sample>],
+fn find_closest_observation<'o, V>(
+    observations: &'o [Observation<V>],
     t: &TimeStamp,
-) -> Option<&'o Observation<Sample>> {
+) -> Option<&'o Observation<V>> {
     find_closest(observations, t, |o| o.timestamp.clone())
 }
 

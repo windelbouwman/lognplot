@@ -12,7 +12,7 @@ pub trait Metrics<V> {
 /// The most simple metric which works always: just count the observations.
 #[derive(Clone, Debug)]
 pub struct CountMetrics {
-    count: usize,
+    pub count: usize,
 }
 
 impl<V> Metrics<V> for CountMetrics {

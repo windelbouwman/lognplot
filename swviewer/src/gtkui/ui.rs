@@ -5,13 +5,18 @@ use gio::prelude::*;
 use gtk::prelude::*;
 use gtk::Application;
 
+use super::chip_panel::setup_chip_config_panel;
 use super::variable_panel::setup_elf_loading;
+// use super::state::
 use crate::serial_wire_viewer::{data_thread, UiThreadCommand};
 use std::sync::mpsc;
 
 pub fn run_gtk_gui() {
-    let application = Application::new(Some("com.github.windelbouwman.quartz"), Default::default())
-        .expect("failed to initialize GTK application");
+    let application = Application::new(
+        Some("com.github.windelbouwman.swviewer"),
+        gio::ApplicationFlags::NON_UNIQUE,
+    )
+    .expect("failed to initialize GTK application");
 
     let (cmd_tx, cmd_rx) = mpsc::channel();
     let join_handle = std::thread::spawn(move || {
@@ -41,6 +46,7 @@ fn build_ui(app: &gtk::Application, cmd_tx: mpsc::Sender<UiThreadCommand>) {
 
     // Connect the data set tree:
     setup_elf_loading(&builder);
+    setup_chip_config_panel(&builder);
 
     // Connect application to window:
     let window: gtk::Window = builder.get_object("top_unit").unwrap();

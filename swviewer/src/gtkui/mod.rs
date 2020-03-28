@@ -1,3 +1,4 @@
+mod chip_panel;
 mod dialogs;
 mod state;
 mod ui;

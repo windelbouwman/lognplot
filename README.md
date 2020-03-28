@@ -26,10 +26,12 @@ Features:
     - rust GUI implementation (based on gtk-rs / cairo)
 - Client libraries for:
     - Python
-    - C
+    - [C](demo/c/README.md)
+    - [C++](cpp/README.md)
+    - [C#](dotnet/README.md)
     - Rust
 - Export data to HDF5
-- Data adapters for:
+- [Data adapters](adapters/README.md) for:
     - ADS
     - MQTT
     - ROS2
