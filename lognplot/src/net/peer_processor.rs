@@ -29,7 +29,7 @@ impl PeerEventProcessorHandle {
 
 pub enum PeerEvent {
     BytesReceived(usize),
-    SamplesReceived(usize),
+    // SamplesReceived(usize),
     // Finished,
 }
 
@@ -57,14 +57,14 @@ async fn process_peer_events(
     let mut kill_switch_endpoint = kill_switch_endpoint.fuse();
 
     let mut total_bytes = 0;
-    let mut total_samples = 0;
+    // let mut total_samples = 0;
 
     perf_tracer.log_metric("total_bytes", std::time::Instant::now(), total_bytes as f64);
-    perf_tracer.log_metric(
-        "total_samples",
-        std::time::Instant::now(),
-        total_samples as f64,
-    );
+    // perf_tracer.log_metric(
+    //     "total_samples",
+    //     std::time::Instant::now(),
+    //     total_samples as f64,
+    // );
 
     loop {
         futures::select! {
@@ -76,10 +76,10 @@ async fn process_peer_events(
                             total_bytes += amount;
                             perf_tracer.log_metric("total_bytes", std::time::Instant::now(), total_bytes as f64);
                         }
-                        PeerEvent::SamplesReceived(amount) => {
-                            total_samples += amount;
-                            perf_tracer.log_metric("total_samples", std::time::Instant::now(), total_samples as f64);
-                        }
+                        // PeerEvent::SamplesReceived(amount) => {
+                        //     total_samples += amount;
+                        //     perf_tracer.log_metric("total_samples", std::time::Instant::now(), total_samples as f64);
+                        // }
                         // PeerEvent::Finished => {
                             // TODO: what to do?
                         // }

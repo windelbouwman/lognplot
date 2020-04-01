@@ -2,4 +2,5 @@
 pub enum TrackType {
     Value,
     Text,
+    Profile,
 }

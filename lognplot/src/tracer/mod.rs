@@ -1,5 +1,5 @@
 //! Trace your application behavior
-//! 
+//!
 //! The tracer can be used to trace to either a remotely
 //! running lognplot GUI, or directly to a tsdb instance.
 

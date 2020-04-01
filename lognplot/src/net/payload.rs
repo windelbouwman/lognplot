@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use crate::time::TimeStamp;
-use crate::tsdb::{Observation, Sample, Text};
+use crate::tsdb::{Observation, ProfileEvent, Sample, Text, TsDbHandle};
 
 /// A chunk of data at fixed sample rate.
 #[derive(Serialize, Deserialize, Debug)]
@@ -49,61 +49,59 @@ impl SampleBatch {
         }
     }
 
-    pub fn name(&self) -> &str {
-        &self.name
-    }
-
-    pub fn has_text(&self) -> bool {
+    /// Feed this batch of observations into a database.
+    pub fn to_db(&self, db: &TsDbHandle) {
         match &self.payload {
-            SamplePayload::Text { .. } => true,
-            _ => false,
-        }
-    }
+            SamplePayload::Sampled { t, dt, data } => {
+                let samples = data
+                    .iter()
+                    .enumerate()
+                    .map(|(index, value)| {
+                        let t2 = t + dt * index as f64;
+                        let timestamp = TimeStamp::new(t2);
+                        Observation::new(timestamp, Sample::new(*value))
+                    })
+                    .collect();
 
-    pub fn to_text(&self) -> Option<Observation<Text>> {
-        match &self.payload {
-            SamplePayload::Text { t, text } => {
-                let timestamp = TimeStamp::new(*t);
-                Some(Observation::new(timestamp, Text::new(text.to_owned())))
+                db.add_values(&self.name, samples);
             }
-            _ => None,
-        }
-    }
-
-    pub fn has_samples(&self) -> bool {
-        match &self.payload {
-            SamplePayload::Sampled { data, .. } => !data.is_empty(),
-            SamplePayload::Batch { samples } => !samples.is_empty(),
-            SamplePayload::Single { .. } => true,
-            _ => false,
-        }
-    }
-
-    /// Convert a batch of samples received over the wire to
-    /// a vector of samples
-    pub fn to_samples(&self) -> Vec<Observation<Sample>> {
-        match &self.payload {
-            SamplePayload::Sampled { t, dt, data } => data
-                .iter()
-                .enumerate()
-                .map(|(index, value)| {
-                    let t2 = t + dt * index as f64;
-                    let timestamp = TimeStamp::new(t2);
-                    Observation::new(timestamp, Sample::new(*value))
-                })
-                .collect(),
-            SamplePayload::Batch { samples } => samples
-                .iter()
-                .map(|(t, value)| {
-                    let timestamp = TimeStamp::new(*t);
-                    Observation::new(timestamp, Sample::new(*value))
-                })
-                .collect(),
+            SamplePayload::Batch { samples } => {
+                let samples = samples
+                    .iter()
+                    .map(|(t, value)| {
+                        let timestamp = TimeStamp::new(*t);
+                        Observation::new(timestamp, Sample::new(*value))
+                    })
+                    .collect();
+                db.add_values(&self.name, samples);
+            }
             SamplePayload::Single { t, value } => {
                 let timestamp = TimeStamp::new(*t);
-                vec![Observation::new(timestamp, Sample::new(*value))]
+                let value = Observation::new(timestamp, Sample::new(*value));
+                db.add_value(&self.name, value);
             }
-            SamplePayload::Event { .. } | SamplePayload::Text { .. } => vec![],
+            SamplePayload::Text { t, text } => {
+                let timestamp = TimeStamp::new(*t);
+                let text = Observation::new(timestamp, Text::new(text.to_owned()));
+                db.add_text(&self.name, text);
+            }
+            SamplePayload::Event {
+                t: _,
+                attributes: _,
+            } => {
+                // TODO
+            }
+            SamplePayload::Profile { t, event } => {
+                let timestamp = TimeStamp::new(*t);
+                let event = match event {
+                    ProfileEventPayload::Enter { name } => ProfileEvent::FunctionEnter {
+                        name: name.to_owned(),
+                    },
+                    ProfileEventPayload::Exit => ProfileEvent::FunctionExit,
+                };
+                let event = Observation::new(timestamp, event);
+                db.add_profile_event(&self.name, event);
+            }
         }
     }
 }
@@ -157,6 +155,27 @@ enum SamplePayload {
 
         attributes: HashMap<String, String>,
     },
+
+    #[serde(rename = "profile")]
+    Profile {
+        t: f64,
+
+        #[serde(flatten)]
+        event: ProfileEventPayload,
+    },
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(tag = "event")]
+enum ProfileEventPayload {
+    #[serde(rename = "enter")]
+    Enter {
+        #[serde(rename = "callee")]
+        name: String,
+    },
+
+    #[serde(rename = "exit")]
+    Exit,
 }
 
 #[cfg(test)]

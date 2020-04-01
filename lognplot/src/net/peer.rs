@@ -98,24 +98,7 @@ fn process_packet(
         Ok(batch) => {
             // let batch: SampleBatch =
             // println!("DAATAA: {:?}", batch.size());
-
-            if batch.has_samples() {
-                let samples = batch.to_samples();
-
-                peer_event_sink
-                    .unbounded_send(PeerEvent::SamplesReceived(samples.len()))
-                    .unwrap();
-
-                // Append the samples to the database:
-                // TODO: instead of direct database access
-                // get access to a queue which is processed elsewhere into the database.
-                db.add_values(batch.name(), samples);
-            }
-
-            if batch.has_text() {
-                let text = batch.to_text().expect("has a text");
-                db.add_text(batch.name(), text);
-            }
+            batch.to_db(db);
         }
         Err(err) => {
             error!("Error decoding packet: {:?}", err);

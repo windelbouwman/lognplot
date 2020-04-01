@@ -4,7 +4,7 @@ use super::handle::{make_handle, TsDbHandle};
 use super::query::Query;
 use super::ChangeSubscriber;
 use super::Summary;
-use super::{Observation, QueryResult, QuickSummary, Sample, Text};
+use super::{Observation, ProfileEvent, QueryResult, QuickSummary, Sample, Text};
 use super::{Track, TrackType};
 use crate::time::{TimeSpan, TimeStamp};
 use std::collections::HashMap;
@@ -123,6 +123,15 @@ impl TsDb {
         let track = self.get_or_create_trace(name, TrackType::Text, &observation.timestamp);
         track.add_text_observation(observation);
         self.notify_signal_changed(name);
+    }
+
+    pub fn add_profile_event(&mut self, name: &str, observation: Observation<ProfileEvent>) {
+        let track = self.get_or_create_trace(name, TrackType::Profile, &observation.timestamp);
+        track.add_profile_observation(observation);
+        self.notify_signal_changed(name);
+        // TODO
+        // let track = self.get_or_create_trace(name, TrackType::Text, &observation.timestamp);
+        // self.db.lock().unwrap().add_profile_event(name, event);
     }
 
     /// Delete all data from the database.

@@ -17,3 +17,9 @@ matrix:
         - cargo test -p lognplot
         - cargo build --release -p clognplot
         - make -C demo/c
+        - cd cpp
+        - mkdir build
+        - cd build
+        - cmake ..
+        - make
+

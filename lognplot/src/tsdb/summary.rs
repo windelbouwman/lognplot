@@ -1,11 +1,12 @@
 use super::{Aggregation, Observation};
-use super::{CountMetrics, Sample, SampleMetrics, Text};
+use super::{CountMetrics, ProfileEvent, Sample, SampleMetrics, Text};
 use crate::time::{TimeSpan, TimeStamp};
 
 /// Data summary
 pub enum Summary {
     Value(Aggregation<Sample, SampleMetrics>),
     Text(Aggregation<Text, CountMetrics>),
+    Profile(Aggregation<ProfileEvent, CountMetrics>),
 }
 
 impl Summary {
@@ -13,6 +14,7 @@ impl Summary {
         match self {
             Summary::Value(summary) => summary.count,
             Summary::Text(summary) => summary.count,
+            Summary::Profile(summary) => summary.count,
         }
     }
 
@@ -20,6 +22,7 @@ impl Summary {
         match self {
             Summary::Value(summary) => &summary.timespan,
             Summary::Text(summary) => &summary.timespan,
+            Summary::Profile(summary) => &summary.timespan,
         }
     }
 }
@@ -46,10 +49,18 @@ impl QuickSummary {
         }
     }
 
+    pub fn new_profile(count: usize, last: Observation<ProfileEvent>) -> Self {
+        QuickSummary {
+            count,
+            last: LastValue::Profile(last),
+        }
+    }
+
     pub fn last_timestamp(&self) -> &TimeStamp {
         match &self.last {
             LastValue::Value(last) => &last.timestamp,
             LastValue::Text(last) => &last.timestamp,
+            LastValue::Profile(last) => &last.timestamp,
         }
     }
 
@@ -57,6 +68,7 @@ impl QuickSummary {
         match &self.last {
             LastValue::Value(last) => last.value.value.to_string(),
             LastValue::Text(last) => last.value.text.clone(),
+            LastValue::Profile(last) => last.value.to_string(),
         }
     }
 }
@@ -65,4 +77,5 @@ impl QuickSummary {
 pub enum LastValue {
     Value(Observation<Sample>),
     Text(Observation<Text>),
+    Profile(Observation<ProfileEvent>),
 }

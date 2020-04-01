@@ -1,5 +1,3 @@
-use super::Text;
-
 /// Implement this for specific observations.
 pub trait Metrics<V> {
     // TODO: we might merge update and include into a single function?
@@ -23,12 +21,5 @@ impl<V> Metrics<V> for CountMetrics {
 
     fn include(&mut self, metrics: &CountMetrics) {
         self.count += metrics.count;
-    }
-}
-
-// This is a bit lame, but impl<V> From<V> for CountMetrics conflicts with a builtin From implementation.
-impl From<Text> for CountMetrics {
-    fn from(_observation: Text) -> Self {
-        CountMetrics { count: 1 }
     }
 }

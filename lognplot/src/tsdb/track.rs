@@ -1,7 +1,7 @@
 use super::trace::Trace;
 use super::Observation;
 use super::TrackType;
-use super::{CountMetrics, Text};
+use super::{CountMetrics, ProfileEvent, Text};
 use super::{Query, QueryResult, QuickSummary, Sample, SampleMetrics, Summary};
 use crate::time::TimeSpan;
 
@@ -9,6 +9,7 @@ use crate::time::TimeSpan;
 pub enum Track {
     Value(Trace<Sample, SampleMetrics>),
     Text(Trace<Text, CountMetrics>),
+    Profile(Trace<ProfileEvent, CountMetrics>),
 }
 
 impl Track {
@@ -16,6 +17,7 @@ impl Track {
         match typ {
             TrackType::Value => Track::Value(Default::default()),
             TrackType::Text => Track::Text(Default::default()),
+            TrackType::Profile => Track::Profile(Default::default()),
         }
     }
 
@@ -23,6 +25,7 @@ impl Track {
         match self {
             Track::Value(..) => TrackType::Value,
             Track::Text(..) => TrackType::Text,
+            Track::Profile(..) => TrackType::Profile,
         }
     }
 
@@ -50,10 +53,19 @@ impl Track {
         }
     }
 
+    pub fn add_profile_observation(&mut self, observation: Observation<ProfileEvent>) {
+        if let Track::Profile(trace) = self {
+            trace.add_observation(observation)
+        } else {
+            panic!("Cannot add profile observation to non-profile track")
+        }
+    }
+
     pub fn query(&self, query: Query) -> QueryResult {
         match self {
             Track::Value(trace) => QueryResult::Value(trace.query(query)),
             Track::Text(trace) => QueryResult::Text(trace.query(query)),
+            Track::Profile(trace) => QueryResult::Profile(trace.query(query)),
         }
     }
 
@@ -67,6 +79,10 @@ impl Track {
                 let (count, last) = trace.quick_summary()?;
                 Some(QuickSummary::new_text(count, last))
             }
+            Track::Profile(trace) => {
+                let (count, last) = trace.quick_summary()?;
+                Some(QuickSummary::new_profile(count, last))
+            }
         }
     }
 
@@ -74,6 +90,7 @@ impl Track {
         match self {
             Track::Value(trace) => Some(Summary::Value(trace.summary(timespan)?)),
             Track::Text(trace) => Some(Summary::Text(trace.summary(timespan)?)),
+            Track::Profile(trace) => Some(Summary::Profile(trace.summary(timespan)?)),
         }
     }
 

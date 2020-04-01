@@ -1,7 +1,9 @@
 //! Thread usable handle. Wrapper around a database.
 
 use super::{ChangeSubscriber, DataChangeEvent};
-use super::{Observation, Query, QueryResult, QuickSummary, Sample, Summary, Text, TsDb};
+use super::{
+    Observation, ProfileEvent, Query, QueryResult, QuickSummary, Sample, Summary, Text, TsDb,
+};
 use crate::time::TimeSpan;
 use futures::channel::mpsc;
 use std::sync::{Arc, Mutex};
@@ -38,6 +40,10 @@ impl LockedTsDb {
 
     pub fn add_text(&self, name: &str, text: Observation<Text>) {
         self.db.lock().unwrap().add_text(name, text);
+    }
+
+    pub fn add_profile_event(&self, name: &str, event: Observation<ProfileEvent>) {
+        self.db.lock().unwrap().add_profile_event(name, event);
     }
 
     /// Query the database.

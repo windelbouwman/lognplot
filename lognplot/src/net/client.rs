@@ -33,7 +33,7 @@ impl TcpClient {
     }
 
     /// Send a batch equally spaced samples.
-    /// 
+    ///
     /// This can be useful if samples as gathered in batched.
     pub fn send_sampled_samples(
         &mut self,

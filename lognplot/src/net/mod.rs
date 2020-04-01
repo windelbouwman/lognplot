@@ -1,7 +1,7 @@
 //! Send log events via network.
-//! 
+//!
 //! Ideas:
-//! 
+//!
 //! Different data sources
 //! In other words, how to get some data?
 //! Options:

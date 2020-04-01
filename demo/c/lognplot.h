@@ -9,8 +9,16 @@
 #define LOGNPLOT_H
 
 #include <stddef.h>
+#include <stdint.h>
 
 typedef int* lognplot_client_t;
+
+#define LOGNPLOT_RESULT_OK 0
+#define LOGNPLOT_RESULT_ERR_OTHER 1
+#define LOGNPLOT_RESULT_ERR_INVALID_CLIENT_PTR 2
+#define LOGNPLOT_RESULT_ERR_INVALID_ARGUMENT 3
+
+typedef uint32_t lognplot_result_t;
 
 /*
     Create a new client and connect to the server.
@@ -22,7 +30,7 @@ lognplot_client_t* lognplot_client_new(const char* address);
 /*
   Close client connection gracefully.
  */
-void lognplot_client_close(lognplot_client_t* client);
+lognplot_result_t lognplot_client_close(lognplot_client_t* client);
 
 /*
     Send a single sample to the server.
@@ -32,7 +40,7 @@ void lognplot_client_close(lognplot_client_t* client);
     \param timestamp the timestamp of the sample
     \param value the value of the sample
 */
-void lognplot_client_send_sample(
+lognplot_result_t lognplot_client_send_sample(
     lognplot_client_t* client,
     const char* name,
     double timestamp,
@@ -51,7 +59,7 @@ void lognplot_client_send_sample(
     \param times the timestamps of the samples
     \param value the values of the samples
  */
-void lognplot_client_send_samples(
+lognplot_result_t lognplot_client_send_samples(
     lognplot_client_t* client,
     const char* name,
     const size_t size,
@@ -73,7 +81,7 @@ void lognplot_client_send_samples(
     \param size the amount of values
     \param values the actual data values
 */
-void lognplot_client_send_sampled_samples(
+lognplot_result_t lognplot_client_send_sampled_samples(
     lognplot_client_t* client,
     const char* name,
     double t0,
@@ -93,7 +101,7 @@ void lognplot_client_send_sampled_samples(
     \text the text message
 
 */
-void lognplot_client_send_text(
+lognplot_result_t lognplot_client_send_text(
     lognplot_client_t* client,
     const char* name,
     double timestamp,

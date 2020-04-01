@@ -1,6 +1,6 @@
 use super::metrics::Metrics;
 use super::{Aggregation, Observation};
-use super::{CountMetrics, Sample, SampleMetrics, Text};
+use super::{CountMetrics, ProfileEvent, Sample, SampleMetrics, Text};
 
 /// This holds the result of a query to the database.
 /// The result can be several things, depending upon query type.
@@ -10,6 +10,7 @@ use super::{CountMetrics, Sample, SampleMetrics, Text};
 pub enum QueryResult {
     Value(RangeQueryResult<Sample, SampleMetrics>),
     Text(RangeQueryResult<Text, CountMetrics>),
+    Profile(RangeQueryResult<ProfileEvent, CountMetrics>),
 }
 
 impl QueryResult {
@@ -17,6 +18,7 @@ impl QueryResult {
         match self {
             QueryResult::Value(r) => r.len(),
             QueryResult::Text(r) => r.len(),
+            QueryResult::Profile(r) => r.len(),
         }
     }
 }

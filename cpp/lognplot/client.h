@@ -6,6 +6,8 @@ extern "C" {
 #include "lognplot.h"
 }
 
+#include <exception>
+
 namespace lognplot {
 
 class TcpClient {
@@ -20,6 +22,16 @@ class TcpClient {
 
     private:
         lognplot_client_t* handle;
+};
+
+class ClientException : public std::exception
+{
+    public:
+        ClientException(const char*);
+        virtual const char * what () const throw ();
+    
+    private:
+        const char* msg;
 };
 
 }

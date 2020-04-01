@@ -9,7 +9,8 @@ use crate::geometry::Point;
 use crate::style::Color;
 use crate::time::TimeStamp;
 use crate::tsdb::{
-    Aggregation, Observation, QueryResult, RangeQueryResult, Sample, SampleMetrics, Text, CountMetrics
+    Aggregation, CountMetrics, Observation, ProfileEvent, QueryResult, RangeQueryResult, Sample,
+    SampleMetrics, Text,
 };
 use std::borrow::Borrow;
 use std::collections::HashMap;
@@ -281,7 +282,10 @@ where
         self.canvas.draw_line(&points);
     }
 
-    fn get_cursor_values(&self, cursor: &Cursor) -> Vec<(Option<(TimeStamp, f64)>, Vec<String>, Color)> {
+    fn get_cursor_values(
+        &self,
+        cursor: &Cursor,
+    ) -> Vec<(Option<(TimeStamp, f64)>, Vec<String>, Color)> {
         let mut values = vec![];
         for curve in &self.chart.curves {
             if let Some(curve_data) = self.query_curve_data(&curve).borrow() {
@@ -315,16 +319,16 @@ where
                         match text_data {
                             RangeQueryResult::Aggregations(_aggregations) => {
                                 // TODO
-                            },
+                            }
                             RangeQueryResult::Observations(observations) => {
-                                if let Some(o) = find_closest_observation(&observations, &cursor.0) {
+                                if let Some(o) = find_last_observation(&observations, &cursor.0) {
                                     let label = o.value.text.clone();
                                     values.push((None, vec![label], curve.color()));
                                 }
                             }
                         }
-                    
                     }
+                    QueryResult::Profile(_profile_data) => {}
                 }
             }
         }
@@ -422,13 +426,21 @@ where
                             self.draw_observations(observations, color, draw_markers);
                         }
                     },
-                    QueryResult::Text(text_data) => {
-                        match text_data {
-                            RangeQueryResult::Aggregations(aggregations) => {
-                                self.draw_text_aggregations(aggregations, color);
-                            }
+                    QueryResult::Text(text_data) => match text_data {
+                        RangeQueryResult::Aggregations(aggregations) => {
+                            self.draw_text_aggregations(aggregations, color);
+                        }
+                        RangeQueryResult::Observations(observations) => {
+                            self.draw_text_observations(observations, color);
+                        }
+                    },
+                    QueryResult::Profile(profile_data) => {
+                        match profile_data {
                             RangeQueryResult::Observations(observations) => {
-                                self.draw_text_observations(observations, color);
+                                self.draw_profile_observations(observations, color);
+                            }
+                            RangeQueryResult::Aggregations(_aggregations) => {
+                                // TODO!
                             }
                         }
                     }
@@ -657,7 +669,11 @@ where
         }
     }
 
-    fn draw_text_aggregations(&mut self, aggregations: &[Aggregation<Text, CountMetrics>], color: Color) {
+    fn draw_text_aggregations(
+        &mut self,
+        aggregations: &[Aggregation<Text, CountMetrics>],
+        color: Color,
+    ) {
         self.canvas.set_pen(color, 1.0);
         self.canvas.set_line_width(2.0);
 
@@ -702,6 +718,17 @@ where
         }
     }
 
+    fn draw_profile_observations(
+        &mut self,
+        _observations: &[Observation<ProfileEvent>],
+        color: Color,
+    ) {
+        self.canvas.set_pen(color, 1.0);
+        self.canvas.set_line_width(2.0);
+
+        // TODO!
+    }
+
     /// Transform x-value to pixel/point location.
     fn x_domain_to_pixel(&self, t: &TimeStamp) -> f64 {
         transform::x_domain_to_pixel(t, &self.chart.x_axis, self.layout)
@@ -710,6 +737,27 @@ where
     /// Convert a y value into a proper pixel y value.
     fn y_domain_to_pixel(&self, y: f64) -> f64 {
         transform::y_domain_to_pixel(y, &self.chart.y_axis, self.layout)
+    }
+}
+
+/// Find the last observation at the given time in a sorted list of observations.
+fn find_last_observation<'o, V>(
+    observations: &'o [Observation<V>],
+    t: &TimeStamp,
+) -> Option<&'o Observation<V>> {
+    find_last(observations, t, |o| o.timestamp.clone())
+}
+
+// Find the last value before the given timestamp.
+fn find_last<'o, T, F>(things: &'o [T], ts: &TimeStamp, f: F) -> Option<&'o T>
+where
+    F: Fn(&T) -> TimeStamp,
+{
+    let idx = things.lower_bound_by(|a| f(a).partial_cmp(ts).unwrap());
+    if (idx == 0) || (idx > things.len()) {
+        None
+    } else {
+        Some(&things[idx - 1])
     }
 }
 
