@@ -77,10 +77,9 @@ where
             let function: u32 = 13;
 
             // entry x:
-            self.component
-                .write_reg(0x20 + comparator * 16, var_address)?; // COMp value
-            self.component.write_reg(0x24 + comparator * 16, mask)?; // mask
-            self.component.write_reg(0x28 + comparator * 16, function)?; // function
+            self.set_comparator(comparator, var_address)?;
+            self.set_mask(comparator, mask)?;
+            self.set_function(comparator, function)?;
 
             Ok(())
         } else {
@@ -93,14 +92,38 @@ where
 
     pub fn disable_memory_watch(&self, channel: usize) -> CoreSightResult<()> {
         if channel < self.num_comparators {
-            self.component.write_reg(0x28 + channel * 16, 0)?; // function, 0 is disabled.
-            Ok(())
+            // function, 0 is disabled.
+            self.set_function(channel, 0)
         } else {
             Err(CoreSightError::Other(format!(
                 "Channel out of bounds: {}",
                 channel
             )))
         }
+    }
+
+    pub fn disable_all_memory_watches(&self) -> CoreSightResult<()> {
+        for channel in 0..self.num_comparators {
+            // function, 0 is disabled.
+            self.set_function(channel, 0)?;
+        }
+
+        Ok(())
+    }
+
+    fn set_comparator(&self, channel: usize, comparison_value: u32) -> CoreSightResult<()> {
+        self.component
+            .write_reg(0x20 + channel * 16, comparison_value)
+    }
+
+    /// Set the mask value for the given channel
+    fn set_mask(&self, channel: usize, mask: u32) -> CoreSightResult<()> {
+        self.component.write_reg(0x24 + channel * 16, mask)
+    }
+
+    /// Set the match function for some channel.
+    fn set_function(&self, channel: usize, function: u32) -> CoreSightResult<()> {
+        self.component.write_reg(0x28 + channel * 16, function)
     }
 
     pub fn poll(&self) -> CoreSightResult<()> {

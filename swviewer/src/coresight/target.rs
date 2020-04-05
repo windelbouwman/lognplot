@@ -160,6 +160,12 @@ where
         Ok(())
     }
 
+    /// Stop all tracing slots
+    pub fn stop_all_tracing(&self) -> CoreSightResult<()> {
+        let dwt = self.grab_dwt();
+        dwt.disable_all_memory_watches()
+    }
+
     pub fn poll(&self) -> CoreSightResult<()> {
         self.grab_dwt().poll()
     }

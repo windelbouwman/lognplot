@@ -2,7 +2,7 @@
 //!
 //!
 
-use crate::trace_var::TraceVar;
+use crate::trace_var::{TraceVar, VarType};
 use std::path::PathBuf;
 
 pub fn parse_elf_file(elf_filename: &PathBuf) -> gimli::Result<Vec<TraceVar>> {
@@ -59,7 +59,8 @@ pub fn parse_elf_file(elf_filename: &PathBuf) -> gimli::Result<Vec<TraceVar>> {
             // println!("  - entry: depth={}, tag={:?}", depth, entry.tag());
             if tag == gimli::DW_TAG_variable {
                 // println!("   -- it is a variable!");
-                if let Some(var) = analyze_variable_entry(entry, &dwarf, header.encoding())? {
+                if let Some(var) = analyze_variable_entry(&unit, entry, &dwarf, header.encoding())?
+                {
                     // println!("Var: {} @ 0x{:08X}", var.name, var.address);
                     trace_vars.push(var);
                 }
@@ -79,6 +80,7 @@ pub fn parse_elf_file(elf_filename: &PathBuf) -> gimli::Result<Vec<TraceVar>> {
 }
 
 fn analyze_variable_entry<E>(
+    unit: &gimli::Unit<gimli::EndianSlice<E>>,
     entry: &gimli::DebuggingInformationEntry<gimli::EndianSlice<E>>,
     dwarf: &gimli::Dwarf<gimli::EndianSlice<E>>,
     encoding: gimli::Encoding,
@@ -120,7 +122,107 @@ where
             None
         };
 
-    let address: Option<u64> =
+    let typ: Option<VarType> = extract_type(unit, entry)?;
+    let address: Option<u64> = extract_address(encoding, entry)?;
+
+    let optional_var = if let (Some(name), Some(address), Some(typ)) = (name, address, typ) {
+        Some(TraceVar {
+            name,
+            address: address as u32,
+            typ,
+        })
+    } else {
+        None
+    };
+
+    Ok(optional_var)
+}
+
+/// Take a debug entry and examine it's DW_AT_type attribute closely
+fn extract_type<E>(
+    unit: &gimli::Unit<gimli::EndianSlice<E>>,
+    entry: &gimli::DebuggingInformationEntry<gimli::EndianSlice<E>>,
+) -> gimli::Result<Option<VarType>>
+where
+    E: gimli::Endianity,
+{
+    let optional_typ = if let Some(value) = entry.attr_value(gimli::constants::DW_AT_type)? {
+        match value {
+            gimli::AttributeValue::UnitRef(offset) => {
+                let mut type_die_cursor = unit.entries_at_offset(offset)?;
+                type_die_cursor.next_entry()?;
+                if let Some(type_die) = type_die_cursor.current() {
+                    // println!("type die: {:?}", type_die);
+                    match type_die.tag() {
+                        gimli::DW_TAG_volatile_type => {
+                            // println!("Volatile!");
+                            extract_type(unit, type_die)?
+                        }
+                        gimli::DW_TAG_base_type => {
+                            let byte_size =
+                                type_die.attr_value(gimli::constants::DW_AT_byte_size)?;
+                            let encoding = type_die.attr_value(gimli::constants::DW_AT_encoding)?;
+                            println!(
+                                "Base type! byte_size={:?}, encoding={:?}",
+                                byte_size, encoding
+                            );
+                            if let (
+                                Some(gimli::AttributeValue::Encoding(ate)),
+                                Some(gimli::AttributeValue::Udata(byte_size)),
+                            ) = (encoding, byte_size)
+                            {
+                                match ate {
+                                    gimli::constants::DW_ATE_float => match byte_size {
+                                        4 => Some(VarType::Float32),
+                                        _x => None,
+                                    },
+                                    gimli::constants::DW_ATE_signed => match byte_size {
+                                        4 => Some(VarType::Int32),
+                                        _x => None,
+                                    },
+                                    gimli::constants::DW_ATE_unsigned_char => match byte_size {
+                                        1 => Some(VarType::Int8),
+                                        _x => None,
+                                    },
+                                    x => {
+                                        println!("?????????? {}", x);
+                                        None
+                                    }
+                                }
+                            } else {
+                                None
+                            }
+                        }
+                        x => {
+                            println!("Other type of type: {:?}", x);
+                            None
+                        }
+                    }
+                } else {
+                    None
+                }
+            }
+            x => {
+                println!("Other value: {:?}", x);
+                None
+            }
+        }
+    } else {
+        None
+    };
+
+    Ok(optional_typ)
+}
+
+/// Try to determine the absolute address by inspecting the DW_AT_location attribute.
+fn extract_address<E>(
+    encoding: gimli::Encoding,
+    entry: &gimli::DebuggingInformationEntry<gimli::EndianSlice<E>>,
+) -> gimli::Result<Option<u64>>
+where
+    E: gimli::Endianity,
+{
+    let optional_address =
         if let Some(value) = entry.attr_value(gimli::constants::DW_AT_location)? {
             if let Some(loc) = value.exprloc_value() {
                 let mut eval = loc.evaluation(encoding);
@@ -163,14 +265,5 @@ where
             None
         };
 
-    let optional_var = if let (Some(name), Some(address)) = (name, address) {
-        Some(TraceVar {
-            name,
-            address: address as u32,
-        })
-    } else {
-        None
-    };
-
-    Ok(optional_var)
+    Ok(optional_address)
 }

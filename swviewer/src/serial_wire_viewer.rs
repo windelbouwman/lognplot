@@ -5,7 +5,7 @@ use crate::coresight::{
     CoreSightError, MemoryAccess, MemoryAddress, Target, TraceDataDecoder, TracePacket,
 };
 use crate::stlink::{get_stlink, StLink, StLinkError, StLinkMode};
-use crate::trace_var::TraceVar;
+use crate::trace_var::{TraceVar, VarType};
 // use crate::ui_logger::UiLogger;
 use crate::usbutil::lsusb;
 use lognplot::net::TcpClient;
@@ -64,11 +64,8 @@ impl<'m> SerialWireViewer<'m> {
 
         self.target.setup_tracing(self.core_freq_hz, swo_trace_hz)?;
 
-        // disable all 4 channels:
-        self.target.stop_trace(0)?;
-        self.target.stop_trace(1)?;
-        self.target.stop_trace(2)?;
-        self.target.stop_trace(3)?;
+        // disable all channels:
+        self.target.stop_all_tracing()?;
 
         Ok(())
     }
@@ -137,16 +134,13 @@ impl<'m> SerialWireViewer<'m> {
 
                     // only emit written values:
                     if write_not_read {
-                        let value: i32 = payload.pread_with(0, LE).unwrap();
-                        trace!("VAL={}", value);
-
                         // Only transmit value when we have a corresponding variable configured:
                         if let Some(var) = self.trace_configuration.get(&comparator) {
-                            self.lognplot_client.send_sample(
-                                &var.name,
-                                self.timestamp,
-                                value as f64,
-                            )?;
+                            let value = extract_value_from_payload(&payload, &var.typ);
+                            trace!("VAr {} = {}", var.name, value);
+
+                            self.lognplot_client
+                                .send_sample(&var.name, self.timestamp, value)?;
                         }
                     }
                 }
@@ -157,6 +151,23 @@ impl<'m> SerialWireViewer<'m> {
         }
 
         Ok(())
+    }
+}
+
+fn extract_value_from_payload(payload: &[u8], typ: &VarType) -> f64 {
+    match typ {
+        VarType::Int32 => {
+            let value: i32 = payload.pread_with(0, LE).unwrap();
+            value as f64
+        }
+        VarType::Int8 => {
+            let value: i8 = payload.pread_with(0, LE).unwrap();
+            value as f64
+        }
+        VarType::Float32 => {
+            let value: f32 = payload.pread_with(0, LE).unwrap();
+            value as f64
+        }
     }
 }
 

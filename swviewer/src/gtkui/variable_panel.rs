@@ -1,9 +1,10 @@
 use super::dialogs::show_error;
+use super::UiStateHandle;
 use crate::symbolscanner::parse_elf_file;
 use gio::prelude::*;
 use gtk::prelude::*;
 
-pub fn setup_elf_loading(builder: &gtk::Builder) {
+pub fn setup_elf_loading(builder: &gtk::Builder, view_model: UiStateHandle) {
     let top_level: gtk::Window = builder.get_object("top_unit").unwrap();
 
     let model = gtk::TreeStore::new(&[
@@ -15,24 +16,22 @@ pub fn setup_elf_loading(builder: &gtk::Builder) {
     setup_search_filter(builder, &model);
     setup_columns(builder);
     let variables_tree_view: gtk::TreeView = builder.get_object("variables_tree_view").unwrap();
-    setup_activated(&variables_tree_view);
+    setup_activated(&variables_tree_view, view_model.clone());
 
     let load_button: gtk::Button = builder.get_object("button_load_elf_file").unwrap();
     load_button.connect_clicked(move |_| {
-        load_elf_file(&top_level, &model);
+        load_elf_file(&top_level, &model, &view_model);
         info!("Clicke!");
     });
 }
 
-fn setup_activated(variables_tree_view: &gtk::TreeView) {
+fn setup_activated(variables_tree_view: &gtk::TreeView, view_model: UiStateHandle) {
     variables_tree_view.connect_row_activated(move |tv, path, _| {
         let model = tv.get_model().unwrap();
         let iter = model.get_iter(path).unwrap();
         let value = get_variable_name(&model, &iter);
-
         info!("Signal activated: {}, starting to trace.", value);
-        // Add activated signal to plot:
-        // app_state.borrow().add_curve(&value, None);
+        view_model.trace_var(&value);
     });
 }
 
@@ -86,7 +85,7 @@ fn signal_filter_func(model: &gtk::TreeModel, iter: &gtk::TreeIter, filter_txt: 
     }
 }
 
-fn load_elf_file(top_level: &gtk::Window, model: &gtk::TreeStore) {
+fn load_elf_file(top_level: &gtk::Window, model: &gtk::TreeStore, view_model: &UiStateHandle) {
     let dialog = gtk::FileChooserDialog::with_buttons(
         Some("Load ELF file with symbols"),
         Some(top_level),
@@ -111,14 +110,20 @@ fn load_elf_file(top_level: &gtk::Window, model: &gtk::TreeStore) {
                 info!("Data loaded!");
                 model.clear();
 
-                for variable in variables {
+                for variable in &variables {
                     let iter = model.append(None);
                     model.set(
                         &iter,
                         &[0, 1, 2],
-                        &[&variable.name, &format!("0x{:08X}", variable.address), &"-"],
+                        &[
+                            &variable.name,
+                            &format!("0x{:08X}", variable.address),
+                            &variable.typ.to_string(),
+                        ],
                     );
                 }
+
+                view_model.load_variables(variables);
             }
         }
     }
