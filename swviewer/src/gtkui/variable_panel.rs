@@ -17,6 +17,7 @@ pub fn setup_elf_loading(builder: &gtk::Builder, view_model: UiStateHandle) {
     setup_columns(builder);
     let variables_tree_view: gtk::TreeView = builder.get_object("variables_tree_view").unwrap();
     setup_activated(&variables_tree_view, view_model.clone());
+    setup_key_press_event(&variables_tree_view, view_model.clone());
 
     let load_button: gtk::Button = builder.get_object("button_load_elf_file").unwrap();
     load_button.connect_clicked(move |_| {
@@ -31,8 +32,44 @@ fn setup_activated(variables_tree_view: &gtk::TreeView, view_model: UiStateHandl
         let iter = model.get_iter(path).unwrap();
         let value = get_variable_name(&model, &iter);
         info!("Signal activated: {}, starting to trace.", value);
-        view_model.trace_var(&value);
+        view_model.trace_var(0, &value);
     });
+}
+
+fn setup_key_press_event(variables_tree_view: &gtk::TreeView, view_model: UiStateHandle) {
+    variables_tree_view.connect_key_press_event(move |tv, key| {
+        let selected_signals = get_selected_variable_names(&tv);
+        let channel_target = match key.get_keyval() {
+            gdk::enums::key::_1 => Some(0),
+            gdk::enums::key::_2 => Some(1),
+            gdk::enums::key::_3 => Some(2),
+            gdk::enums::key::_4 => Some(3),
+            gdk::enums::key::_5 => Some(4),
+            gdk::enums::key::_6 => Some(5),
+            gdk::enums::key::_7 => Some(6),
+            gdk::enums::key::_8 => Some(7),
+            _ => None,
+        };
+
+        if let (Some(channel), Some(name)) = (channel_target, selected_signals.first()) {
+            view_model.trace_var(channel, &name);
+        }
+
+        Inhibit(false)
+    });
+}
+
+fn get_selected_variable_names(w: &gtk::TreeView) -> Vec<String> {
+    let selector = w.get_selection();
+    let (selected_rows, tree_model) = selector.get_selected_rows();
+    let mut selected_names: Vec<String> = vec![];
+    for selected_row in selected_rows {
+        if let Some(tree_iter) = tree_model.get_iter(&selected_row) {
+            let value = get_variable_name(&tree_model, &tree_iter);
+            selected_names.push(value);
+        }
+    }
+    selected_names
 }
 
 /// Given a model and an iterator get the signal name.

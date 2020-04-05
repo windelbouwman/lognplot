@@ -162,10 +162,10 @@ where
                             let byte_size =
                                 type_die.attr_value(gimli::constants::DW_AT_byte_size)?;
                             let encoding = type_die.attr_value(gimli::constants::DW_AT_encoding)?;
-                            println!(
-                                "Base type! byte_size={:?}, encoding={:?}",
-                                byte_size, encoding
-                            );
+                            // println!(
+                            //     "Base type! byte_size={:?}, encoding={:?}",
+                            //     byte_size, encoding
+                            // );
                             if let (
                                 Some(gimli::AttributeValue::Encoding(ate)),
                                 Some(gimli::AttributeValue::Udata(byte_size)),
@@ -174,16 +174,42 @@ where
                                 match ate {
                                     gimli::constants::DW_ATE_float => match byte_size {
                                         4 => Some(VarType::Float32),
-                                        _x => None,
+                                        8 => None,
+                                        x => {
+                                            println!("Invalid float size.. {}", x);
+                                            None
+                                        }
                                     },
                                     gimli::constants::DW_ATE_signed => match byte_size {
+                                        0 => None,
+                                        1 => Some(VarType::Int8),
+                                        2 => Some(VarType::Int16),
                                         4 => Some(VarType::Int32),
-                                        _x => None,
+                                        8 => None,
+                                        x => {
+                                            println!("Invalid signed size.. {}", x);
+                                            None
+                                        }
+                                    },
+                                    gimli::constants::DW_ATE_unsigned => match byte_size {
+                                        0 => None,
+                                        1 => Some(VarType::Uint8),
+                                        2 => Some(VarType::Uint16),
+                                        4 => Some(VarType::Uint32),
+                                        8 => None,
+                                        x => {
+                                            println!("Invalid unsigned size.. {}", x);
+                                            None
+                                        }
                                     },
                                     gimli::constants::DW_ATE_unsigned_char => match byte_size {
                                         1 => Some(VarType::Int8),
                                         _x => None,
                                     },
+                                    gimli::constants::DW_ATE_boolean => {
+                                        // Hmmz, what is a boolean?
+                                        None
+                                    }
                                     x => {
                                         println!("?????????? {}", x);
                                         None
@@ -192,6 +218,27 @@ where
                             } else {
                                 None
                             }
+                        }
+                        gimli::DW_TAG_pointer_type => {
+                            // Hmmz, pointer, what to do?
+                            None
+                        }
+                        gimli::DW_TAG_structure_type => {
+                            // Structure type, cool stuff!
+                            // TODO: add .field to the name, and recurse
+                            None
+                        }
+                        gimli::DW_TAG_array_type => {
+                            // TODO: handle this
+                            None
+                        }
+                        gimli::DW_TAG_enumeration_type => {
+                            // TODO: can we handle this?
+                            None
+                        }
+                        gimli::DW_TAG_union_type => {
+                            // TODO: handle this ?
+                            None
                         }
                         x => {
                             println!("Other type of type: {:?}", x);

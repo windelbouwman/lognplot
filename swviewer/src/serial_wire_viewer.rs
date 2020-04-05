@@ -160,8 +160,24 @@ fn extract_value_from_payload(payload: &[u8], typ: &VarType) -> f64 {
             let value: i32 = payload.pread_with(0, LE).unwrap();
             value as f64
         }
+        VarType::Int16 => {
+            let value: i16 = payload.pread_with(0, LE).unwrap();
+            value as f64
+        }
         VarType::Int8 => {
             let value: i8 = payload.pread_with(0, LE).unwrap();
+            value as f64
+        }
+        VarType::Uint32 => {
+            let value: u32 = payload.pread_with(0, LE).unwrap();
+            value as f64
+        }
+        VarType::Uint16 => {
+            let value: u16 = payload.pread_with(0, LE).unwrap();
+            value as f64
+        }
+        VarType::Uint8 => {
+            let value: u8 = payload.pread_with(0, LE).unwrap();
             value as f64
         }
         VarType::Float32 => {
