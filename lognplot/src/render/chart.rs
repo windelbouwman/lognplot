@@ -625,48 +625,14 @@ where
 
     /// Draw a single series of observed textual events.
     fn draw_text_observations(&mut self, observations: &[Observation<Text>], color: Color) {
-        self.canvas.set_pen(color, 1.0);
-        self.canvas.set_line_width(2.0);
+        let mut texts = vec![];
 
-        let text_height = self.canvas.text_size("X").height;
-        let padding = 5.0;
-
-        let track_y = self.layout.plot_bottom - 20.0 - self.text_track_y;
-        self.text_track_y += text_height + padding * 3.0;
-
-        let track_left = self.layout.plot_left;
-        let track_right = self.layout.plot_right;
-        let track_top = track_y - (text_height / 2.0) - padding;
-        let track_bottom = track_y + (text_height / 2.0) + padding;
-
-        // Draw top line:
-        self.canvas.draw_line(&[
-            Point::new(track_left, track_top),
-            Point::new(track_right, track_top),
-        ]);
-
-        // Draw bottom line:
-        self.canvas.draw_line(&[
-            Point::new(track_left, track_bottom),
-            Point::new(track_right, track_bottom),
-        ]);
-
-        // Draw text events:
         for observation in observations {
             let observation_x = self.x_domain_to_pixel(&observation.timestamp);
-            self.canvas.draw_line(&[
-                Point::new(observation_x, track_top),
-                Point::new(observation_x, track_bottom),
-            ]);
-
-            let point = Point::new(observation_x + padding, track_y);
-            self.canvas.print_text(
-                &point,
-                HorizontalAnchor::Left,
-                VerticalAnchor::Middle,
-                &observation.value.text,
-            );
+            texts.push((observation_x, observation.value.text.clone()));
         }
+
+        self.draw_texts_in_track(texts, color);
     }
 
     fn draw_text_aggregations(
@@ -674,6 +640,19 @@ where
         aggregations: &[Aggregation<Text, CountMetrics>],
         color: Color,
     ) {
+        let mut texts = vec![];
+
+        for aggregation in aggregations {
+            let observation_x = self.x_domain_to_pixel(&aggregation.timespan.start);
+            texts.push((observation_x, aggregation.metrics().count.to_string()));
+        }
+
+        self.draw_texts_in_track(texts, color);
+    }
+
+    /// Helper function to draw a sequence of texts between two lines.
+    /// Also proceed to the next text track slot.
+    fn draw_texts_in_track(&mut self, texts: Vec<(f64, String)>, color: Color) {
         self.canvas.set_pen(color, 1.0);
         self.canvas.set_line_width(2.0);
 
@@ -700,21 +679,68 @@ where
             Point::new(track_right, track_bottom),
         ]);
 
-        // Draw text events:
-        for aggregation in aggregations {
-            let observation_x = self.x_domain_to_pixel(&aggregation.timespan.start);
-            self.canvas.draw_line(&[
-                Point::new(observation_x, track_top),
-                Point::new(observation_x, track_bottom),
-            ]);
+        let end_markers = texts
+            .iter()
+            .skip(1)
+            .map(|t| t.0)
+            .chain(std::iter::once(track_right));
 
-            let point = Point::new(observation_x + padding, track_y);
-            self.canvas.print_text(
+        // Draw text boxes:
+        for ((x, text), end_x) in texts.iter().zip(end_markers) {
+            self.canvas
+                .draw_line(&[Point::new(*x, track_top), Point::new(*x, track_bottom)]);
+
+            let max_text_width: f64 = end_x - *x - padding * 2.0;
+
+            let point = Point::new(x + padding, track_y);
+
+            self.draw_dotted_text(
                 &point,
                 HorizontalAnchor::Left,
                 VerticalAnchor::Middle,
-                &aggregation.metrics().count.to_string(),
+                text,
+                max_text_width,
             );
+        }
+    }
+
+    /// Draw a text and trim the text length if it does not fit within the given width.
+    fn draw_dotted_text(
+        &mut self,
+        point: &Point,
+        horizontal_anchor: HorizontalAnchor,
+        vertical_anchor: VerticalAnchor,
+        text: &str,
+        max_text_width: f64,
+    ) {
+        let text_width = self.canvas.text_size(text).width;
+        if text_width < max_text_width {
+            // we can fit the text!
+            self.canvas
+                .print_text(&point, horizontal_anchor, vertical_anchor, text);
+        } else {
+            // trimming required..
+            let dots = "...";
+            let dots_width = self.canvas.text_size(dots).width;
+            // Do not draw text in too small regions
+            // so only draw text when we can fit the 3 dots.
+            if dots_width < max_text_width {
+                // Shrink text until it fits
+                let chars = text.chars();
+                let mut prefix = String::new();
+                let mut dotted_text: String = dots.to_owned();
+                for ch in chars {
+                    prefix.push(ch);
+                    let new_dotted_text = prefix.clone() + dots;
+                    let new_dotted_text_width = self.canvas.text_size(&new_dotted_text).width;
+                    if new_dotted_text_width > max_text_width {
+                        break;
+                    }
+                    dotted_text = new_dotted_text;
+                }
+                self.canvas
+                    .print_text(&point, horizontal_anchor, vertical_anchor, &dotted_text);
+            }
         }
     }
 
