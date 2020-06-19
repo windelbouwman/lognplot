@@ -13,7 +13,6 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
-      - uses: actions-rs/cargo@v1
-        with:
-          command: build
-          command: test
+          profile: minimal
+      - run: cargo build
+      - run: cargo test
