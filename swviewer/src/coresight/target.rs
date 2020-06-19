@@ -141,6 +141,7 @@ where
         // config dwt:
         let dwt = self.grab_dwt();
         dwt.setup_tracing()?;
+        // dwt.enable_exception_trace()?;
 
         Ok(())
     }

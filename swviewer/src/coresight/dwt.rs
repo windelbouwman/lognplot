@@ -66,6 +66,14 @@ where
         Ok(())
     }
 
+    pub fn enable_exception_trace(&self) -> CoreSightResult<()> {
+        info!("Enable exception trace");
+        let mut value = self.component.read_reg(REG_OFFSET_DWT_CTRL)?;
+        value |= 1 << 16; // EXCTRCENA
+        self.component.write_reg(REG_OFFSET_DWT_CTRL, value)?;
+        Ok(())
+    }
+
     /// Enable data monitor on a given user variable at some address
     pub fn enable_trace(&self, var_address: u32, comparator: usize) -> CoreSightResult<()> {
         if comparator < self.num_comparators {

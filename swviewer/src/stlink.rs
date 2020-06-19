@@ -9,12 +9,20 @@ use scroll::{Pread, Pwrite, LE};
 const STLINK_VID: u16 = 0x0483;
 const STLINK_V2_PID: u16 = 0x3748;
 const STLINK_V2_1_PID: u16 = 0x374B;
+const STLINK_V3S_PID: u16 = 0x374F;
 
 fn find_st_link() -> rusb::Result<Option<rusb::Device<rusb::GlobalContext>>> {
     let first_match = rusb::devices()?.iter().find(|d| {
         if let Ok(desc) = d.device_descriptor() {
-            desc.vendor_id() == STLINK_VID
-                && (desc.product_id() == STLINK_V2_PID || desc.product_id() == STLINK_V2_1_PID)
+            if 
+            desc.vendor_id() == STLINK_VID {
+                match desc.product_id() {
+                    STLINK_V2_PID | STLINK_V2_1_PID => true,
+                    _ => false,
+                }
+            } else {
+                false
+            }
         } else {
             false
         }
@@ -141,13 +149,13 @@ impl StLink {
 
         let tx_endpoint = match pid {
             STLINK_V2_PID => 2,
-            STLINK_V2_1_PID => 1,
+            STLINK_V2_1_PID | STLINK_V3S_PID => 1,
             _ => unimplemented!("invalid PID"),
         };
 
         let trace_endpoint = match pid {
             STLINK_V2_PID => 0x83,
-            STLINK_V2_1_PID => 0x82,
+            STLINK_V2_1_PID | STLINK_V3S_PID => 0x82,
             _ => unimplemented!("invalid PID"),
         };
 

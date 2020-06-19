@@ -145,8 +145,21 @@ impl<'m> SerialWireViewer<'m> {
                     }
                 }
             }
+            TracePacket::ItmData { id, payload } => {
+                // Simply print all data from ITM as ascii
+                use std::ascii::escape_default;
+                let mut visible = String::new();
+                for b in payload {
+                    let part: Vec<u8> = escape_default(b).collect();
+                    visible.push_str(&String::from_utf8(part).unwrap());
+                }
+                print!("{}", visible);
+                
+                // println!("")
+                
+            }
             _ => {
-                debug!("Trace packet: {:?}", packet);
+                info!("Trace packet: {:?}", packet);
             }
         }
 
