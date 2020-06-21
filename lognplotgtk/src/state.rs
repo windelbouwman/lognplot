@@ -39,13 +39,20 @@ impl GuiState {
         self.db.delete_all();
     }
 
+    #[cfg(features = "hdf5")]
     pub fn save(&self, filename: &Path) -> Result<(), String> {
         info!("Save data to {:?}", filename);
         super::io::export_data(self.db.clone(), filename).map_err(|e| e.to_string())
     }
 
+    #[cfg(features = "hdf5")]
     pub fn load(&self, filename: &Path) -> Result<(), String> {
         super::io::import_data(self.db.clone(), filename).map_err(|e| e.to_string())
+    }
+
+    #[cfg(not(features = "hdf5"))]
+    pub fn load(&self, filename: &Path) -> Result<(), String> {
+        Err("No hdf5 support!".to_owned())
     }
 
     pub fn save_session(&self, filename: &Path) -> std::io::Result<()> {

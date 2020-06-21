@@ -203,15 +203,25 @@ fn setup_menus(builder: &gtk::Builder, app_state: GuiStateHandle) {
 
     let top_level: gtk::Window = builder.get_object("top_unit").unwrap();
     let menu_open: gtk::MenuItem = builder.get_object("menu_open").unwrap();
-    menu_open.connect_activate(clone!(@strong app_state => move |_| {
-        load_data_from_hdf5(&top_level, &app_state);
-    }));
+    if cfg!(feature = "hdf5") {
+        menu_open.set_sensitive(true);
+        menu_open.connect_activate(clone!(@strong app_state => move |_| {
+            load_data_from_hdf5(&top_level, &app_state);
+        }));
+    } else {
+        menu_open.set_sensitive(false);
+    }
 
     let top_level: gtk::Window = builder.get_object("top_unit").unwrap();
     let menu_save: gtk::MenuItem = builder.get_object("menu_save").unwrap();
-    menu_save.connect_activate(clone!(@strong app_state => move |_| {
-        save_data_as_hdf5(&top_level, &app_state);
-    }));
+    if cfg!(feature = "hdf5") {
+        menu_save.set_sensitive(true);
+        menu_save.connect_activate(clone!(@strong app_state => move |_| {
+            save_data_as_hdf5(&top_level, &app_state);
+        }));
+    } else {
+        menu_save.set_sensitive(false);
+    }
 
     let top_level: gtk::Window = builder.get_object("top_unit").unwrap();
     let menu_save_session: gtk::MenuItem = builder.get_object("menu_save_session").unwrap();
@@ -251,37 +261,44 @@ fn setup_toolbar_buttons(builder: &gtk::Builder, app_state: GuiStateHandle) {
         }));
     }
 
-    // Zoom to button:
-    {
-        let tb_zoom_to: gtk::MenuToolButton = builder.get_object("tb_zoom_to").unwrap();
-        let menu2: gtk::Menu = builder.get_object("my_menu1").unwrap();
-        tb_zoom_to.set_menu(&menu2);
-
-        let menu_ids = vec![
-            ("menu_last_year", 365.0 * 24.0 * 60.0 * 60.0),
-            ("menu_last_day", 24.0 * 60.0 * 60.0),
-            ("menu_last_hour", 60.0 * 60.0),
-            ("menu_last_10_minutes", 10.0 * 60.0),
-            ("menu_last_minute", 60.0),
-            ("menu_last_30_seconds", 30.0),
-            ("menu_last_10_seconds", 10.0),
-            ("menu_last_second", 1.0),
-        ];
-        for (menu_id, tail_duration) in menu_ids {
-            let menu_item: gtk::MenuItem = builder.get_object(menu_id).unwrap();
-            menu_item.connect_activate(clone!(@strong app_state => move |_tb| {
-                info!("Zoom to last {} seconds", tail_duration);
-                app_state
-                    .borrow_mut()
-                    .enable_tailing(tail_duration);
-            }));
-        }
-    }
+    setup_zoom_to_options(builder, app_state.clone());
 
     {
         let tb_link_x_axis: gtk::ToggleToolButton = builder.get_object("tb_link_x_axis").unwrap();
         tb_link_x_axis.connect_toggled(clone!(@strong app_state => move |tb| {
             app_state.borrow_mut().set_linked_x_axis(tb.get_active());
+        }));
+    }
+}
+
+/// Setup zoom-to button and popover menu
+fn setup_zoom_to_options(builder: &gtk::Builder, app_state: GuiStateHandle) {
+    let tb_zoom_to: gtk::ToolButton = builder.get_object("tb_zoom_to").unwrap();
+    let pop_over: gtk::Popover = builder.get_object("popover1").unwrap();
+    pop_over.set_relative_to(Some(&tb_zoom_to));
+
+    tb_zoom_to.connect_clicked(clone!(@strong pop_over => move |_tb| {
+        pop_over.show_all();
+    }));
+
+    let menu_ids = vec![
+        ("bt_last_year", 365.0 * 24.0 * 60.0 * 60.0),
+        ("bt_last_day", 24.0 * 60.0 * 60.0),
+        ("bt_last_hour", 60.0 * 60.0),
+        ("bt_last_10_minutes", 10.0 * 60.0),
+        ("bt_last_minute", 60.0),
+        ("bt_last_30_seconds", 30.0),
+        ("bt_last_10_seconds", 10.0),
+        ("bt_last_second", 1.0),
+    ];
+    for (menu_id, tail_duration) in menu_ids {
+        let duration_button: gtk::Button = builder.get_object(menu_id).unwrap();
+        duration_button.connect_clicked(clone!(@strong app_state, @strong pop_over => move |_tb| {
+            pop_over.hide();
+            info!("Zoom to last {} seconds", tail_duration);
+            app_state
+                .borrow_mut()
+                .enable_tailing(tail_duration);
         }));
     }
 }

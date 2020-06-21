@@ -6,7 +6,10 @@ extern crate glib;
 
 mod chart_widget;
 mod error_dialog;
+
+#[cfg(feature = "hdf5")]
 mod io;
+
 mod mainwindow;
 mod mime_types;
 mod resources;
@@ -20,6 +23,19 @@ use lognplot::tsdb::TsDb;
 use std::sync::Arc;
 
 pub use state::{GuiState, GuiStateHandle};
+
+#[cfg(not(features = "hdf5"))]
+mod io {
+    use super::GuiStateHandle;
+
+    pub fn save_data_as_hdf5(top_level: &gtk::Window, app_state: &GuiStateHandle) {
+        unimplemented!();
+    }
+
+    pub fn load_data_from_hdf5(top_level: &gtk::Window, app_state: &GuiStateHandle) {
+        unimplemented!();
+    }
+}
 
 /// Create database, start server, and open a GUI.
 fn main() {
