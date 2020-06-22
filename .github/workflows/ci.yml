@@ -14,5 +14,5 @@ jobs:
         with:
           toolchain: stable
           profile: minimal
-      - run: cargo build
-      - run: cargo test
+      - run: cargo build --release -p lognplot
+      - run: cargo test -p lognplot

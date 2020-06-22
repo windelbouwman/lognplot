@@ -14,8 +14,7 @@ const STLINK_V3S_PID: u16 = 0x374F;
 fn find_st_link() -> rusb::Result<Option<rusb::Device<rusb::GlobalContext>>> {
     let first_match = rusb::devices()?.iter().find(|d| {
         if let Ok(desc) = d.device_descriptor() {
-            if 
-            desc.vendor_id() == STLINK_VID {
+            if desc.vendor_id() == STLINK_VID {
                 match desc.product_id() {
                     STLINK_V2_PID | STLINK_V2_1_PID => true,
                     _ => false,

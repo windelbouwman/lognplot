@@ -154,9 +154,8 @@ impl<'m> SerialWireViewer<'m> {
                     visible.push_str(&String::from_utf8(part).unwrap());
                 }
                 print!("{}", visible);
-                
+
                 // println!("")
-                
             }
             _ => {
                 info!("Trace packet: {:?}", packet);

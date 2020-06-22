@@ -24,7 +24,7 @@ use std::sync::Arc;
 
 pub use state::{GuiState, GuiStateHandle};
 
-#[cfg(not(features = "hdf5"))]
+#[cfg(not(feature = "hdf5"))]
 mod io {
     use super::GuiStateHandle;
 
