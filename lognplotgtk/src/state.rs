@@ -51,7 +51,7 @@ impl GuiState {
     }
 
     #[cfg(not(feature = "hdf5"))]
-    pub fn load(&self, filename: &Path) -> Result<(), String> {
+    pub fn load(&self, _filename: &Path) -> Result<(), String> {
         Err("No hdf5 support!".to_owned())
     }
 

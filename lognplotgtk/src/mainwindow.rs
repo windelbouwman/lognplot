@@ -49,30 +49,95 @@ fn build_ui(app: &gtk::Application, app_state: GuiStateHandle) {
     window.show_all();
 }
 
-fn setup_chart_area(builder: &gtk::Builder, app_state: GuiStateHandle) {
-    // First chart:
-    let draw_area: gtk::DrawingArea = builder.get_object("chart_control").unwrap();
-    let chart_state1 = setup_drawing_area(draw_area, app_state.clone(), "chart1");
+/// Create new chart area with extra buttons around it
+/// to enable splitting in vertical and horizontal direction
+fn create_new_chart_area(app_state: &GuiStateHandle, parent_box: gtk::Box) {
+    let box1 = gtk::Box::new(gtk::Orientation::Vertical, 0);
+    let draw_area: gtk::DrawingArea = gtk::DrawingArea::new();
+    massage_drawing_area(&draw_area);
+    box1.pack_start(&draw_area, true, true, 0);
+
+    // generate new unique chart id based on amount of charts so far:
+    let chart_id = format!("chart{}", app_state.borrow().num_charts() + 1);
+
+    let chart_state1 = setup_drawing_area(draw_area, app_state.clone(), &chart_id);
     app_state.borrow_mut().add_chart(chart_state1);
 
-    // Second chart:
-    let draw_area2: gtk::DrawingArea = builder.get_object("chart_control2").unwrap();
-    let chart_state2 = setup_drawing_area(draw_area2, app_state.clone(), "chart2");
-    app_state.borrow_mut().add_chart(chart_state2);
+    // Create split buttons:
+    let box2 = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+    let button1 = gtk::Button::new();
+    button1.set_label("Split vertical");
+    box2.pack_start(&button1, false, false, 0);
 
-    // Split handler:
-    // TODO:
-    // let hbx: gtk::Box = builder.get_object("root_splittor_box").unwrap();
-    // let split_button: gtk::Button = builder.get_object("button_split_vertical").unwrap();
-    // split_button.connect_clicked(move |_| {
-    //     println!("Split!");
-    //     hbx.remove(&draw_area2);
-    //     let paned = gtk::Paned::new(gtk::Orientation::Vertical);
-    //     hbx.add(&paned);
-    //     paned.add(&draw_area2);
+    let button2 = gtk::Button::new();
+    button2.set_label("Split horizontal");
+    box2.pack_start(&button2, false, false, 0);
 
-    //     // hbx.add_widget(draw_area2);
-    // });
+    box1.pack_start(&box2, false, false, 0);
+    box1.show_all();
+
+    button1.connect_clicked(
+        clone!(@strong app_state, @strong box1, @strong parent_box => move |_| {
+            info!("Split vertically");
+            split_chart(&app_state, &box1, gtk::Orientation::Vertical);
+        }),
+    );
+
+    button2.connect_clicked(
+        clone!(@strong app_state, @strong box1, @strong parent_box => move |_| {
+            info!("Split horizontally");
+            split_chart(&app_state, &box1, gtk::Orientation::Horizontal);
+        }),
+    );
+
+    parent_box.pack_start(&box1, true, true, 0);
+}
+
+/// Complex way of finding position of box in parent box:
+fn find_index(box1: gtk::Box, parent: &gtk::Box) -> i32 {
+    for (index, child) in parent.get_children().iter().enumerate() {
+        let child_box: gtk::Box = child.clone().downcast::<gtk::Box>().unwrap();
+        if child_box == box1 {
+            return index as i32;
+        }
+    }
+
+    0
+}
+
+/// Takes care of splitting the chart into two areas
+/// This is done by determining the containing box parent,
+/// and removing this box from the parent, placing a new
+/// box in between in the box hierarchy..
+fn split_chart(app_state: &GuiStateHandle, box1: &gtk::Box, orientation: gtk::Orientation) {
+    // Create new split pane:
+    let new_box = gtk::Box::new(orientation, 0);
+
+    // Determine parent box (either vertical or horizontal)
+    let parent_box: gtk::Box = box1.get_parent().unwrap().downcast::<gtk::Box>().unwrap();
+
+    // find position in parent:
+    let index = find_index(box1.clone(), &parent_box);
+    info!("Old position: {:?}", index);
+
+    // Remove original container and add new box:
+    parent_box.remove(box1);
+    parent_box.pack_start(&new_box, true, true, 0);
+    parent_box.reorder_child(&new_box, index); // move to first position again!
+
+    new_box.pack_start(box1, true, true, 0);
+
+    // create new chart area:
+    create_new_chart_area(&app_state, new_box.clone());
+
+    new_box.show_all();
+}
+
+fn setup_chart_area(builder: &gtk::Builder, app_state: GuiStateHandle) {
+    let root_splittor: gtk::Box = builder.get_object("root_splittor").unwrap();
+
+    // Initial chart:
+    create_new_chart_area(&app_state, root_splittor);
 }
 
 fn setup_about_dialog(about_dialog: &gtk::AboutDialog) {
@@ -87,8 +152,8 @@ fn setup_about_dialog(about_dialog: &gtk::AboutDialog) {
     about_dialog.connect_response(|p, _| p.hide());
 }
 
-/// Construct new plot window with the given number of plots.
-fn new_plot_window(app_state: GuiStateHandle, amount: usize) {
+/// Construct new plot window.
+fn new_plot_window(app_state: GuiStateHandle) {
     info!("New window!");
     let chart_id = format!("chart{}", app_state.borrow().num_charts() + 1);
     let new_window = gtk::WindowBuilder::new()
@@ -99,47 +164,15 @@ fn new_plot_window(app_state: GuiStateHandle, amount: usize) {
         new_window.set_icon(Some(&icon));
     }
 
-    let mut charts = vec![];
-    if amount > 1 {
-        let grid = gtk::Grid::new();
-        new_window.add(&grid);
+    let root_box = gtk::Box::new(gtk::Orientation::Vertical, 0);
+    new_window.add(&root_box);
 
-        // Create grid of plots:
-        for row in 0_i32..amount as i32 {
-            for column in 0_i32..amount as i32 {
-                let chart_id = format!(
-                    "chart{}",
-                    app_state.borrow().num_charts() + 1 + charts.len()
-                );
-                // println!("Row: {}", row);
-                let new_chart_area = gtk::DrawingArea::new();
-                grid.attach(&new_chart_area, column, row, 1, 1);
-                massage_drawing_area(&new_chart_area);
-
-                let chart_n = setup_drawing_area(new_chart_area, app_state.clone(), &chart_id);
-                charts.push(chart_n);
-            }
-        }
-
-        grid.show();
-    } else {
-        let new_chart_area = gtk::DrawingArea::new();
-        new_window.add(&new_chart_area);
-        massage_drawing_area(&new_chart_area);
-
-        let chart_n = setup_drawing_area(new_chart_area, app_state.clone(), &chart_id);
-        charts.push(chart_n);
-    }
-
-    for chart_n in &charts {
-        app_state.borrow_mut().add_chart(chart_n.clone());
-    }
+    create_new_chart_area(&app_state, root_box);
 
     new_window.connect_delete_event(clone!(@strong app_state => move |_, _| {
         // Remove all chart structs from the app state:
-        for chart_n in &charts {
-            app_state.borrow_mut().delete_chart(&chart_n);
-        }
+        // TODO: remove charts of this window!
+        // TODO: by not doing this, we suffer from some memory leakage?
         Inhibit(false)
     }));
     new_window.show_all();
@@ -150,6 +183,7 @@ fn massage_drawing_area(new_chart_area: &gtk::DrawingArea) {
     new_chart_area.show();
     new_chart_area.set_hexpand(true);
     new_chart_area.set_vexpand(true);
+    new_chart_area.set_size_request(200, 200);
 
     new_chart_area.set_can_focus(true);
     new_chart_area.set_can_default(true);
@@ -181,13 +215,7 @@ fn setup_menus(builder: &gtk::Builder, app_state: GuiStateHandle) {
 
     let menu_new_plot_window: gtk::MenuItem = builder.get_object("menu_new_plot_window").unwrap();
     menu_new_plot_window.connect_activate(clone!(@strong app_state => move |_| {
-        new_plot_window(app_state.clone(), 1);
-    }));
-
-    let menu_new_grid_plot_window: gtk::MenuItem =
-        builder.get_object("menu_new_grid_plot_window").unwrap();
-    menu_new_grid_plot_window.connect_activate(clone!(@strong app_state => move |_| {
-        new_plot_window(app_state.clone(), 2);
+        new_plot_window(app_state.clone());
     }));
 
     let top_level: gtk::Window = builder.get_object("top_unit").unwrap();

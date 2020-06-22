@@ -28,11 +28,11 @@ pub use state::{GuiState, GuiStateHandle};
 mod io {
     use super::GuiStateHandle;
 
-    pub fn save_data_as_hdf5(top_level: &gtk::Window, app_state: &GuiStateHandle) {
+    pub fn save_data_as_hdf5(_top_level: &gtk::Window, _app_state: &GuiStateHandle) {
         unimplemented!();
     }
 
-    pub fn load_data_from_hdf5(top_level: &gtk::Window, app_state: &GuiStateHandle) {
+    pub fn load_data_from_hdf5(_top_level: &gtk::Window, _app_state: &GuiStateHandle) {
         unimplemented!();
     }
 }
