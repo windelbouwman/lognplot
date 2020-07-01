@@ -16,3 +16,25 @@ jobs:
           profile: minimal
       - run: cargo build --release -p lognplot
       - run: cargo test -p lognplot
+
+  windows_build:
+    name: Build on windows
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Rust toolchain installation
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+      - name: Install vcpkg dependencies
+        env:
+          vcpkgResponseFile: ${{github.workspace}}/.github/workflows/response_file.txt
+        uses: lukka/run-vcpkg@v3
+        with:
+          vcpkgTriplet: x64-windows
+          vcpkgGitCommitId: 6185aa76504a5025f36754324abf307cc776f3da
+          vcpkgArguments: '@${{env.vcpkgResponseFile}}'
+          appendedCacheKey: ${{hashFiles(env.vcpkgResponseFile)}}
+      - run: cargo build --release -p lognplot
+      - run: cargo test -p lognplot
