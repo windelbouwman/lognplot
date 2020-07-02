@@ -19,6 +19,7 @@ jobs:
 
   windows_build:
     name: Build on windows
+    if: false  # TODO: fix windows build
     runs-on: windows-latest
     steps:
       - name: Checkout source code

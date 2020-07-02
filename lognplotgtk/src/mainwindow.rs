@@ -65,30 +65,35 @@ fn create_new_chart_area(app_state: &GuiStateHandle, parent_box: gtk::Box) {
 
     // Create split buttons:
     let box2 = gtk::Box::new(gtk::Orientation::Horizontal, 0);
-    let button1 = gtk::Button::new();
-    button1.set_label("Split vertical");
-    box2.pack_start(&button1, false, false, 0);
+    let button_split_vertical = gtk::Button::new();
+    button_split_vertical.set_label("Split vertical");
+    box2.pack_start(&button_split_vertical, false, false, 0);
 
-    let button2 = gtk::Button::new();
-    button2.set_label("Split horizontal");
-    box2.pack_start(&button2, false, false, 0);
+    let button_split_horizontal = gtk::Button::new();
+    button_split_horizontal.set_label("Split horizontal");
+    box2.pack_start(&button_split_horizontal, false, false, 0);
+
+    let button_close = gtk::Button::new();
+    button_close.set_label("Close");
+    box2.pack_start(&button_close, false, false, 0);
 
     box1.pack_start(&box2, false, false, 0);
     box1.show_all();
 
-    button1.connect_clicked(
-        clone!(@strong app_state, @strong box1, @strong parent_box => move |_| {
-            info!("Split vertically");
-            split_chart(&app_state, &box1, gtk::Orientation::Vertical);
-        }),
-    );
+    button_split_vertical.connect_clicked(clone!(@strong app_state, @strong box1 => move |_| {
+        info!("Split vertically");
+        split_chart(&app_state, &box1, gtk::Orientation::Vertical);
+    }));
 
-    button2.connect_clicked(
-        clone!(@strong app_state, @strong box1, @strong parent_box => move |_| {
-            info!("Split horizontally");
-            split_chart(&app_state, &box1, gtk::Orientation::Horizontal);
-        }),
-    );
+    button_split_horizontal.connect_clicked(clone!(@strong app_state, @strong box1 => move |_| {
+        info!("Split horizontally");
+        split_chart(&app_state, &box1, gtk::Orientation::Horizontal);
+    }));
+
+    button_close.connect_clicked(clone!(@strong box1 => move |_| {
+        info!("Close chart!");
+        close_chart(&box1);
+    }));
 
     parent_box.pack_start(&box1, true, true, 0);
 }
@@ -131,6 +136,21 @@ fn split_chart(app_state: &GuiStateHandle, box1: &gtk::Box, orientation: gtk::Or
     create_new_chart_area(&app_state, new_box.clone());
 
     new_box.show_all();
+}
+
+fn close_chart(box1: &gtk::Box) {
+    // Determine parent box:
+    let parent_box: gtk::Box = box1.get_parent().unwrap().downcast::<gtk::Box>().unwrap();
+
+    // Remove self from parent:
+    parent_box.remove(box1);
+
+    // Parent now contains a single plot!
+    if parent_box.get_children().is_empty() {
+        if let Ok(grand_parent_box) = parent_box.get_parent().unwrap().downcast::<gtk::Box>() {
+            grand_parent_box.remove(&parent_box);
+        }
+    }
 }
 
 fn setup_chart_area(builder: &gtk::Builder, app_state: GuiStateHandle) {
