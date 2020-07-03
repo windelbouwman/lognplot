@@ -4,7 +4,7 @@ use super::axis::ValueAxis;
 use super::curve::Curve;
 use super::Cursor;
 use crate::geometry::Range;
-use crate::time::TimeSpan;
+use crate::time::{TimeSpan, TimeStamp};
 use crate::tsdb::Summary;
 
 /// A single 2D-chart
@@ -108,6 +108,14 @@ impl Chart {
         }
     }
 
+    pub fn get_last_timestamp(&self) -> Option<TimeStamp> {
+        if let Some(summary) = self.data_summary(None) {
+            Some(summary.timespan.end)
+        } else {
+            None
+        }
+    }
+
     /// Adjust Y-axis such that we view the given metrics.
     fn fit_y_axis_to_range(&mut self, range: &Range<f64>) {
         let mut domain = range.end() - range.begin();
@@ -120,7 +128,7 @@ impl Chart {
         self.y_axis.set_limits(minimum, maximum);
     }
 
-    fn fit_x_axis_to_timespan(&mut self, timespan: &TimeSpan) {
+    pub fn fit_x_axis_to_timespan(&mut self, timespan: &TimeSpan) {
         let mut domain = timespan.end.amount - timespan.start.amount;
         if domain.abs() < 1.0e-18 {
             domain = 1.0;

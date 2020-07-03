@@ -8,11 +8,12 @@ use std::time::Instant;
 
 use crate::session::DashBoardItem;
 use crate::state::GuiStateHandle;
+use crate::time_tracker::TimeTracker;
 use lognplot::chart::{Chart, Curve, CurveData};
 use lognplot::geometry::Size;
 use lognplot::render::{draw_chart, CairoCanvas, ChartLayout, ChartOptions};
 use lognplot::render::{x_pixel_to_domain, x_pixels_to_domain, y_pixel_to_domain};
-use lognplot::time::TimeStamp;
+use lognplot::time::{TimeSpan, TimeStamp};
 use lognplot::tracer::{AnyTracer, Tracer};
 use lognplot::tsdb::DataChangeEvent;
 use lognplot::tsdb::TsDbHandle;
@@ -31,6 +32,7 @@ pub struct ChartState {
     drag: Option<(f64, f64)>,
     draw_area: gtk::DrawingArea,
     id: String,
+    time_estimator: TimeTracker,
 }
 
 /// category10 color wheel
@@ -66,6 +68,7 @@ impl ChartState {
             drag: None,
             draw_area,
             id: id.to_owned(),
+            time_estimator: TimeTracker::new(),
         }
     }
 
@@ -122,7 +125,7 @@ impl ChartState {
     }
 
     /// Handle data change event from database.
-    pub fn handle_event(&self, event: &DataChangeEvent) {
+    pub fn handle_event(&mut self, event: &DataChangeEvent) {
         // Check if we must update the chart:
         let update = event.delete_all
             || event
@@ -130,6 +133,9 @@ impl ChartState {
                 .iter()
                 .any(|n| self.chart.has_signal(n));
         if update {
+            if let Some(last_time) = self.chart.get_last_timestamp() {
+                self.time_estimator.update(last_time.amount);
+            }
             self.repaint();
         }
     }
@@ -251,8 +257,18 @@ impl ChartState {
         self.repaint();
     }
 
-    pub fn zoom_to_last(&mut self, tail_duration: f64) {
-        self.chart.zoom_to_last(tail_duration);
+    fn zoom_to_last(&mut self, tail_duration: f64) {
+        self.time_estimator.predict();
+
+        let end_time = self.time_estimator.get_estimate();
+        let end = TimeStamp::new(end_time);
+        let begin = end.clone() - tail_duration;
+        let timespan = TimeSpan::new(begin, end);
+
+        self.chart.fit_x_axis_to_timespan(&timespan);
+
+        // self.chart.zoom_to_last(tail_duration);
+
         self.chart.fit_y_axis();
         self.repaint();
     }
@@ -265,7 +281,7 @@ impl ChartState {
         self.tailing = None;
     }
 
-    pub fn do_tailing(&mut self) {
+    fn do_tailing(&mut self) {
         if let Some(x) = self.tailing {
             self.zoom_to_last(x);
         }

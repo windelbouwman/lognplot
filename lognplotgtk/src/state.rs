@@ -120,7 +120,7 @@ impl GuiState {
 
     pub fn handle_event(&self, event: &DataChangeEvent) {
         for chart in &self.charts {
-            chart.borrow().handle_event(event);
+            chart.borrow_mut().handle_event(event);
         }
     }
 

@@ -16,6 +16,7 @@ mod resources;
 mod session;
 mod signal_repository;
 mod state;
+mod time_tracker;
 
 use lognplot::net::run_server;
 use lognplot::tracer::AnyTracer;
