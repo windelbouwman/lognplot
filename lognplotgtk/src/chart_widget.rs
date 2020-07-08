@@ -55,6 +55,8 @@ impl ChartState {
         // let color_wheel = vec!["blue".to_string(), "red".to_string(), "green".to_string()];
         let color_wheel: Vec<String> = CATEGORY10_COLORS.iter().map(|s| (*s).to_string()).collect();
 
+        info!("Chart id: {}", id);
+
         ChartState {
             chart,
             chart_options: ChartOptions::default(),
@@ -64,11 +66,11 @@ impl ChartState {
             color_wheel,
             color_index: 0,
             tailing: None,
-            perf_tracer,
+            perf_tracer: perf_tracer.clone(),
             drag: None,
             draw_area,
             id: id.to_owned(),
-            time_estimator: TimeTracker::new(),
+            time_estimator: TimeTracker::new(perf_tracer, id),
         }
     }
 
@@ -366,15 +368,12 @@ impl ChartState {
 
         let t2 = Instant::now();
         let draw_duration = t2 - t1;
-        trace!("Drawing time: {:?}", draw_duration);
+        // trace!("Drawing time: {:?}", draw_duration);
 
         // internal performance metric:
         let draw_seconds: f64 = draw_duration.as_secs_f64();
-        self.perf_tracer.log_metric(
-            &format!("META_chart_render_time_{}", self.id),
-            t1,
-            draw_seconds,
-        );
+        self.perf_tracer
+            .log_metric(&format!("META.{}.render_time", self.id), t1, draw_seconds);
 
         // Focus indicator!
         let is_focus = self.draw_area.is_focus();

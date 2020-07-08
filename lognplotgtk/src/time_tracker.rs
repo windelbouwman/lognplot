@@ -13,7 +13,9 @@
 //!   new values arrive, and P becomes too large.
 //!
 
+use lognplot::tracer::{AnyTracer, Tracer};
 use nalgebra::{Matrix1, Matrix2, RowVector2, Vector2};
+use std::sync::Arc;
 use std::time::Instant;
 
 pub struct TimeTracker {
@@ -29,14 +31,21 @@ pub struct TimeTracker {
 
     // previous timestamp!
     prev: Option<Instant>,
+
+    /// The time tracker can be traced as well (inception!)
+    perf_tracer: Arc<AnyTracer>,
+
+    trace_prefix: String,
 }
 
 impl TimeTracker {
-    pub fn new() -> Self {
+    pub fn new(perf_tracer: Arc<AnyTracer>, trace_prefix: &str) -> Self {
         TimeTracker {
             x_hat: Vector2::zeros(),
             P: Matrix2::identity(),
             prev: None,
+            perf_tracer,
+            trace_prefix: trace_prefix.to_owned(),
         }
     }
 
@@ -80,8 +89,11 @@ impl TimeTracker {
             // This estimate becomes more unpredictable over time
             self.P = F * self.P * F.transpose() + Q;
 
-            println!("Predicted: x_hat={} P={}", self.x_hat, self.P);
+            // nalgebra matrices are rendered pretty sweet in ascii!
+            // println!("Predicted: x_hat={} P={}", self.x_hat, self.P);
         }
+
+        self.trace();
     }
 
     // Inject a newly observed value!
@@ -114,11 +126,48 @@ impl TimeTracker {
             // Update variance:
             self.P = (Matrix2::identity() - K * H) * self.P;
 
-            println!(
-                "Updated with value {}: x_hat={} P={}",
-                observation, self.x_hat, self.P
-            );
+            // println!(
+            //     "Updated with value {}: x_hat={} P={}",
+            //     observation, self.x_hat, self.P
+            // );
         }
+
+        self.trace();
+    }
+
+    fn trace(&self) {
+        let t1 = Instant::now();
+
+        self.perf_tracer.log_metric(
+            &format!("META.{}.x_hat[0]", self.trace_prefix),
+            t1,
+            self.x_hat[0],
+        );
+        self.perf_tracer.log_metric(
+            &format!("META.{}.x_hat[1]", self.trace_prefix),
+            t1,
+            self.x_hat[1],
+        );
+        self.perf_tracer.log_metric(
+            &format!("META.{}.P[0, 0]", self.trace_prefix),
+            t1,
+            self.P[(0, 0)],
+        );
+        self.perf_tracer.log_metric(
+            &format!("META.{}.P[0, 1]", self.trace_prefix),
+            t1,
+            self.P[(0, 1)],
+        );
+        self.perf_tracer.log_metric(
+            &format!("META.{}.P[1, 0]", self.trace_prefix),
+            t1,
+            self.P[(1, 0)],
+        );
+        self.perf_tracer.log_metric(
+            &format!("META.{}.P[1, 1]", self.trace_prefix),
+            t1,
+            self.P[(1, 1)],
+        );
     }
 
     pub fn get_estimate(&self) -> f64 {
