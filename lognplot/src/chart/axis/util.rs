@@ -1,3 +1,7 @@
+pub fn get_scale(domain: f64) -> i32 {
+    domain.log10().floor() as i32
+}
+
 /// Given the current axis, calculate sensible
 /// tick spacing.
 pub fn calc_tick_spacing(domain: f64, n_ticks: usize) -> (i32, f64) {

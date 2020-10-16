@@ -51,7 +51,8 @@ impl ChartState {
         draw_area: gtk::DrawingArea,
         id: &str,
     ) -> Self {
-        let chart = Chart::default();
+        let mut chart = Chart::default();
+        chart.set_title(id);
         // let color_wheel = vec!["blue".to_string(), "red".to_string(), "green".to_string()];
         let color_wheel: Vec<String> = CATEGORY10_COLORS.iter().map(|s| (*s).to_string()).collect();
 
@@ -110,6 +111,18 @@ impl ChartState {
         debug!("Kill all signals!");
         self.disable_tailing();
         self.chart.clear_curves();
+        self.repaint();
+    }
+
+    pub fn set_cursor1(&mut self) {
+        debug!("set cursor 1!");
+        self.chart.set_cursor1();
+        self.repaint();
+    }
+
+    pub fn set_cursor2(&mut self) {
+        debug!("set cursor 2!");
+        self.chart.set_cursor2();
         self.repaint();
     }
 
@@ -345,16 +358,16 @@ impl ChartState {
     }
 
     fn on_resize_event(&mut self, allocation: &gdk::Rectangle) {
-        self.chart_layout
-            .resize(allocation.width as f64, allocation.height as f64);
-        self.chart_layout.layout(&self.chart_options);
+        let width: f64 = allocation.width as f64;
+        let height: f64 = allocation.height as f64;
+        self.chart_layout.resize(width, height);
     }
 
-    fn draw_on_canvas(&self, canvas: &cairo::Context) -> Inhibit {
+    fn draw_on_canvas(&mut self, canvas: &cairo::Context) -> Inhibit {
         let size = get_size(&self.draw_area);
 
         // println!("Draw, width = {:?}, height= {:?}", width, height);
-        canvas.set_font_size(14.0);
+        canvas.set_font_size(12.0);
         let mut canvas2 = CairoCanvas::new(&canvas);
 
         let t1 = Instant::now();
@@ -362,7 +375,7 @@ impl ChartState {
         draw_chart(
             &self.chart,
             &mut canvas2,
-            &self.chart_layout,
+            &mut self.chart_layout,
             &self.chart_options,
         );
 
@@ -438,6 +451,12 @@ impl ChartState {
             gdk::enums::key::BackSpace => {
                 self.clear_curves();
             }
+            gdk::enums::key::_1 => {
+                self.set_cursor1();
+            }
+            gdk::enums::key::_2 => {
+                self.set_cursor2();
+            }
 
             x => {
                 println!("Key! {:?}", x);
@@ -468,7 +487,7 @@ pub fn setup_drawing_area(
 
     // Connect draw event:
     draw_area.connect_draw(
-        clone!(@strong chart_state => move |_, c| { chart_state.borrow().draw_on_canvas(c) } ),
+        clone!(@strong chart_state => move |_, c| { chart_state.borrow_mut().draw_on_canvas(c) } ),
     );
 
     // Connect drop event:

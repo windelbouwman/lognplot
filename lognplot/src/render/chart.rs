@@ -19,8 +19,12 @@ use std::rc::Rc;
 use superslice::Ext;
 
 /// Draw the given chart onto the canvas!
-pub fn draw_chart<C>(chart: &Chart, canvas: &mut C, layout: &ChartLayout, options: &ChartOptions)
-where
+pub fn draw_chart<C>(
+    chart: &Chart,
+    canvas: &mut C,
+    layout: &mut ChartLayout,
+    options: &ChartOptions,
+) where
     C: Canvas,
 {
     let mut renderer = ChartRenderer::new(chart, canvas, layout, options);
@@ -50,7 +54,7 @@ where
     canvas: &'a mut C,
 
     // Layout:
-    layout: &'a ChartLayout,
+    layout: &'a mut ChartLayout,
 
     // Parameters:
     options: &'a ChartOptions,
@@ -67,7 +71,7 @@ where
     pub fn new(
         chart: &'a Chart,
         canvas: &'a mut C,
-        layout: &'a ChartLayout,
+        layout: &'a mut ChartLayout,
         options: &'a ChartOptions,
     ) -> Self {
         ChartRenderer {
@@ -117,11 +121,11 @@ where
     fn draw_title(&mut self) {
         if let Some(title) = &self.chart.title {
             self.canvas.set_pen(Color::black(), 1.0);
-            let top_center = Point::new(50.0, 0.0);
+            let top_center = Point::new(self.layout.width / 2.0, self.options.padding);
             self.canvas.print_text(
                 &top_center,
                 HorizontalAnchor::Middle,
-                VerticalAnchor::Bottom,
+                VerticalAnchor::Top,
                 title,
             );
         }
@@ -129,17 +133,52 @@ where
 
     /// Draw x and y axis with tick markers.
     fn draw_axis(&mut self) {
-        let n_x_ticks = (self.layout.plot_width as usize / PIXELS_PER_X_TICK).max(2);
-        let (prefix, ticks) = self.chart.x_axis.calc_date_tiks(n_x_ticks);
+        self.layout.layout(&self.options);
 
-        let x_ticks: Vec<(TimeStamp, String)> = ticks
+        if let Some(title) = &self.chart.title {
+            self.layout.title_height = self.canvas.text_size(title).height + self.options.padding;
+        } else {
+            self.layout.title_height = 0.0;
+        }
+
+        let n_x_ticks = (self.layout.plot_width as usize / PIXELS_PER_X_TICK).max(2);
+        let (prefix, x_ticks) = self.chart.x_axis.calc_date_tiks(n_x_ticks);
+
+        let n_y_ticks = (self.layout.plot_height as usize / PIXELS_PER_Y_TICK).max(2);
+        let y_ticks = self.chart.y_axis.calc_tiks(n_y_ticks);
+
+        // Now we have the ticks, calculate space taken by the ticks and re-layout!
+        let y_labels_max_width = y_ticks
+            .iter()
+            .map(|t| self.canvas.text_size(&t.1).width)
+            .fold(1.0, |a, b| if a > b { a } else { b });
+        self.layout.y_axis_legend_width =
+            y_labels_max_width + self.options.tick_size * 2.0 + self.options.padding;
+        // println!("Y axis width: {}, ticks={:?}", self.layout.y_axis_legend_width, y_ticks);
+        let x_labels_max_height = x_ticks
+            .iter()
+            .map(|t| self.canvas.text_size(&t.1).height)
+            .fold(1.0, |a, b| if a > b { a } else { b });
+        self.layout.x_axis_legend_height =
+            x_labels_max_height + self.options.tick_size * 2.0 + self.options.padding;
+        self.layout.info_bar_height = self.canvas.text_size("X").height;
+        // println!("X axis height: {}, ticks={:?}", self.layout.x_axis_legend_height, x_ticks);
+        self.layout.layout(&self.options);
+
+        // Now we are ready to paint!
+        self.canvas.set_pen(Color::white(), 1.0);
+        self.canvas.fill_rect(
+            self.layout.plot_left,
+            self.layout.plot_top,
+            self.layout.plot_width,
+            self.layout.plot_height,
+        );
+
+        let x_ticks: Vec<(TimeStamp, String)> = x_ticks
             .into_iter()
             .map(|(x, s)| (TimeStamp::new(x), s))
             .collect();
         self.draw_x_axis(prefix, &x_ticks);
-
-        let n_y_ticks = (self.layout.plot_height as usize / PIXELS_PER_Y_TICK).max(2);
-        let y_ticks = self.chart.y_axis.calc_tiks(n_y_ticks);
 
         self.draw_y_axis(&y_ticks);
 
@@ -150,7 +189,7 @@ where
     // X axis:
     fn draw_x_axis(&mut self, prefix: Option<String>, x_ticks: &[(TimeStamp, String)]) {
         self.canvas.set_pen(Color::black(), 1.0);
-        self.canvas.set_line_width(2.0);
+        self.canvas.set_line_width(1.0);
 
         if let Some(title) = &self.chart.x_axis.label {
             let p = Point::new(self.layout.width / 2.0, self.layout.height - 2.0);
@@ -167,18 +206,18 @@ where
                 .print_text(&p, HorizontalAnchor::Left, VerticalAnchor::Bottom, &prefix);
         }
 
-        let y = self.layout.plot_bottom + self.options.tick_size;
-        let baseline = vec![
-            Point::new(self.layout.plot_left, y),
-            Point::new(self.layout.plot_right, y),
-        ];
+        let y = self.layout.plot_bottom;
+        // let baseline = vec![
+        //     Point::new(self.layout.plot_left, y),
+        //     Point::new(self.layout.plot_right, y),
+        // ];
 
-        self.canvas.draw_line(&baseline);
+        // self.canvas.draw_line(&baseline);
 
         for (p, label) in x_ticks.iter() {
             let x = self.x_domain_to_pixel(p);
-            let p1 = Point::new(x, y + self.options.tick_size + 5.0);
-            let p2 = Point::new(x, self.layout.plot_bottom + self.options.tick_size);
+            let p1 = Point::new(x, y + self.options.tick_size * 2.0);
+            let p2 = Point::new(x, y);
             let p3 = Point::new(x, y + self.options.tick_size);
             let horizontal_anchor = HorizontalAnchor::Middle;
 
@@ -192,7 +231,7 @@ where
     // y axis:
     fn draw_y_axis(&mut self, y_ticks: &[(f64, String)]) {
         self.canvas.set_pen(Color::black(), 1.0);
-        self.canvas.set_line_width(2.0);
+        self.canvas.set_line_width(1.0);
 
         if let Some(title) = &self.chart.y_axis.label {
             let p = Point::new(10.0, self.layout.height / 2.0);
@@ -200,13 +239,13 @@ where
                 .print_text(&p, HorizontalAnchor::Left, VerticalAnchor::Middle, title);
         }
 
-        let x = self.layout.plot_left - self.options.tick_size;
-        let baseline = vec![
-            Point::new(x, self.layout.plot_top),
-            Point::new(x, self.layout.plot_bottom),
-        ];
+        let x = self.layout.plot_left;
+        // let baseline = vec![
+        //     Point::new(x, self.layout.plot_top),
+        //     Point::new(x, self.layout.plot_bottom),
+        // ];
 
-        self.canvas.draw_line(&baseline);
+        // self.canvas.draw_line(&baseline);
 
         for (p, label) in y_ticks.iter() {
             let y = self.y_domain_to_pixel(*p);
@@ -263,16 +302,41 @@ where
     fn draw_cursor(&mut self) {
         if let Some(cursor) = &self.chart.cursor {
             if self.chart.x_axis.contains(&cursor.0) {
-                self.draw_cursor_line(cursor);
+                self.draw_cursor_line(&cursor.0, true);
                 // TBD: how usable / visually helpful is this??
                 self.draw_cursor_values(cursor);
             }
         }
+
+        if let Some(cursor) = &self.chart.cursor1 {
+            self.draw_cursor_line(cursor, false);
+        }
+
+        if let Some(cursor) = &self.chart.cursor2 {
+            self.draw_cursor_line(cursor, false);
+        }
+
+        if let (Some(cur1), Some(cur2)) = (&self.chart.cursor1, &self.chart.cursor2) {
+            let dt: f64 = (cur1.amount - cur2.amount).abs();
+            let F = if dt > 1e-10 {
+                let F: f64 = 1.0 / dt;
+                format!("{} Hz", F)
+            } else {
+                "inf".to_owned()
+            };
+            let text = format!("dt = {} s, F = {}", dt, F);
+            let p = Point::new(
+                self.layout.width - self.options.padding,
+                self.layout.height - self.options.padding,
+            );
+            self.canvas
+                .print_text(&p, HorizontalAnchor::Right, VerticalAnchor::Bottom, &text);
+        }
     }
 
     /// Draw the cursor as a line on the data.
-    fn draw_cursor_line(&mut self, cursor: &Cursor) {
-        let x = self.x_domain_to_pixel(&cursor.0);
+    fn draw_cursor_line(&mut self, cursor: &TimeStamp, draw_label: bool) {
+        let x = self.x_domain_to_pixel(&cursor);
         let top = Point::new(x, self.layout.plot_top);
         let bottom = Point::new(x, self.layout.plot_bottom);
         let points = vec![top, bottom];
@@ -280,6 +344,18 @@ where
         self.canvas.set_pen(Color::black(), 1.0);
         self.canvas.set_line_width(2.0);
         self.canvas.draw_line(&points);
+
+        if draw_label {
+            // cursor label:
+            let label_top = Point::new(x, self.layout.height - self.options.padding);
+            let label = self.chart.x_axis.get_cursor_label(&cursor);
+            self.canvas.print_text(
+                &label_top,
+                HorizontalAnchor::Middle,
+                VerticalAnchor::Bottom,
+                &label,
+            );
+        }
     }
 
     fn get_cursor_values(
@@ -757,12 +833,12 @@ where
 
     /// Transform x-value to pixel/point location.
     fn x_domain_to_pixel(&self, t: &TimeStamp) -> f64 {
-        transform::x_domain_to_pixel(t, &self.chart.x_axis, self.layout)
+        transform::x_domain_to_pixel(t, &self.chart.x_axis, &self.layout)
     }
 
     /// Convert a y value into a proper pixel y value.
     fn y_domain_to_pixel(&self, y: f64) -> f64 {
-        transform::y_domain_to_pixel(y, &self.chart.y_axis, self.layout)
+        transform::y_domain_to_pixel(y, &self.chart.y_axis, &self.layout)
     }
 }
 

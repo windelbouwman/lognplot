@@ -7,6 +7,10 @@ use crate::geometry::Size;
 pub struct ChartLayout {
     pub width: f64,
     pub height: f64,
+    pub y_axis_legend_width: f64,
+    pub title_height: f64,
+    pub x_axis_legend_height: f64,
+    pub info_bar_height: f64,
     pub plot_top: f64,
     pub plot_left: f64,
     pub plot_bottom: f64,
@@ -20,6 +24,10 @@ impl ChartLayout {
         ChartLayout {
             // TODO: casowary?
             width: size.width,
+            y_axis_legend_width: 140.0,
+            x_axis_legend_height: 60.0,
+            title_height: 0.0,
+            info_bar_height: 10.0,
             height: size.height,
             plot_top: 0.0,
             plot_left: 0.0,
@@ -36,9 +44,10 @@ impl ChartLayout {
     }
 
     pub fn layout(&mut self, options: &ChartOptions) {
-        self.plot_top = options.padding;
-        self.plot_left = 140.0;
-        self.plot_bottom = self.height - 60.0;
+        self.plot_top = options.padding + self.title_height;
+        self.plot_left = self.y_axis_legend_width;
+        self.plot_bottom = self.height
+            - (self.x_axis_legend_height + options.padding * 2.0 + self.info_bar_height);
         self.plot_right = self.width - options.padding;
         self.plot_height = self.plot_bottom - self.plot_top;
         self.plot_width = self.plot_right - self.plot_left;

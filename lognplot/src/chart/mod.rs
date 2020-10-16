@@ -36,5 +36,5 @@ where
     let options = ChartOptions::default();
     let mut layout = ChartLayout::new(size);
     layout.layout(&options);
-    draw_chart(&chart, canvas, &layout, &options);
+    draw_chart(&chart, canvas, &mut layout, &options);
 }

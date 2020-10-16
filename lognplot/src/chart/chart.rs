@@ -23,6 +23,12 @@ pub struct Chart {
 
     /// The position of the cursor.
     pub cursor: Option<Cursor>,
+
+    /// Horizontal cursor 1 for measuring
+    pub cursor1: Option<TimeStamp>,
+
+    /// Horizontal cursor 2 for measuring
+    pub cursor2: Option<TimeStamp>,
 }
 
 impl Default for Chart {
@@ -34,6 +40,8 @@ impl Default for Chart {
             grid: true,
             curves: vec![],
             cursor: None,
+            cursor1: None,
+            cursor2: None,
         }
     }
 }
@@ -60,6 +68,20 @@ impl Chart {
     /// Remove all curves from this plot.
     pub fn clear_curves(&mut self) {
         self.curves.clear();
+        self.cursor1 = None;
+        self.cursor2 = None;
+    }
+
+    pub fn set_cursor1(&mut self) {
+        if let Some((ts, _v)) = &self.cursor {
+            self.cursor1 = Some(ts.clone());
+        }
+    }
+
+    pub fn set_cursor2(&mut self) {
+        if let Some((ts, _v)) = &self.cursor {
+            self.cursor2 = Some(ts.clone());
+        }
     }
 
     /// Zoom horizontally.

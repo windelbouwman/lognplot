@@ -4,7 +4,7 @@ use super::TickLabels;
 use crate::geometry::Range;
 use crate::time::{TimeSpan, TimeStamp};
 
-use super::util::{calc_tick_spacing, ceil_to_multiple_of, format_at_scale};
+use super::util::{calc_tick_spacing, ceil_to_multiple_of, format_at_scale, get_scale};
 
 #[derive(Clone)]
 pub struct ValueAxis {
@@ -102,11 +102,22 @@ impl ValueAxis {
         self.set_limits(begin, end);
     }
 
+    /// Retrieve a good value for a cursor label!
+    pub fn get_cursor_label(&self, ts: &TimeStamp) -> String {
+        let domain = self.range.end() - self.range.begin();
+        let scale = get_scale(domain);
+        let t = ts.amount;
+        format_at_scale(t, scale - 2)
+    }
+
     pub fn calc_tiks(&self, n_ticks: usize) -> TickLabels {
         calc_tiks(self.range.begin(), self.range.end(), n_ticks)
     }
 
     /// Calculate date time tick markers.
+    ///
+    /// This returns an optional prefix (offset)
+    /// and a set of tick labels.
     pub fn calc_date_tiks(&self, n_ticks: usize) -> (Option<String>, TickLabels) {
         let begin = self.range.begin();
         // If time in some range between 1973 and 2096, use data time stuff:
@@ -123,7 +134,8 @@ impl ValueAxis {
 /// a given range.
 fn calc_tiks(begin: f64, end: f64, n_ticks: usize) -> TickLabels {
     trace!("Calculating ticks!");
-    let (scale, tick_step) = calc_tick_spacing(end - begin, n_ticks);
+    let domain = end - begin;
+    let (scale, tick_step) = calc_tick_spacing(domain, n_ticks);
     trace!("tickz {:?}", tick_step);
 
     let first_tick = ceil_to_multiple_of(begin, tick_step);
