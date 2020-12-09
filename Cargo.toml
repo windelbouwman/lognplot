@@ -4,5 +4,6 @@ members = [
     "clognplot",
     "lognplot",
     "lognplotgtk",
+    "logshipper",
     "swviewer",
 ]
