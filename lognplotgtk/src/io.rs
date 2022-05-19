@@ -86,11 +86,11 @@ fn export_db(db: TsDbHandle, file: &hdf5::File) -> hdf5::Result<()> {
             // Construct ndarray:
             let signal = ndarray::arr2(&data);
 
-            // Create hdf5 signal, and write it:
-            let sig1 = group
-                .new_dataset::<f64>()
-                .create(&signal_name, (data.len(), 2))?;
-            sig1.write(&signal)?;
+            // Create hdf5 dataset for this signal:
+            group
+                .new_dataset_builder()
+                .with_data(&signal)
+                .create(signal_name.as_str())?;
         }
     }
 
