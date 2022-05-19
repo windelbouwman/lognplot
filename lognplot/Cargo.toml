@@ -24,7 +24,7 @@ superslice = "1"
 serde_cbor = { git = "https://github.com/windelbouwman/cbor" }
 
 # Dependencies for cairo:
-cairo-rs = { version = "0.8", optional = true }
+cairo-rs = { version = "0.15", optional = true }
 
 # Dependencies when we require server feature:
 tokio = { version = "0.2", optional = true, features = ["tcp", "rt-core", "stream"] }

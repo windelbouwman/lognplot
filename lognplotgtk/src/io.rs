@@ -19,8 +19,7 @@ pub fn save_data_as_hdf5(top_level: &gtk::Window, app_state: &GuiStateHandle) {
         ],
     );
     let res = dialog.run();
-    let filename = dialog.get_filename();
-    dialog.destroy();
+    let filename = dialog.filename();
     if let gtk::ResponseType::Accept = res {
         if let Some(filename) = filename {
             info!("Saving data to filename: {:?}", filename);
@@ -47,8 +46,7 @@ pub fn load_data_from_hdf5(top_level: &gtk::Window, app_state: &GuiStateHandle) 
     );
 
     let res = dialog.run();
-    let filename = dialog.get_filename();
-    dialog.destroy();
+    let filename = dialog.filename();
     if let (gtk::ResponseType::Accept, Some(filename)) = (res, filename) {
         info!("Loading data from filename: {:?}", filename);
         let res = { app_state.borrow().load(&filename) };

@@ -11,5 +11,4 @@ pub fn show_error(top_level: &gtk::Window, message: &str) {
         &message,
     );
     error_dialog.run();
-    error_dialog.destroy();
 }

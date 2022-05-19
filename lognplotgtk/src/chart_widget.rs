@@ -334,12 +334,12 @@ impl ChartState {
         debug!(
             "Scroll wheel event! {:?}, {:?}, {:?}",
             e,
-            e.get_delta(),
-            e.get_direction()
+            e.delta(),
+            e.direction()
         );
-        let pixel_x_pos = e.get_position().0;
+        let pixel_x_pos = e.position().0;
         let around = Some(pixel_x_pos);
-        match e.get_direction() {
+        match e.direction() {
             gdk::ScrollDirection::Up => {
                 self.zoom_in_horizontal(around);
             }
@@ -358,8 +358,8 @@ impl ChartState {
     }
 
     fn on_resize_event(&mut self, allocation: &gdk::Rectangle) {
-        let width: f64 = allocation.width as f64;
-        let height: f64 = allocation.height as f64;
+        let width: f64 = allocation.width() as f64;
+        let height: f64 = allocation.height() as f64;
         self.chart_layout.resize(width, height);
     }
 
@@ -393,7 +393,7 @@ impl ChartState {
         if is_focus {
             let padding = 1.0;
             gtk::render_focus(
-                &self.draw_area.get_style_context(),
+                &self.draw_area.style_context(),
                 &canvas,
                 padding,
                 padding,
@@ -406,11 +406,11 @@ impl ChartState {
     }
 
     fn on_motion_event(&mut self, e: &gdk::EventMotion) -> Inhibit {
-        let pos = e.get_position();
+        let pos = e.position();
         debug!("Mouse motion! {:?}", pos);
         self.set_cursor(Some((pos.0, pos.1)));
 
-        if e.get_state().contains(gdk::ModifierType::BUTTON1_MASK) {
+        if e.state().contains(gdk::ModifierType::BUTTON1_MASK) {
             self.move_drag(pos.0, pos.1);
         }
         self.repaint();
@@ -420,41 +420,41 @@ impl ChartState {
 
     fn on_key(&mut self, key: &gdk::EventKey) -> Inhibit {
         self.disable_tailing();
-        match key.get_keyval() {
-            gdk::enums::key::Up | gdk::enums::key::w => {
+        match key.keyval() {
+            gdk::keys::constants::Up | gdk::keys::constants::w => {
                 self.pan_up();
             }
-            gdk::enums::key::Down | gdk::enums::key::s => {
+            gdk::keys::constants::Down | gdk::keys::constants::s => {
                 self.pan_down();
             }
-            gdk::enums::key::Left | gdk::enums::key::a => {
+            gdk::keys::constants::Left | gdk::keys::constants::a => {
                 self.pan_left();
             }
-            gdk::enums::key::Right | gdk::enums::key::d => {
+            gdk::keys::constants::Right | gdk::keys::constants::d => {
                 self.pan_right();
             }
-            gdk::enums::key::i => {
+            gdk::keys::constants::i => {
                 self.zoom_in_vertical();
             }
-            gdk::enums::key::k => {
+            gdk::keys::constants::k => {
                 self.zoom_out_vertical();
             }
-            gdk::enums::key::KP_Add | gdk::enums::key::l => {
+            gdk::keys::constants::KP_Add | gdk::keys::constants::l => {
                 self.zoom_in_horizontal(None);
             }
-            gdk::enums::key::KP_Subtract | gdk::enums::key::j => {
+            gdk::keys::constants::KP_Subtract | gdk::keys::constants::j => {
                 self.zoom_out_horizontal(None);
             }
-            gdk::enums::key::Home | gdk::enums::key::Return => {
+            gdk::keys::constants::Home | gdk::keys::constants::Return => {
                 self.zoom_fit();
             }
-            gdk::enums::key::BackSpace => {
+            gdk::keys::constants::BackSpace => {
                 self.clear_curves();
             }
-            gdk::enums::key::_1 => {
+            gdk::keys::constants::_1 => {
                 self.set_cursor1();
             }
-            gdk::enums::key::_2 => {
+            gdk::keys::constants::_2 => {
                 self.set_cursor2();
             }
 
@@ -487,7 +487,7 @@ pub fn setup_drawing_area(
 
     // Connect draw event:
     draw_area.connect_draw(
-        clone!(@strong chart_state => move |_, c| { chart_state.borrow_mut().draw_on_canvas(c) } ),
+        clone!(@strong chart_state => move |_, c|  chart_state.borrow_mut().draw_on_canvas(c)  ),
     );
 
     // Connect drop event:
@@ -500,7 +500,7 @@ pub fn setup_drawing_area(
 
     draw_area.connect_drag_data_received(
         clone!(@strong chart_state => move |w, _dc, _x, _y, data, _info, _time| {
-            let mime_payload: String = data.get_text().expect("Must work!!").to_string();
+            let mime_payload: String = data.text().expect("Must work!!").to_string();
             if let Ok(signal_names) = serde_json::from_str::<Vec<String>>(&mime_payload) {
                 info!("DROP {:?}", signal_names);
                 for signal_name in signal_names {
@@ -516,7 +516,7 @@ pub fn setup_drawing_area(
     );
 
     draw_area.connect_button_press_event(clone!(@strong chart_state => move |w, e| {
-        let pos = e.get_position();
+        let pos = e.position();
         debug!("Mouse press! {:?}", pos);
         chart_state.borrow_mut().start_drag(pos.0, pos.1);
         w.grab_focus();
@@ -543,7 +543,7 @@ pub fn setup_drawing_area(
 
     // Connect key event:
     draw_area.connect_key_press_event(
-        clone!(@strong chart_state => move |_, k| { chart_state.borrow_mut().on_key(k) } ),
+        clone!(@strong chart_state => move |_, k|  chart_state.borrow_mut().on_key(k)  ),
     );
 
     setup_tailing_timer(chart_state.clone());
@@ -552,8 +552,8 @@ pub fn setup_drawing_area(
 }
 
 fn get_size(drawing_area: &gtk::DrawingArea) -> Size {
-    let width = drawing_area.get_allocated_width() as f64;
-    let height = drawing_area.get_allocated_height() as f64;
+    let width = drawing_area.allocated_width() as f64;
+    let height = drawing_area.allocated_height() as f64;
     Size::new(width, height)
 }
 
@@ -564,5 +564,5 @@ fn setup_tailing_timer(chart_state: ChartStateHandle) {
         chart_state.borrow_mut().do_tailing();
         gtk::prelude::Continue(true)
     };
-    gtk::timeout_add(100, tick);
+    glib::timeout_add_local(std::time::Duration::from_millis(100), tick);
 }

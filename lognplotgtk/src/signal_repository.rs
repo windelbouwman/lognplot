@@ -35,14 +35,18 @@ impl SignalBrowser {
             let row = self.model_map.len() as i32;
             self.model_map.insert(signal_name.clone(), row);
             self.model
-                .set(&iter, &[0, 1, 2], &[&signal_name, &"-", &"-"]);
+                .set(&iter, &[(0, signal_name), (1, &"-"), (2, &"-")]);
 
             updates += 1;
             if updates > 50 {
                 // Pfew, take a brake to allow GUI to be responsive.
                 debug!("Taking a break adding new signals in signal panel");
                 updates = 0;
-                glib::timeout_future_with_priority(glib::Priority::default(), 100).await;
+                glib::timeout_future_with_priority(
+                    glib::Priority::default(),
+                    std::time::Duration::from_millis(100),
+                )
+                .await;
             }
         }
     }
@@ -56,8 +60,8 @@ impl SignalBrowser {
         for signal_name in changed_signals {
             if let Some(summary) = self.db.quick_summary(&signal_name) {
                 let row = self.model_map[signal_name];
-                let path: gtk::TreePath = gtk::TreePath::new_from_indicesv(&[row]);
-                if let Some(iter2) = self.model.get_iter(&path) {
+                let path: gtk::TreePath = gtk::TreePath::from_indicesv(&[row]);
+                if let Some(iter2) = self.model.iter(&path) {
                     self.model
                         .set_value(&iter2, 1, &summary.count.to_string().to_value());
                     self.model
@@ -68,7 +72,11 @@ impl SignalBrowser {
                     // Pfew, take a brake to allow GUI to be responsive.
                     debug!("Taking a break updating signal changes in panel");
                     updates = 0;
-                    glib::timeout_future_with_priority(glib::Priority::default(), 100).await;
+                    glib::timeout_future_with_priority(
+                        glib::Priority::default(),
+                        std::time::Duration::from_millis(100),
+                    )
+                    .await;
                 }
             }
         }
@@ -93,7 +101,7 @@ pub fn setup_signal_repository(builder: &gtk::Builder, app_state: GuiStateHandle
 
     setup_columns(builder);
     setup_filter_model(builder, &model);
-    let tree_view: gtk::TreeView = builder.get_object("signal_tree_view").unwrap();
+    let tree_view: gtk::TreeView = builder.object("signal_tree_view").unwrap();
     setup_drag_drop(&tree_view);
     setup_dropping(&tree_view, app_state.clone());
     setup_activate(&tree_view, app_state.clone());
@@ -123,7 +131,11 @@ fn setup_notify_change(mut signal_pane: SignalBrowser) {
             debug!("Done with updates!");
 
             // Delay to emulate rate limiting of events.
-            glib::timeout_future_with_priority(glib::Priority::default(), 200).await;
+            glib::timeout_future_with_priority(
+                glib::Priority::default(),
+                std::time::Duration::from_millis(200),
+            )
+            .await;
 
             // Re-query database for some extra samples:
             signal_pane.db.poll_events();
@@ -132,9 +144,9 @@ fn setup_notify_change(mut signal_pane: SignalBrowser) {
 }
 
 fn setup_columns(builder: &gtk::Builder) {
-    let name_column: gtk::TreeViewColumn = builder.get_object("column_name").unwrap();
-    let size_column: gtk::TreeViewColumn = builder.get_object("column_size").unwrap();
-    let last_value_column: gtk::TreeViewColumn = builder.get_object("column_last_value").unwrap();
+    let name_column: gtk::TreeViewColumn = builder.object("column_name").unwrap();
+    let size_column: gtk::TreeViewColumn = builder.object("column_size").unwrap();
+    let last_value_column: gtk::TreeViewColumn = builder.object("column_last_value").unwrap();
 
     let cell = gtk::CellRendererText::new();
     name_column.pack_start(&cell, true);
@@ -150,8 +162,8 @@ fn setup_columns(builder: &gtk::Builder) {
 }
 
 fn setup_filter_model(builder: &gtk::Builder, model: &gtk::TreeStore) {
-    let tree_view: gtk::TreeView = builder.get_object("signal_tree_view").unwrap();
-    let filter_edit: gtk::SearchEntry = builder.get_object("signal_search_entry").unwrap();
+    let tree_view: gtk::TreeView = builder.object("signal_tree_view").unwrap();
+    let filter_edit: gtk::SearchEntry = builder.object("signal_search_entry").unwrap();
 
     // Filter model:
     // Sort model:
@@ -160,7 +172,7 @@ fn setup_filter_model(builder: &gtk::Builder, model: &gtk::TreeStore) {
     let filter_model = gtk::TreeModelFilter::new(&sort_model, None);
 
     filter_model.set_visible_func(clone!(@strong filter_edit => move |m, i| {
-        let txt = filter_edit.get_text().unwrap().to_string();
+        let txt = filter_edit.text().to_string();
         signal_filter_func(m, i, txt)
     }));
 
@@ -172,8 +184,7 @@ fn setup_filter_model(builder: &gtk::Builder, model: &gtk::TreeStore) {
 }
 
 fn signal_filter_func(model: &gtk::TreeModel, iter: &gtk::TreeIter, filter_txt: String) -> bool {
-    let optional_name = model.get_value(&iter, 0).get::<String>().unwrap();
-    if let Some(name) = optional_name {
+    if let Ok(name) = model.value(&iter, 0).get::<String>() {
         filter_txt.is_empty() || name.contains(&filter_txt)
     } else {
         true
@@ -182,7 +193,7 @@ fn signal_filter_func(model: &gtk::TreeModel, iter: &gtk::TreeIter, filter_txt: 
 
 /// Connect drag signal.
 fn setup_drag_drop(tree_view: &gtk::TreeView) {
-    let selection = tree_view.get_selection();
+    let selection = tree_view.selection();
     selection.set_mode(gtk::SelectionMode::Multiple);
 
     let targets = vec![gtk::TargetEntry::new(
@@ -216,8 +227,8 @@ fn setup_dropping(tree_view: &gtk::TreeView, app_state: GuiStateHandle) {
     tree_view.drag_dest_set(gtk::DestDefaults::ALL, &targets, gdk::DragAction::COPY);
 
     tree_view.connect_drag_data_received(move |_w, _dc, _x, _y, data, _info, _time| {
-        _w.stop_signal_emission("drag_data_received");
-        let uris: Vec<String> = data.get_uris().iter().map(|u| u.to_string()).collect();
+        _w.stop_signal_emission_by_name("drag_data_received");
+        let uris: Vec<String> = data.uris().iter().map(|u| u.to_string()).collect();
         info!("DROP {:?}", uris);
         for uri in uris {
             if let Err(err) = handle_drop_uri(uri, &app_state) {
@@ -248,11 +259,11 @@ fn handle_drop_uri(uri: String, app_state: &GuiStateHandle) -> Result<(), String
 }
 
 fn get_selected_signal_names(w: &gtk::TreeView) -> Vec<String> {
-    let selector = w.get_selection();
-    let (selected_rows, tree_model) = selector.get_selected_rows();
+    let selector = w.selection();
+    let (selected_rows, tree_model) = selector.selected_rows();
     let mut selected_names: Vec<String> = vec![];
     for selected_row in selected_rows {
-        if let Some(tree_iter) = tree_model.get_iter(&selected_row) {
+        if let Some(tree_iter) = tree_model.iter(&selected_row) {
             let value = get_signal_name(&tree_model, &tree_iter);
             selected_names.push(value);
         }
@@ -262,8 +273,8 @@ fn get_selected_signal_names(w: &gtk::TreeView) -> Vec<String> {
 
 fn setup_activate(tree_view: &gtk::TreeView, app_state: GuiStateHandle) {
     tree_view.connect_row_activated(move |tv, path, _| {
-        let model = tv.get_model().unwrap();
-        let iter = model.get_iter(path).unwrap();
+        let model = tv.model().unwrap();
+        let iter = model.iter(path).unwrap();
         let value = get_signal_name(&model, &iter);
 
         debug!("Signal activated: {}, adding to chart.", value);
@@ -275,22 +286,22 @@ fn setup_activate(tree_view: &gtk::TreeView, app_state: GuiStateHandle) {
 fn setup_key_press_handler(tree_view: &gtk::TreeView, app_state: GuiStateHandle) {
     tree_view.connect_key_press_event(move |tv, key| {
         let selected_signals = get_selected_signal_names(&tv);
-        let chart_target = match key.get_keyval() {
-            gdk::enums::key::_1 => Some(1),
-            gdk::enums::key::_2 => Some(2),
-            gdk::enums::key::_3 => Some(3),
-            gdk::enums::key::_4 => Some(4),
-            gdk::enums::key::_5 => Some(5),
-            gdk::enums::key::_6 => Some(6),
-            gdk::enums::key::_7 => Some(7),
-            gdk::enums::key::_8 => Some(8),
-            gdk::enums::key::_9 => Some(9),
-            gdk::enums::key::A => Some(10),
-            gdk::enums::key::B => Some(11),
-            gdk::enums::key::C => Some(12),
-            gdk::enums::key::D => Some(13),
-            gdk::enums::key::E => Some(14),
-            gdk::enums::key::F => Some(15),
+        let chart_target = match key.keyval() {
+            gdk::keys::constants::_1 => Some(1),
+            gdk::keys::constants::_2 => Some(2),
+            gdk::keys::constants::_3 => Some(3),
+            gdk::keys::constants::_4 => Some(4),
+            gdk::keys::constants::_5 => Some(5),
+            gdk::keys::constants::_6 => Some(6),
+            gdk::keys::constants::_7 => Some(7),
+            gdk::keys::constants::_8 => Some(8),
+            gdk::keys::constants::_9 => Some(9),
+            gdk::keys::constants::A => Some(10),
+            gdk::keys::constants::B => Some(11),
+            gdk::keys::constants::C => Some(12),
+            gdk::keys::constants::D => Some(13),
+            gdk::keys::constants::E => Some(14),
+            gdk::keys::constants::F => Some(15),
             _ => None,
         };
         if chart_target.is_some() {
@@ -309,5 +320,5 @@ fn setup_key_press_handler(tree_view: &gtk::TreeView, app_state: GuiStateHandle)
 
 /// Given a model and an iterator get the signal name.
 fn get_signal_name(model: &gtk::TreeModel, iter: &gtk::TreeIter) -> String {
-    model.get_value(iter, 0).get::<String>().unwrap().unwrap()
+    model.value(iter, 0).get::<String>().unwrap()
 }

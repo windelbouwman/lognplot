@@ -52,11 +52,11 @@ impl<'a> Canvas for CairoCanvas<'a> {
             0.0,
             2.0 * std::f64::consts::PI,
         );
-        self.cr.stroke();
+        self.cr.stroke().unwrap();
     }
 
     fn text_size(&self, text: &str) -> Size {
-        let extents = self.cr.text_extents(text);
+        let extents = self.cr.text_extents(text).unwrap();
         Size::new(extents.width, extents.height)
     }
 
@@ -72,7 +72,7 @@ impl<'a> Canvas for CairoCanvas<'a> {
         // self.cr.stroke();
 
         // https://www.cairographics.org/manual/cairo-cairo-scaled-font-t.html#cairo-text-extents-t
-        let extents = self.cr.text_extents(text);
+        let extents = self.cr.text_extents(text).unwrap();
 
         let x_offset = match horizontal_anchor {
             HorizontalAnchor::Left => 0.0,
@@ -88,13 +88,13 @@ impl<'a> Canvas for CairoCanvas<'a> {
         let y = p.y() - extents.y_bearing - y_offset;
 
         self.cr.move_to(x, y);
-        self.cr.show_text(text);
+        self.cr.show_text(text).unwrap();
     }
 
     fn draw_line(&mut self, points: &[Point]) {
         if points.len() > 1 {
             self.make_path(points);
-            self.cr.stroke();
+            self.cr.stroke().unwrap();
         }
     }
 
@@ -102,7 +102,7 @@ impl<'a> Canvas for CairoCanvas<'a> {
         if points.len() > 1 {
             self.make_path(points);
             self.cr.close_path();
-            self.cr.stroke();
+            self.cr.stroke().unwrap();
         }
     }
 
@@ -110,7 +110,7 @@ impl<'a> Canvas for CairoCanvas<'a> {
         if points.len() > 1 {
             self.make_path(points);
             self.cr.close_path();
-            self.cr.fill();
+            self.cr.fill().unwrap();
         }
     }
 }
