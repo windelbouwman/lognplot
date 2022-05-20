@@ -10,7 +10,7 @@ use std::str::FromStr;
 pub struct Curve {
     pub data: CurveData,
     stroke: Stroke,
-    legend: Option<String>,
+    // legend: Option<String>,
 }
 
 /// A dataset. Can be either a trace, or a vector of points!
@@ -124,12 +124,12 @@ fn point_summary(points: &[Point]) -> Option<Summary> {
 impl Curve {
     pub fn new(data: CurveData, color: &str) -> Self {
         let stroke = Stroke::from_str(color).unwrap();
-        let legend = None;
+        // let legend = None;
 
         Self {
             data,
             stroke,
-            legend,
+            // legend,
         }
     }
 

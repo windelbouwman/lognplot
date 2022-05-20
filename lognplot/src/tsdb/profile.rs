@@ -4,8 +4,8 @@
 //! callstack over time manner.
 
 use super::CountMetrics;
-use super::Observation;
-use crate::time::TimeStamp;
+// use super::Observation;
+// use crate::time::TimeStamp;
 use std::fmt;
 
 /// A single profiling event, such as function enter or function
@@ -31,6 +31,9 @@ impl fmt::Display for ProfileEvent {
         }
     }
 }
+
+/*
+TODO: future work, contrapt a sort of running function call trace
 
 /// A structure holding a running call stack.
 struct CallTrack {
@@ -75,3 +78,5 @@ impl Call {
         }
     }
 }
+
+*/

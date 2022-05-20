@@ -88,7 +88,7 @@ async fn process_peer_events(
                     // TODO: what to do in this case?
                 }
             },
-            x = kill_switch_endpoint => {
+            _x = kill_switch_endpoint => {
                 info!("Killing peer event processing connection!");
                 break;
             }

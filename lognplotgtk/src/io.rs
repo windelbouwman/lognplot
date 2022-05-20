@@ -118,7 +118,7 @@ fn import_data_inner(db: TsDbHandle, file: &hdf5::File) -> hdf5::Result<()> {
         if shape[1] == 2 {
             // println!("Let go!");
             let mut samples = vec![];
-            for row in data.genrows() {
+            for row in data.rows() {
                 assert!(row.len() == 2);
                 let timestamp = TimeStamp::new(row[0]);
                 let value = Sample::new(row[1]);

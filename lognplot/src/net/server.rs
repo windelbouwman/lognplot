@@ -91,7 +91,7 @@ async fn server_prog(
         );
 
         futures::select! {
-            x = kill_switch_receiver => {
+            _x = kill_switch_receiver => {
                 info!("Server shutdown by kill switch.");
                 break;
             },

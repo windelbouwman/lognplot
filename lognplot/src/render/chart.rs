@@ -318,13 +318,13 @@ where
 
         if let (Some(cur1), Some(cur2)) = (&self.chart.cursor1, &self.chart.cursor2) {
             let dt: f64 = (cur1.amount - cur2.amount).abs();
-            let F = if dt > 1e-10 {
-                let F: f64 = 1.0 / dt;
-                format!("{} Hz", F)
+            let freq = if dt > 1e-10 {
+                let freq: f64 = 1.0 / dt;
+                format!("{} Hz", freq)
             } else {
                 "inf".to_owned()
             };
-            let text = format!("dt = {} s, F = {}", dt, F);
+            let text = format!("dt = {} s, F = {}", dt, freq);
             let p = Point::new(
                 self.layout.width - self.options.padding,
                 self.layout.height - self.options.padding,

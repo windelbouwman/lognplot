@@ -27,7 +27,7 @@ pub struct TimeTracker {
     /// Estimation covariance
     ///
     /// This value will increase when the estimate becomes uncertain.
-    P: Matrix2<f64>,
+    covariance: Matrix2<f64>,
 
     // previous timestamp!
     prev: Option<Instant>,
@@ -42,7 +42,7 @@ impl TimeTracker {
     pub fn new(perf_tracer: Arc<AnyTracer>, trace_prefix: &str) -> Self {
         TimeTracker {
             x_hat: Vector2::zeros(),
-            P: Matrix2::identity(),
+            covariance: Matrix2::identity(),
             prev: None,
             perf_tracer,
             trace_prefix: trace_prefix.to_owned(),
@@ -65,29 +65,30 @@ impl TimeTracker {
 
     fn reset(&mut self, observation: f64) {
         self.x_hat = Vector2::new(observation, 1.0);
-        self.P = Matrix2::identity();
+        self.covariance = Matrix2::identity();
         self.prev = None;
     }
 
     // Advance the model, to predict the new value
     pub fn predict(&mut self) {
         // Only predict when we are somewhat accurate:
-        if self.P.norm() < 10.0 {
+        if self.covariance.norm() < 10.0 {
             let dt = self.get_dt();
             // State transition model:
-            let F = Matrix2::new(1.0, dt, 0.0, 1.0);
+            let transition_model = Matrix2::new(1.0, dt, 0.0, 1.0);
 
             // Assume (for now) time elapses one second per second:
             // let time_speed = 1.0;  // (s/s)
 
             // Estimated time increases:
-            self.x_hat = F * self.x_hat;
+            self.x_hat = transition_model * self.x_hat;
 
-            // Some noise on the prediction:
-            let Q = Matrix2::new(0.001 * dt, 0.0, 0.0, 0.001 * dt);
+            // Some noise on the prediction (Q):
+            let noise_model = Matrix2::new(0.001 * dt, 0.0, 0.0, 0.001 * dt);
 
             // This estimate becomes more unpredictable over time
-            self.P = F * self.P * F.transpose() + Q;
+            self.covariance =
+                transition_model * self.covariance * transition_model.transpose() + noise_model;
 
             // nalgebra matrices are rendered pretty sweet in ascii!
             // println!("Predicted: x_hat={} P={}", self.x_hat, self.P);
@@ -101,30 +102,36 @@ impl TimeTracker {
         // Update to the last prediction possible:
         self.predict();
 
-        // Observation model:
-        let H = RowVector2::new(1.0, 0.0);
+        // Observation model (H):
+        let observation_model = RowVector2::new(1.0, 0.0);
 
         // Innovation:
-        let y: Matrix1<f64> = Matrix1::new(observation) - H * self.x_hat;
+        let y: Matrix1<f64> = Matrix1::new(observation) - observation_model * self.x_hat;
 
         if y.norm() > 5.0 {
             self.reset(observation);
         } else {
-            // Some measurement noise:
-            let R: Matrix1<f64> = Matrix1::new(0.01);
+            // Some measurement noise (R):
+            let measurement_noise: Matrix1<f64> = Matrix1::new(0.01);
 
-            // Innovation covariance:
-            let S: Matrix1<f64> = H * self.P * H.transpose() + R;
+            // Innovation covariance (S):
+            let innovation_covariance: Matrix1<f64> =
+                observation_model * self.covariance * observation_model.transpose()
+                    + measurement_noise;
 
             // Optimal Kalman gain:
-            let K: Vector2<f64> =
-                self.P * H.transpose() * S.try_inverse().expect("Inverse must work");
+            let kalman_gain: Vector2<f64> = self.covariance
+                * observation_model.transpose()
+                * innovation_covariance
+                    .try_inverse()
+                    .expect("Inverse must work");
 
             // Update estimate:
-            self.x_hat = self.x_hat + K * y;
+            self.x_hat = self.x_hat + kalman_gain * y;
 
             // Update variance:
-            self.P = (Matrix2::identity() - K * H) * self.P;
+            self.covariance =
+                (Matrix2::identity() - kalman_gain * observation_model) * self.covariance;
 
             // println!(
             //     "Updated with value {}: x_hat={} P={}",
@@ -151,22 +158,22 @@ impl TimeTracker {
         self.perf_tracer.log_metric(
             &format!("META.{}.P[0, 0]", self.trace_prefix),
             t1,
-            self.P[(0, 0)],
+            self.covariance[(0, 0)],
         );
         self.perf_tracer.log_metric(
             &format!("META.{}.P[0, 1]", self.trace_prefix),
             t1,
-            self.P[(0, 1)],
+            self.covariance[(0, 1)],
         );
         self.perf_tracer.log_metric(
             &format!("META.{}.P[1, 0]", self.trace_prefix),
             t1,
-            self.P[(1, 0)],
+            self.covariance[(1, 0)],
         );
         self.perf_tracer.log_metric(
             &format!("META.{}.P[1, 1]", self.trace_prefix),
             t1,
-            self.P[(1, 1)],
+            self.covariance[(1, 1)],
         );
     }
 

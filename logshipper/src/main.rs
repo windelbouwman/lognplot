@@ -1,7 +1,6 @@
-
-use std::io::{self, BufRead};
-use regex::Regex;
 use lognplot::net::TcpClient;
+use regex::Regex;
+use std::io::{self, BufRead};
 use std::str::FromStr;
 
 fn main() {

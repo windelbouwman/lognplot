@@ -71,7 +71,7 @@ async fn peer_prog(
                     break;
                 }
             },
-            x = kill_switch_endpoint => {
+            _x = kill_switch_endpoint => {
                 info!("Killing client connection!");
                 break;
             }
