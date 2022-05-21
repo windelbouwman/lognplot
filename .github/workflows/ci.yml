@@ -19,40 +19,23 @@ jobs:
 
   windows_build:
     name: Build on windows
-    if: false  # TODO: fix windows build
     runs-on: windows-latest
     steps:
       - name: Checkout source code
         uses: actions/checkout@v2
+      - name: Setup msys2 environment
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: mingw-w64-x86_64-gtk3 mingw-w64-x86_64-hdf5
       - name: Install rust toolchain
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
           profile: minimal
-      - name: Install vcpkg and dependencies
-        env:
-          vcpkgResponseFile: ${{github.workspace}}/.github/workflows/response_file.txt
-        uses: lukka/run-vcpkg@v3
-        with:
-          vcpkgTriplet: x64-windows
-          vcpkgGitCommitId: 6185aa76504a5025f36754324abf307cc776f3da
-          vcpkgArguments: '@${{env.vcpkgResponseFile}}'
-          appendedCacheKey: ${{hashFiles(env.vcpkgResponseFile)}}
-      - name: Fix gtk lib files
-        run: |
-          Copy-Item ${{github.workspace}}\vcpkg\installed\x64-windows\lib\gtk-3.0.lib -Destination ${{github.workspace}}\vcpkg\installed\x64-windows\lib\gtk-3.lib
-          Copy-Item ${{github.workspace}}\vcpkg\installed\x64-windows\lib\gdk-3.0.lib -Destination ${{github.workspace}}\vcpkg\installed\x64-windows\lib\gdk-3.lib
-          Copy-Item ${{github.workspace}}\vcpkg\installed\x64-windows\bin\gtk-3.0.dll -Destination ${{github.workspace}}\vcpkg\installed\x64-windows\bin\gtk-3.dll
-          Copy-Item ${{github.workspace}}\vcpkg\installed\x64-windows\bin\gdk-3.0.dll -Destination ${{github.workspace}}\vcpkg\installed\x64-windows\bin\gdk-3.dll
-      - name: Add vcpkg bin folder to path
-        run: echo "::add-path::${{github.workspace}}\vcpkg\installed\x64-windows\bin"
       - name: Build rust code
-        env:
-          HDF5_DIR: ${{github.workspace}}\vcpkg\installed\x64-windows
-          GTK_LIB_DIR: ${{github.workspace}}\vcpkg\installed\x64-windows\lib
-          LIB: ${{github.workspace}}\vcpkg\installed\x64-windows\lib
         run: cargo build --release -p lognplotgtk -p lognplot -p clognplot
-      - run: cargo test -p lognplot
       - name: Archive executable
         uses: actions/upload-artifact@v2
         with:
