@@ -53,8 +53,7 @@ impl TcpClient {
     }
 
     fn write_sample_batch(&mut self, payload: SampleBatch) -> std::io::Result<()> {
-        // Encode data
-        let data = serde_cbor::to_vec(&payload).unwrap();
+        let data = payload.to_bytes();
         self.write_blob(data)
     }
 

@@ -87,17 +87,13 @@ fn process_packet(
     packet: &[u8],
     peer_event_sink: &mpsc::UnboundedSender<PeerEvent>,
 ) {
-    // debug!("Got: {:?}", &packet);
-
     peer_event_sink
         .unbounded_send(PeerEvent::BytesReceived(packet.len()))
         .unwrap();
 
     // try to decode cbor package:
-    match serde_cbor::from_slice::<SampleBatch>(&packet) {
+    match SampleBatch::from_bytes(packet) {
         Ok(batch) => {
-            // let batch: SampleBatch =
-            // println!("DAATAA: {:?}", batch.size());
             batch.to_db(db);
         }
         Err(err) => {

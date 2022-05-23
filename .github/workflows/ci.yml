@@ -32,9 +32,11 @@ jobs:
       - name: Install rust toolchain
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: stable
+          toolchain: stable-gnu
           profile: minimal
       - name: Build rust code
+        env:
+          HDF5_DIR: ${{github.workspace}}\msys64\mingw64
         run: cargo build --release -p lognplotgtk -p lognplot -p clognplot
       - name: Archive executable
         uses: actions/upload-artifact@v2

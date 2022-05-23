@@ -104,6 +104,20 @@ impl SampleBatch {
             }
         }
     }
+
+    /// Encode data
+    pub fn to_bytes(&self) -> Vec<u8> {
+        let mut data: Vec<u8> = vec![];
+        ciborium::ser::into_writer(self, &mut data).unwrap();
+        data
+    }
+
+    pub fn from_bytes(data: &[u8]) -> Result<Self, String> {
+        match ciborium::de::from_reader(data) {
+            Ok(x) => Ok(x),
+            Err(e) => Err(format!("{:?}", e)),
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -186,8 +200,8 @@ mod tests {
     /// Check a simple roundtrip operation (to bytes and back to data)
     fn roundtrip() {
         let batch = SampleBatch::new_sample("bla".to_string(), 3.14, 2.5);
-        let data = serde_cbor::to_vec(&batch).unwrap();
-        let batch2: SampleBatch = serde_cbor::from_slice(&data).unwrap();
+        let data = batch.to_bytes();
+        let batch2: SampleBatch = SampleBatch::from_bytes(&data).unwrap();
         assert_eq!(batch.name, batch2.name);
     }
 }
