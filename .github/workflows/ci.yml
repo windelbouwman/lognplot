@@ -18,7 +18,7 @@ jobs:
       - run: cargo test -p lognplot
 
   windows_build:
-    name: Build on windows
+    name: Build on windows (MINGW64/GNU build)
     runs-on: windows-latest
     steps:
       - name: Checkout source code
@@ -40,7 +40,7 @@ jobs:
       - name: Build rust code
         env:
           HDF5_DIR: D:\a\_temp\msys64\mingw64
-        run: cargo build --release -p lognplotgtk
+        run: cargo build --release -p lognplotgtk --no-default-features
       - name: Archive executable
         uses: actions/upload-artifact@v2
         with:
