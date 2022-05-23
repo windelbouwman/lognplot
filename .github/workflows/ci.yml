@@ -37,6 +37,7 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable-gnu
+          default: true
           profile: minimal
       - name: Build rust code
         env:
