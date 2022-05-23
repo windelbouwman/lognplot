@@ -28,7 +28,7 @@ jobs:
         with:
           msystem: MINGW64
           update: true
-          install: mingw-w64-x86_64-gtk3 mingw-w64-x86_64-hdf5
+          install: mingw-w64-x86_64-gtk3 mingw-w64-x86_64-hdf5 mingw-w64-x86_64-pkg-config
       - name: Patch HDF5 dll for hdf5 crate
         run: |
           Copy-Item D:\a\_temp\msys64\mingw64\bin\libhdf5-0.dll -Destination D:\a\_temp\msys64\mingw64\lib\hdf5-0.dll
