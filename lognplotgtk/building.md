@@ -15,6 +15,34 @@ TODO
 
 # Windows build instructions
 
+## msys2
+
+For this, use the stable-gnu toolchain for rust:
+
+    CMD> rustup default stable-gnu
+
+Install msys2, next install depending packages:
+
+    # pacman -S mingw-w64-x86_64-hdf5 mingw-w64-x86_64-gtk3
+
+Fix hdf5 dll:
+
+    copy C:\msys64\mingw64\bin\libhdf5-0.dll C:\msys64\mingw64\lib\hdf5.dll
+
+Set HDF5 path:
+
+    CMD> SET HDF5_DIR=C:\msys64\mingw64
+
+Build rust application:
+
+    CMD> cd lognplotgtk
+    CMD> cargo build --release
+
+
+## VCPKG
+
+**Note: not recommended, since VCPKG builds an outdated GTK version.**
+
 For windows, use [vcpkg](https://github.com/Microsoft/vcpkg) to install GTK development packages:
 
     CMD> vcpkg install gtk:x64-windows
