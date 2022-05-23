@@ -29,6 +29,9 @@ jobs:
           msystem: MINGW64
           update: true
           install: mingw-w64-x86_64-gtk3 mingw-w64-x86_64-hdf5
+      - name: Patch HDF5 dll for hdf5 crate
+        run: |
+          Copy-Item C:\msys64\mingw64\bin\libhdf5-0.dll -Destination C:\msys64\mingw64\lib\hdf5-0.dll
       - name: Install rust toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -36,8 +39,8 @@ jobs:
           profile: minimal
       - name: Build rust code
         env:
-          HDF5_DIR: ${{github.workspace}}\msys64\mingw64
-        run: cargo build --release -p lognplotgtk -p lognplot -p clognplot
+          HDF5_DIR: C:\msys64\mingw64
+        run: cargo build --release -p lognplotgtk
       - name: Archive executable
         uses: actions/upload-artifact@v2
         with:
