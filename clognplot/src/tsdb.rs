@@ -1,7 +1,8 @@
 //! TSDB API
 use libc::c_char;
 use lognplot::time::TimeStamp;
-use lognplot::tsdb::{Observation, Sample, TsDb, TsDbHandle};
+use lognplot::tsdb::observations::{Observation, Sample};
+use lognplot::tsdb::{TsDb, TsDbHandle};
 use std::ffi::CStr;
 
 #[no_mangle]

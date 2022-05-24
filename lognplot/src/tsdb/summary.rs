@@ -1,5 +1,6 @@
-use super::{Aggregation, Observation};
-use super::{CountMetrics, ProfileEvent, Sample, SampleMetrics, Text};
+use super::observations::{
+    Aggregation, CountMetrics, Observation, ProfileEvent, Sample, SampleMetrics, Text,
+};
 use crate::time::{TimeSpan, TimeStamp};
 
 /// Data summary

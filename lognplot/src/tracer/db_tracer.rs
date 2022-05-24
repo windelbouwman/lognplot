@@ -2,7 +2,8 @@
 
 use super::Tracer;
 use crate::time::TimeStamp;
-use crate::tsdb::{Observation, Sample, Text, TsDbHandle};
+use crate::tsdb::observations::{Observation, Sample, Text};
+use crate::tsdb::TsDbHandle;
 use std::time::Instant;
 
 /// A struct which allows recording

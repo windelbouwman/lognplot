@@ -1,9 +1,8 @@
 //! Thread usable handle. Wrapper around a database.
 
+use super::observations::{Observation, ProfileEvent, Sample, Text};
 use super::{ChangeSubscriber, DataChangeEvent};
-use super::{
-    Observation, ProfileEvent, Query, QueryResult, QuickSummary, Sample, Summary, Text, TsDb,
-};
+use super::{Query, QueryResult, QuickSummary, Summary, TsDb};
 use crate::time::TimeSpan;
 use futures::channel::mpsc;
 use std::sync::{Arc, Mutex};

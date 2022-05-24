@@ -8,10 +8,10 @@ use crate::chart::{Chart, Cursor, Curve};
 use crate::geometry::Point;
 use crate::style::Color;
 use crate::time::TimeStamp;
-use crate::tsdb::{
-    Aggregation, CountMetrics, Observation, ProfileEvent, QueryResult, RangeQueryResult, Sample,
-    SampleMetrics, Text,
+use crate::tsdb::observations::{
+    Aggregation, CountMetrics, Observation, ProfileEvent, Sample, SampleMetrics, Text,
 };
+use crate::tsdb::{QueryResult, RangeQueryResult};
 use std::borrow::Borrow;
 use std::collections::HashMap;
 use std::rc::Rc;

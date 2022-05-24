@@ -1,10 +1,15 @@
-// Data IO. This could be moved to the lognplot crate?
+//! Data IO.
+//!
+//! Functionality to import/export data to a HDF5 file.
+//!
+//! Idea: This could be moved to the lognplot crate?
 
 use super::error_dialog::show_error;
 use super::GuiStateHandle;
 use gtk::prelude::*;
 use lognplot::time::TimeStamp;
-use lognplot::tsdb::{Observation, Sample, TsDbHandle};
+use lognplot::tsdb::observations::{Observation, Sample};
+use lognplot::tsdb::TsDbHandle;
 use std::path::Path;
 
 /// Popup a dialog and export data as HDF5 format.
@@ -143,7 +148,8 @@ fn import_data_inner(db: TsDbHandle, file: &hdf5::File) -> hdf5::Result<()> {
 mod tests {
     use super::{export_db, import_data_inner};
     use lognplot::time::TimeStamp;
-    use lognplot::tsdb::{Observation, Sample, TsDb};
+    use lognplot::tsdb::observations::{Observation, Sample};
+    use lognplot::tsdb::TsDb;
 
     #[test]
     fn export_test() -> hdf5::Result<()> {

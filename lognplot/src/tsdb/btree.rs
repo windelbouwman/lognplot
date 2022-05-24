@@ -3,8 +3,8 @@
 //! The idea is to create leaf nodes and intermediate nodes.
 //! Leaf and intermediate nodes can have multiple child nodes.
 
-use super::metrics::Metrics;
-use super::{Aggregation, Observation, RangeQueryResult};
+use super::observations::{Aggregation, Metrics, Observation};
+use super::RangeQueryResult;
 use crate::time::TimeSpan;
 
 /// This is the intermediate level fanout ratio.
@@ -570,7 +570,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::super::sample::{Sample, SampleMetrics};
+    use super::super::observations::{Sample, SampleMetrics};
     use super::{Btree, Observation};
     use crate::time::{TimeSpan, TimeStamp};
 

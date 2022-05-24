@@ -3,7 +3,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use crate::time::TimeStamp;
-use crate::tsdb::{Observation, ProfileEvent, Sample, Text, TsDbHandle};
+use crate::tsdb::observations::{Observation, ProfileEvent, Sample, Text};
+use crate::tsdb::TsDbHandle;
 
 /// A chunk of data at fixed sample rate.
 #[derive(Serialize, Deserialize, Debug)]

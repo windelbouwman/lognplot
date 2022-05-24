@@ -1,37 +1,31 @@
 //! Time series database, usable as a library.
 
-mod aggregation;
 mod btree;
 mod connection;
 mod db;
 mod handle;
-// mod logrecords;
-mod metrics;
+pub mod observations;
+
 mod notify;
-mod observation;
-mod profile;
 mod query;
 mod query_result;
-mod sample;
+
 mod summary;
-mod text;
+
 mod trace;
 mod track;
 mod track_type;
 
-pub use aggregation::Aggregation;
 use btree::Btree;
 pub use db::TsDb;
 pub use handle::TsDbHandle;
-pub use metrics::{CountMetrics, Metrics};
+
 pub use notify::{ChangeSubscriber, DataChangeEvent};
-pub use observation::Observation;
-pub use profile::ProfileEvent;
 pub use query::Query;
 pub use query_result::{QueryResult, RangeQueryResult};
-pub use sample::{Sample, SampleMetrics};
+
 pub use summary::{QuickSummary, Summary};
-pub use text::Text;
+
 pub use trace::Trace;
 pub use track::Track;
 pub use track_type::TrackType;
@@ -39,9 +33,8 @@ pub use track_type::TrackType;
 #[cfg(test)]
 mod tests {
     use super::connection::Connection;
+    use super::observations::{Observation, Sample};
     use super::query::Query;
-    use super::Observation;
-    use super::Sample;
     use super::TsDb;
     use crate::time::TimeModifiers;
     use crate::time::TimeStamp;

@@ -4,7 +4,8 @@
 //! or leaf chunks, with real data.
 //! Also: keep track of certain metrics, such as min, max and sum.
 
-use super::{Aggregation, Btree, Metrics, Observation, Query, RangeQueryResult};
+use super::observations::{Aggregation, Metrics, Observation};
+use super::{Btree, Query, RangeQueryResult};
 use crate::time::TimeSpan;
 
 /// A trace is a single signal with a history in time.

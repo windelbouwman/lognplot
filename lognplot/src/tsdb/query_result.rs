@@ -1,6 +1,6 @@
-use super::metrics::Metrics;
-use super::{Aggregation, Observation};
-use super::{CountMetrics, ProfileEvent, Sample, SampleMetrics, Text};
+use super::observations::{
+    Aggregation, CountMetrics, Metrics, Observation, ProfileEvent, Sample, SampleMetrics, Text,
+};
 
 /// This holds the result of a query to the database.
 /// The result can be several things, depending upon query type.

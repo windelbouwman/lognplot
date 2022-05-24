@@ -1,8 +1,7 @@
+use super::observations::{CountMetrics, Observation, ProfileEvent, Sample, SampleMetrics, Text};
 use super::trace::Trace;
-use super::Observation;
 use super::TrackType;
-use super::{CountMetrics, ProfileEvent, Text};
-use super::{Query, QueryResult, QuickSummary, Sample, SampleMetrics, Summary};
+use super::{Query, QueryResult, QuickSummary, Summary};
 use crate::time::TimeSpan;
 
 #[derive(Debug)]

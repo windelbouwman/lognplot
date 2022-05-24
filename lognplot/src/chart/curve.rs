@@ -1,8 +1,8 @@
 use crate::geometry::Point;
 use crate::style::{Color, Stroke};
 use crate::time::{TimeSpan, TimeStamp};
-use crate::tsdb::{Aggregation, Observation, Sample, SampleMetrics, Summary};
-use crate::tsdb::{Query, QueryResult, RangeQueryResult, TsDbHandle};
+use crate::tsdb::observations::{Aggregation, Observation, Sample, SampleMetrics};
+use crate::tsdb::{Query, QueryResult, RangeQueryResult, Summary, TsDbHandle};
 use std::str::FromStr;
 
 /// A single curve with some stroke styling.

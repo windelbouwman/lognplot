@@ -1,8 +1,9 @@
 use lognplot::time::TimeStamp;
+use lognplot::tsdb::observations::{Observation, Sample};
 /// Demo of raw database performance.
 ///
 /// Strategy: insert 1 million points, and measure how long it took.
-use lognplot::tsdb::{Observation, Query, Sample, TsDb};
+use lognplot::tsdb::{Query, TsDb};
 use std::time::Instant;
 
 fn main() {

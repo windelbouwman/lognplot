@@ -1,10 +1,11 @@
 //! Time series database which uses B+ trees to store tha data.
 
 use super::handle::{make_handle, TsDbHandle};
+use super::observations::{Observation, ProfileEvent, Sample, Text};
 use super::query::Query;
 use super::ChangeSubscriber;
 use super::Summary;
-use super::{Observation, ProfileEvent, QueryResult, QuickSummary, Sample, Text};
+use super::{QueryResult, QuickSummary};
 use super::{Track, TrackType};
 use crate::time::{TimeSpan, TimeStamp};
 use std::collections::HashMap;
