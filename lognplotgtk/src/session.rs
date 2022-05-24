@@ -56,6 +56,7 @@ pub fn save_session(top_level: &gtk::Window, app_state: &GuiStateHandle) {
     );
     let res = dialog.run();
     let filename = dialog.filename();
+    dialog.close();
 
     if let gtk::ResponseType::Accept = res {
         if let Some(filename) = filename {
@@ -86,6 +87,7 @@ pub fn load_session(top_level: &gtk::Window, app_state: &GuiStateHandle) {
 
     let res = dialog.run();
     let filename = dialog.filename();
+    dialog.close();
 
     if let gtk::ResponseType::Accept = res {
         if let Some(filename) = filename {

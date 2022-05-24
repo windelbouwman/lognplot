@@ -4,6 +4,7 @@ extern crate log;
 #[macro_use]
 extern crate glib;
 
+mod chart_state;
 mod chart_widget;
 mod error_dialog;
 

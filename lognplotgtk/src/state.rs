@@ -1,4 +1,4 @@
-use crate::chart_widget::{ChartState, ChartStateHandle};
+use crate::chart_state::{ChartState, ChartStateHandle};
 use crate::session;
 use lognplot::tracer::AnyTracer;
 use lognplot::tsdb::{DataChangeEvent, TsDbHandle};
@@ -115,6 +115,13 @@ impl GuiState {
     pub fn enable_tailing(&self, tail_duration: f64) {
         for chart in &self.charts {
             chart.borrow_mut().enable_tailing(tail_duration);
+        }
+    }
+
+    /// Call this from a timer to scroll to latest
+    pub fn do_tailing(&self) {
+        for chart in &self.charts {
+            chart.borrow_mut().do_tailing();
         }
     }
 

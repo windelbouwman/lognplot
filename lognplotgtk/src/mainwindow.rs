@@ -1,4 +1,4 @@
-use super::chart_widget::setup_drawing_area;
+use super::chart_widget::create_new_chart_area;
 use super::io::{load_data_from_hdf5, save_data_as_hdf5};
 use super::session::{load_session, save_session};
 use super::signal_repository::setup_signal_repository;
@@ -35,6 +35,7 @@ fn build_ui(app: &gtk::Application, app_state: GuiStateHandle) {
     setup_chart_area(&builder, app_state.clone());
     setup_menus(&builder, app_state.clone());
     setup_toolbar_buttons(&builder, app_state.clone());
+    setup_tailing_timer(app_state.clone());
     setup_notify_change(app_state);
 
     // Connect application to window:
@@ -46,110 +47,6 @@ fn build_ui(app: &gtk::Application, app_state: GuiStateHandle) {
 
     window.set_application(Some(app));
     window.show_all();
-}
-
-/// Create new chart area with extra buttons around it
-/// to enable splitting in vertical and horizontal direction
-fn create_new_chart_area(app_state: &GuiStateHandle, parent_box: gtk::Box) {
-    let box1 = gtk::Box::new(gtk::Orientation::Vertical, 0);
-    let draw_area: gtk::DrawingArea = gtk::DrawingArea::new();
-    massage_drawing_area(&draw_area);
-    box1.pack_start(&draw_area, true, true, 0);
-
-    // generate new unique chart id based on amount of charts so far:
-    let chart_id = format!("chart{}", app_state.borrow().num_charts() + 1);
-
-    let chart_state1 = setup_drawing_area(draw_area, app_state.clone(), &chart_id);
-    app_state.borrow_mut().add_chart(chart_state1);
-
-    // Create split buttons:
-    let box2 = gtk::Box::new(gtk::Orientation::Horizontal, 0);
-    let button_split_vertical = gtk::Button::new();
-    button_split_vertical.set_label("Split vertical");
-    box2.pack_start(&button_split_vertical, false, false, 0);
-
-    let button_split_horizontal = gtk::Button::new();
-    button_split_horizontal.set_label("Split horizontal");
-    box2.pack_start(&button_split_horizontal, false, false, 0);
-
-    let button_close = gtk::Button::new();
-    button_close.set_label("Close");
-    box2.pack_start(&button_close, false, false, 0);
-
-    box1.pack_start(&box2, false, false, 0);
-    box1.show_all();
-
-    button_split_vertical.connect_clicked(clone!(@strong app_state, @strong box1 => move |_| {
-        info!("Split vertically");
-        split_chart(&app_state, &box1, gtk::Orientation::Vertical);
-    }));
-
-    button_split_horizontal.connect_clicked(clone!(@strong app_state, @strong box1 => move |_| {
-        info!("Split horizontally");
-        split_chart(&app_state, &box1, gtk::Orientation::Horizontal);
-    }));
-
-    button_close.connect_clicked(clone!(@strong box1 => move |_| {
-        info!("Close chart!");
-        close_chart(&box1);
-    }));
-
-    parent_box.pack_start(&box1, true, true, 0);
-}
-
-/// Complex way of finding position of box in parent box:
-fn find_index(box1: gtk::Box, parent: &gtk::Box) -> i32 {
-    for (index, child) in parent.children().iter().enumerate() {
-        let child_box: gtk::Box = child.clone().downcast::<gtk::Box>().unwrap();
-        if child_box == box1 {
-            return index as i32;
-        }
-    }
-
-    0
-}
-
-/// Takes care of splitting the chart into two areas
-/// This is done by determining the containing box parent,
-/// and removing this box from the parent, placing a new
-/// box in between in the box hierarchy..
-fn split_chart(app_state: &GuiStateHandle, box1: &gtk::Box, orientation: gtk::Orientation) {
-    // Create new split pane:
-    let new_box = gtk::Box::new(orientation, 0);
-
-    // Determine parent box (either vertical or horizontal)
-    let parent_box: gtk::Box = box1.parent().unwrap().downcast::<gtk::Box>().unwrap();
-
-    // find position in parent:
-    let index = find_index(box1.clone(), &parent_box);
-    info!("Old position: {:?}", index);
-
-    // Remove original container and add new box:
-    parent_box.remove(box1);
-    parent_box.pack_start(&new_box, true, true, 0);
-    parent_box.reorder_child(&new_box, index); // move to first position again!
-
-    new_box.pack_start(box1, true, true, 0);
-
-    // create new chart area:
-    create_new_chart_area(&app_state, new_box.clone());
-
-    new_box.show_all();
-}
-
-fn close_chart(box1: &gtk::Box) {
-    // Determine parent box:
-    let parent_box: gtk::Box = box1.parent().unwrap().downcast::<gtk::Box>().unwrap();
-
-    // Remove self from parent:
-    parent_box.remove(box1);
-
-    // Parent now contains a single plot!
-    if parent_box.children().is_empty() {
-        if let Ok(grand_parent_box) = parent_box.parent().unwrap().downcast::<gtk::Box>() {
-            grand_parent_box.remove(&parent_box);
-        }
-    }
 }
 
 fn setup_chart_area(builder: &gtk::Builder, app_state: GuiStateHandle) {
@@ -195,32 +92,6 @@ fn new_plot_window(app_state: GuiStateHandle) {
         Inhibit(false)
     }));
     new_window.show_all();
-}
-
-/// Apply various settings to the drawing area.
-fn massage_drawing_area(new_chart_area: &gtk::DrawingArea) {
-    new_chart_area.show();
-    new_chart_area.set_hexpand(true);
-    new_chart_area.set_vexpand(true);
-    new_chart_area.set_size_request(200, 200);
-
-    new_chart_area.set_can_focus(true);
-    new_chart_area.set_can_default(true);
-    new_chart_area.set_sensitive(true);
-    new_chart_area.set_receives_default(true);
-
-    // Enable some events to allow scrolling by mouse.
-    new_chart_area.add_events(gdk::EventMask::ENTER_NOTIFY_MASK);
-    new_chart_area.add_events(gdk::EventMask::POINTER_MOTION_MASK);
-    new_chart_area.add_events(gdk::EventMask::LEAVE_NOTIFY_MASK);
-    new_chart_area.add_events(gdk::EventMask::BUTTON_PRESS_MASK);
-    new_chart_area.add_events(gdk::EventMask::BUTTON_MOTION_MASK);
-    new_chart_area.add_events(gdk::EventMask::BUTTON_RELEASE_MASK);
-    new_chart_area.add_events(gdk::EventMask::FOCUS_CHANGE_MASK);
-    new_chart_area.add_events(gdk::EventMask::STRUCTURE_MASK);
-    new_chart_area.add_events(gdk::EventMask::EXPOSURE_MASK);
-    new_chart_area.add_events(gdk::EventMask::SCROLL_MASK);
-    new_chart_area.add_events(gdk::EventMask::KEY_PRESS_MASK);
 }
 
 fn setup_menus(builder: &gtk::Builder, app_state: GuiStateHandle) {
@@ -373,4 +244,14 @@ fn setup_notify_change(app_state: GuiStateHandle) {
             app_state.borrow().db.poll_events();
         }
     });
+}
+
+/// Setup a timer to implement tailing of signals.
+fn setup_tailing_timer(app_state: GuiStateHandle) {
+    // Refreshing timer!
+    let tick = move || {
+        app_state.borrow_mut().do_tailing();
+        gtk::prelude::Continue(true)
+    };
+    glib::timeout_add_local(std::time::Duration::from_millis(57), tick);
 }
