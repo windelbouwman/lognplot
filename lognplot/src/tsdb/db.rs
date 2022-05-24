@@ -1,11 +1,11 @@
 //! Time series database which uses B+ trees to store tha data.
 
-use super::handle::{make_handle, TsDbHandle};
+use super::handle::{make_handle, LockedTsDb};
 use super::observations::{Observation, ProfileEvent, Sample, Text};
 use super::query::Query;
 use super::ChangeSubscriber;
-use super::Summary;
 use super::{QueryResult, QuickSummary};
+use super::{Summary, TsDbApi};
 use super::{Track, TrackType};
 use crate::time::{TimeSpan, TimeStamp};
 use std::collections::HashMap;
@@ -41,12 +41,8 @@ impl Default for TsDb {
 
 /// Database for time series.
 impl TsDb {
-    pub fn into_handle(self) -> TsDbHandle {
+    pub fn into_handle(self) -> std::sync::Arc<LockedTsDb<Self>> {
         make_handle(self)
-    }
-
-    pub fn get_signal_names(&self) -> Vec<String> {
-        self.data.keys().cloned().collect()
     }
 
     fn get_or_create_trace(
@@ -101,100 +97,7 @@ impl TsDb {
         self.data.insert(name.to_owned(), trace);
     }
 
-    /// Add a batch of values
-    pub fn add_values(&mut self, name: &str, samples: Vec<Observation<Sample>>) {
-        if !samples.is_empty() {
-            let first_observation = samples.first().expect("Must have an observation here.");
-            let trace =
-                self.get_or_create_trace(name, TrackType::Value, &first_observation.timestamp);
-            trace.add_value_observations(samples);
-            self.notify_signal_changed(name);
-        }
-    }
-
-    /// Add a single observation to the database.
-    pub fn add_value(&mut self, name: &str, observation: Observation<Sample>) {
-        let trace = self.get_or_create_trace(name, TrackType::Value, &observation.timestamp);
-        trace.add_value_observation(observation);
-        self.notify_signal_changed(name);
-    }
-
-    /// Add a text record.
-    pub fn add_text(&mut self, name: &str, observation: Observation<Text>) {
-        let track = self.get_or_create_trace(name, TrackType::Text, &observation.timestamp);
-        track.add_text_observation(observation);
-        self.notify_signal_changed(name);
-    }
-
-    pub fn add_profile_event(&mut self, name: &str, observation: Observation<ProfileEvent>) {
-        let track = self.get_or_create_trace(name, TrackType::Profile, &observation.timestamp);
-        track.add_profile_observation(observation);
-        self.notify_signal_changed(name);
-        // TODO
-        // let track = self.get_or_create_trace(name, TrackType::Text, &observation.timestamp);
-        // self.db.lock().unwrap().add_profile_event(name, event);
-    }
-
-    /// Delete all data from the database.
-    pub fn delete_all(&mut self) {
-        self.data.clear();
-        self.data.shrink_to_fit();
-        self.notify_delete_all();
-    }
-
-    /// Delete a single trace from the database.
-    pub fn delete(&mut self, name: &str) {
-        self.data.remove(name);
-        self.delete_event(name);
-    }
-
-    /// Query the given trace for data.
-    pub fn query(&self, name: &str, query: Query) -> Option<QueryResult> {
-        if let Some(trace) = self.data.get(name) {
-            Some(trace.query(query))
-        } else {
-            None
-        }
-    }
-
-    // Download raw samples.
-    pub fn get_raw_samples(&self, name: &str) -> Option<Vec<Observation<Sample>>> {
-        self.data.get(name).map(|t| t.to_vec())
-    }
-
-    pub fn quick_summary(&self, name: &str) -> Option<QuickSummary> {
-        self.data.get(name)?.quick_summary()
-    }
-
-    /// Get a summary for a certain timerange (or all time) the given trace.
-    pub fn summary(&self, name: &str, timespan: Option<&TimeSpan>) -> Option<Summary> {
-        self.data.get(name)?.summary(timespan)
-    }
-
     // Events
-
-    /// Register a subscriber which will be notified of any change.
-    pub fn register_notifier(&mut self, mut subscriber: ChangeSubscriber) {
-        // Add a new signal event for all currently present signals:
-        for signal_name in self.data.keys() {
-            subscriber.notify_signal_added(signal_name);
-            subscriber.notify_signal_changed(signal_name);
-        }
-
-        // Poll once to flush the above 'new' signals.
-        subscriber.poll_events();
-
-        // Poll twice to mark the event as ready to be sent:
-        subscriber.poll_events();
-        self.change_subscribers.push(subscriber);
-    }
-
-    // Check if we have pending events, and emit them to queues.
-    pub fn poll_events(&mut self) {
-        for subscriber in &mut self.change_subscribers {
-            subscriber.poll_events();
-        }
-    }
 
     /// Notify listeners of the newly arrived data.
     fn notify_signal_changed(&mut self, name: &str) {
@@ -216,6 +119,105 @@ impl TsDb {
     fn notify_delete_all(&mut self) {
         for subscriber in &mut self.change_subscribers {
             subscriber.notify_delete_all();
+        }
+    }
+}
+
+impl TsDbApi for TsDb {
+    fn get_signal_names(&self) -> Vec<String> {
+        self.data.keys().cloned().collect()
+    }
+
+    /// Add a single observation to the database.
+    fn add_value(&mut self, name: &str, observation: Observation<Sample>) {
+        let trace = self.get_or_create_trace(name, TrackType::Value, &observation.timestamp);
+        trace.add_value_observation(observation);
+        self.notify_signal_changed(name);
+    }
+
+    /// Add a batch of values
+    fn add_values(&mut self, name: &str, samples: Vec<Observation<Sample>>) {
+        if !samples.is_empty() {
+            let first_observation = samples.first().expect("Must have an observation here.");
+            let trace =
+                self.get_or_create_trace(name, TrackType::Value, &first_observation.timestamp);
+            trace.add_value_observations(samples);
+            self.notify_signal_changed(name);
+        }
+    }
+
+    /// Add a text record.
+    fn add_text(&mut self, name: &str, observation: Observation<Text>) {
+        let track = self.get_or_create_trace(name, TrackType::Text, &observation.timestamp);
+        track.add_text_observation(observation);
+        self.notify_signal_changed(name);
+    }
+
+    fn add_profile_event(&mut self, name: &str, observation: Observation<ProfileEvent>) {
+        let track = self.get_or_create_trace(name, TrackType::Profile, &observation.timestamp);
+        track.add_profile_observation(observation);
+        self.notify_signal_changed(name);
+        // TODO
+        // let track = self.get_or_create_trace(name, TrackType::Text, &observation.timestamp);
+        // self.db.lock().unwrap().add_profile_event(name, event);
+    }
+
+    /// Delete all data from the database.
+    fn delete_all(&mut self) {
+        self.data.clear();
+        self.data.shrink_to_fit();
+        self.notify_delete_all();
+    }
+
+    /// Delete a single trace from the database.
+    fn delete(&mut self, name: &str) {
+        self.data.remove(name);
+        self.delete_event(name);
+    }
+
+    /// Query the given trace for data.
+    fn query(&self, name: &str, query: Query) -> Option<QueryResult> {
+        if let Some(trace) = self.data.get(name) {
+            Some(trace.query(query))
+        } else {
+            None
+        }
+    }
+
+    fn quick_summary(&self, name: &str) -> Option<QuickSummary> {
+        self.data.get(name)?.quick_summary()
+    }
+
+    /// Get a summary for a certain timerange (or all time) the given trace.
+    fn summary(&self, name: &str, timespan: Option<&TimeSpan>) -> Option<Summary> {
+        self.data.get(name)?.summary(timespan)
+    }
+
+    // Download raw samples.
+    fn get_raw_samples(&self, name: &str) -> Option<Vec<Observation<Sample>>> {
+        self.data.get(name).map(|t| t.to_vec())
+    }
+
+    /// Register a subscriber which will be notified of any change.
+    fn register_notifier(&mut self, mut subscriber: ChangeSubscriber) {
+        // Add a new signal event for all currently present signals:
+        for signal_name in self.data.keys() {
+            subscriber.notify_signal_added(signal_name);
+            subscriber.notify_signal_changed(signal_name);
+        }
+
+        // Poll once to flush the above 'new' signals.
+        subscriber.poll_events();
+
+        // Poll twice to mark the event as ready to be sent:
+        subscriber.poll_events();
+        self.change_subscribers.push(subscriber);
+    }
+
+    // Check if we have pending events, and emit them to queues.
+    fn poll_events(&mut self) {
+        for subscriber in &mut self.change_subscribers {
+            subscriber.poll_events();
         }
     }
 }

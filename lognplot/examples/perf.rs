@@ -3,7 +3,7 @@ use lognplot::tsdb::observations::{Observation, Sample};
 /// Demo of raw database performance.
 ///
 /// Strategy: insert 1 million points, and measure how long it took.
-use lognplot::tsdb::{Query, TsDb};
+use lognplot::tsdb::{Query, TsDb, TsDbApi};
 use std::time::Instant;
 
 fn main() {

@@ -88,8 +88,9 @@ fn main() {
 
     info!("Starting lognplot GUI tool");
 
-    let db = TsDb::default();
-    let db_handle = db.into_handle();
+    // Choose here the database backend.
+    // let db = lognplot::tsdb::VoidDb::default();
+    let db_handle = TsDb::default().into_handle();
 
     let perf_tracer = if matches.is_present("meta-trace-remote") {
         let addr = matches.value_of("meta-trace-remote").unwrap();

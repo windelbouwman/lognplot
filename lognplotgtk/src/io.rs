@@ -149,7 +149,7 @@ mod tests {
     use super::{export_db, import_data_inner};
     use lognplot::time::TimeStamp;
     use lognplot::tsdb::observations::{Observation, Sample};
-    use lognplot::tsdb::TsDb;
+    use lognplot::tsdb::{TsDb, TsDbApi};
 
     #[test]
     fn export_test() -> hdf5::Result<()> {

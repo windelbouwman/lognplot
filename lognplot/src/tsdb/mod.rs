@@ -1,24 +1,25 @@
 //! Time series database, usable as a library.
 
+mod api;
 mod btree;
 mod connection;
 mod db;
 mod handle;
-pub mod observations;
-
 mod notify;
+pub mod observations;
 mod query;
 mod query_result;
-
 mod summary;
-
 mod trace;
 mod track;
 mod track_type;
+mod void_db;
 
+pub use api::TsDbApi;
 use btree::Btree;
 pub use db::TsDb;
 pub use handle::TsDbHandle;
+pub use void_db::VoidDb;
 
 pub use notify::{ChangeSubscriber, DataChangeEvent};
 pub use query::Query;
@@ -35,7 +36,7 @@ mod tests {
     use super::connection::Connection;
     use super::observations::{Observation, Sample};
     use super::query::Query;
-    use super::TsDb;
+    use super::{TsDb, TsDbApi};
     use crate::time::TimeModifiers;
     use crate::time::TimeStamp;
 

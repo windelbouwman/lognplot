@@ -2,24 +2,32 @@
 
 use super::observations::{Observation, ProfileEvent, Sample, Text};
 use super::{ChangeSubscriber, DataChangeEvent};
-use super::{Query, QueryResult, QuickSummary, Summary, TsDb};
+use super::{Query, QueryResult, QuickSummary, Summary, TsDb, TsDbApi};
+// use super::VoidDb;
 use crate::time::TimeSpan;
 use futures::channel::mpsc;
 use std::sync::{Arc, Mutex};
 
-pub type TsDbHandle = Arc<LockedTsDb>;
+// pub type TsDbHandle = Arc<LockedTsDb<VoidDb>>;
+pub type TsDbHandle = Arc<LockedTsDb<TsDb>>;
 
-pub fn make_handle(db: TsDb) -> TsDbHandle {
+pub fn make_handle<D>(db: D) -> Arc<LockedTsDb<D>>
+where
+    D: TsDbApi,
+{
     Arc::new(LockedTsDb::new(db))
 }
 
 #[derive(Debug)]
-pub struct LockedTsDb {
-    db: Mutex<TsDb>,
+pub struct LockedTsDb<D> {
+    db: Mutex<D>,
 }
 
-impl LockedTsDb {
-    pub fn new(db: TsDb) -> Self {
+impl<D> LockedTsDb<D>
+where
+    D: TsDbApi,
+{
+    pub fn new(db: D) -> Self {
         LockedTsDb { db: Mutex::new(db) }
     }
 
@@ -95,7 +103,10 @@ impl LockedTsDb {
     }
 }
 
-impl std::fmt::Display for LockedTsDb {
+impl<D> std::fmt::Display for LockedTsDb<D>
+where
+    D: std::fmt::Display,
+{
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "{}", self.db.lock().unwrap())
     }
