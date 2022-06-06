@@ -18,7 +18,7 @@ glib = "0.15"
 gio = "0.15"
 gtk = "0.15"
 gdk = "0.15"
-nalgebra = "0.21"
+nalgebra = "0.27"
 gdk-pixbuf = "0.15"
 hdf5 = { version = "0.8", optional = true }
 lognplot = { path = "../lognplot", features=["cairo", "server"] }
