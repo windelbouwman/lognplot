@@ -16,7 +16,7 @@ clap = "2.33"
 gimli = "0.20"
 log = "0.4.8"
 object = "0.17"
-rusb = "0.5.5"
+rusb = "0.7.0"
 simple_logger = "1.6"
 scroll = "0.10"
 lognplot = { path = "../lognplot" }
