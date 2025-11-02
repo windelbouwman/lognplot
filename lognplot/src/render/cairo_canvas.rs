@@ -57,7 +57,7 @@ impl<'a> Canvas for CairoCanvas<'a> {
 
     fn text_size(&self, text: &str) -> Size {
         let extents = self.cr.text_extents(text).unwrap();
-        Size::new(extents.width, extents.height)
+        Size::new(extents.width(), extents.height())
     }
 
     fn print_text(
@@ -76,16 +76,16 @@ impl<'a> Canvas for CairoCanvas<'a> {
 
         let x_offset = match horizontal_anchor {
             HorizontalAnchor::Left => 0.0,
-            HorizontalAnchor::Middle => extents.width * 0.5,
-            HorizontalAnchor::Right => extents.width,
+            HorizontalAnchor::Middle => extents.width() * 0.5,
+            HorizontalAnchor::Right => extents.width(),
         };
         let y_offset = match vertical_anchor {
             VerticalAnchor::Top => 0.0,
-            VerticalAnchor::Middle => extents.height * 0.5,
-            VerticalAnchor::Bottom => extents.height,
+            VerticalAnchor::Middle => extents.height() * 0.5,
+            VerticalAnchor::Bottom => extents.height(),
         };
-        let x = p.x() - extents.x_bearing - x_offset;
-        let y = p.y() - extents.y_bearing - y_offset;
+        let x = p.x() - extents.x_bearing() - x_offset;
+        let y = p.y() - extents.y_bearing() - y_offset;
 
         self.cr.move_to(x, y);
         self.cr.show_text(text).unwrap();

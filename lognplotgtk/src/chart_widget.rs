@@ -2,6 +2,7 @@
 //!
 //! Also implement plot control splitting, and adding of extra buttons for split, clear plot etc.
 
+use gdk::Key;
 use gtk::prelude::*;
 
 use super::chart_state::{ChartState, ChartStateHandle};
@@ -9,11 +10,11 @@ use crate::state::GuiStateHandle;
 
 /// Create new chart area with extra buttons around it
 /// to enable splitting in vertical and horizontal direction
-pub fn create_new_chart_area(app_state: &GuiStateHandle, parent_box: gtk::Box) {
+pub fn create_new_chart_area(app_state: &GuiStateHandle, parent_box: &gtk::Box) {
     let box1 = gtk::Box::new(gtk::Orientation::Vertical, 0);
-    let draw_area: gtk::DrawingArea = gtk::DrawingArea::new();
+    let draw_area = gtk::DrawingArea::new();
     massage_drawing_area(&draw_area);
-    box1.pack_start(&draw_area, true, true, 0);
+    box1.prepend(&draw_area);
 
     // generate new unique chart id based on amount of charts so far:
     let chart_id = format!("chart{}", app_state.borrow().num_charts() + 1);
@@ -24,43 +25,61 @@ pub fn create_new_chart_area(app_state: &GuiStateHandle, parent_box: gtk::Box) {
     let box2 = gtk::Box::new(gtk::Orientation::Horizontal, 0);
     let button_split_vertical = gtk::Button::new();
     button_split_vertical.set_label("Split vertical");
-    box2.pack_start(&button_split_vertical, false, false, 0);
+    box2.append(&button_split_vertical);
 
     let button_split_horizontal = gtk::Button::new();
     button_split_horizontal.set_label("Split horizontal");
-    box2.pack_start(&button_split_horizontal, false, false, 0);
+    box2.append(&button_split_horizontal);
 
-    let button_close = gtk::Button::new();
-    button_close.set_label("Close");
-    box2.pack_start(&button_close, false, false, 0);
+    let button_close = gtk::Button::builder().label("Close").build();
+    box2.append(&button_close);
 
     let button_clear_plot = gtk::Button::new();
     button_clear_plot.set_label("Clear plot");
-    box2.pack_start(&button_clear_plot, false, false, 0);
+    box2.append(&button_clear_plot);
 
-    box1.pack_start(&box2, false, false, 0);
-    box1.show_all();
+    box1.append(&box2);
 
-    button_split_vertical.connect_clicked(clone!(@strong app_state, @strong box1 => move |_| {
-        info!("Split vertically");
-        split_chart(&app_state, &box1, gtk::Orientation::Vertical);
-    }));
+    button_split_vertical.connect_clicked(clone!(
+        #[strong]
+        app_state,
+        #[strong]
+        box1,
+        move |_| {
+            info!("Split vertically");
+            split_chart(&app_state, &box1, gtk::Orientation::Vertical);
+        }
+    ));
 
-    button_split_horizontal.connect_clicked(clone!(@strong app_state, @strong box1 => move |_| {
-        info!("Split horizontally");
-        split_chart(&app_state, &box1, gtk::Orientation::Horizontal);
-    }));
+    button_split_horizontal.connect_clicked(clone!(
+        #[strong]
+        app_state,
+        #[strong]
+        box1,
+        move |_| {
+            info!("Split horizontally");
+            split_chart(&app_state, &box1, gtk::Orientation::Horizontal);
+        }
+    ));
 
-    button_close.connect_clicked(clone!(@strong box1 => move |_| {
-        info!("Close chart!");
-        close_chart(&box1);
-    }));
+    button_close.connect_clicked(clone!(
+        #[strong]
+        box1,
+        move |_| {
+            info!("Close chart!");
+            close_chart(&box1);
+        }
+    ));
 
-    button_clear_plot.connect_clicked(clone!(@strong chart_state1 => move |_| {
-        chart_state1.borrow_mut().clear_curves();
-    }));
+    button_clear_plot.connect_clicked(clone!(
+        #[strong]
+        chart_state1,
+        move |_| {
+            chart_state1.borrow_mut().clear_curves();
+        }
+    ));
 
-    parent_box.pack_start(&box1, true, true, 0);
+    parent_box.append(&box1);
 
     app_state.borrow_mut().add_chart(chart_state1.clone());
 }
@@ -76,33 +95,13 @@ fn split_chart(app_state: &GuiStateHandle, box1: &gtk::Box, orientation: gtk::Or
     // Determine parent box (either vertical or horizontal)
     let parent_box: gtk::Box = box1.parent().unwrap().downcast::<gtk::Box>().unwrap();
 
-    // find position in parent:
-    let index = find_index(box1.clone(), &parent_box);
-    info!("Old position: {:?}", index);
-
     // Remove original container and add new box:
     parent_box.remove(box1);
-    parent_box.pack_start(&new_box, true, true, 0);
-    parent_box.reorder_child(&new_box, index); // move to first position again!
-
-    new_box.pack_start(box1, true, true, 0);
+    parent_box.append(&new_box);
+    new_box.append(box1);
 
     // create new chart area:
-    create_new_chart_area(&app_state, new_box.clone());
-
-    new_box.show_all();
-}
-
-/// Complex way of finding position of box in parent box:
-fn find_index(box1: gtk::Box, parent: &gtk::Box) -> i32 {
-    for (index, child) in parent.children().iter().enumerate() {
-        let child_box: gtk::Box = child.clone().downcast::<gtk::Box>().unwrap();
-        if child_box == box1 {
-            return index as i32;
-        }
-    }
-
-    0
+    create_new_chart_area(&app_state, &new_box);
 }
 
 fn close_chart(box1: &gtk::Box) {
@@ -113,7 +112,7 @@ fn close_chart(box1: &gtk::Box) {
     parent_box.remove(box1);
 
     // Parent now contains a single plot!
-    if parent_box.children().is_empty() {
+    if parent_box.first_child().is_none() {
         if let Ok(grand_parent_box) = parent_box.parent().unwrap().downcast::<gtk::Box>() {
             grand_parent_box.remove(&parent_box);
         }
@@ -128,22 +127,8 @@ fn massage_drawing_area(new_chart_area: &gtk::DrawingArea) {
     new_chart_area.set_size_request(200, 200);
 
     new_chart_area.set_can_focus(true);
-    new_chart_area.set_can_default(true);
     new_chart_area.set_sensitive(true);
     new_chart_area.set_receives_default(true);
-
-    // Enable some events to allow scrolling by mouse.
-    new_chart_area.add_events(gdk::EventMask::ENTER_NOTIFY_MASK);
-    new_chart_area.add_events(gdk::EventMask::POINTER_MOTION_MASK);
-    new_chart_area.add_events(gdk::EventMask::LEAVE_NOTIFY_MASK);
-    new_chart_area.add_events(gdk::EventMask::BUTTON_PRESS_MASK);
-    new_chart_area.add_events(gdk::EventMask::BUTTON_MOTION_MASK);
-    new_chart_area.add_events(gdk::EventMask::BUTTON_RELEASE_MASK);
-    new_chart_area.add_events(gdk::EventMask::FOCUS_CHANGE_MASK);
-    new_chart_area.add_events(gdk::EventMask::STRUCTURE_MASK);
-    new_chart_area.add_events(gdk::EventMask::EXPOSURE_MASK);
-    new_chart_area.add_events(gdk::EventMask::SCROLL_MASK);
-    new_chart_area.add_events(gdk::EventMask::KEY_PRESS_MASK);
 }
 
 fn setup_drawing_area(
@@ -151,11 +136,6 @@ fn setup_drawing_area(
     app_state: GuiStateHandle,
     chart_id: &str,
 ) -> ChartStateHandle {
-    // Always get mouse pointer motion:
-    draw_area.add_events(gdk::EventMask::ENTER_NOTIFY_MASK);
-    draw_area.add_events(gdk::EventMask::POINTER_MOTION_MASK);
-    draw_area.add_events(gdk::EventMask::LEAVE_NOTIFY_MASK);
-
     let db = { app_state.borrow().db.clone() };
     let perf_tracer = app_state.borrow().get_perf_tracer();
 
@@ -163,139 +143,163 @@ fn setup_drawing_area(
         ChartState::new(db, perf_tracer, app_state, draw_area.clone(), chart_id).into_handle();
 
     // Connect draw event:
-    draw_area.connect_draw(
-        clone!(@strong chart_state => move |_, c|  chart_state.borrow_mut().draw_on_canvas(c)  ),
-    );
+    draw_area.set_draw_func(clone!(
+        #[strong]
+        chart_state,
+        move |_, c, width, height| chart_state.borrow_mut().draw_on_canvas(
+            c,
+            width as f64,
+            height as f64
+        )
+    ));
 
     // Connect drop event:
-    let targets = vec![gtk::TargetEntry::new(
-        super::mime_types::SIGNAL_NAMES_MIME_TYPE,
-        gtk::TargetFlags::empty(),
-        0,
-    )];
-    draw_area.drag_dest_set(gtk::DestDefaults::ALL, &targets, gdk::DragAction::COPY);
-
-    draw_area.connect_drag_data_received(
-        clone!(@strong chart_state => move |w, _dc, _x, _y, data, _info, _time| {
-            let mime_payload: String = data.text().expect("Must work!!").to_string();
+    let formats = gdk::ContentFormats::builder()
+        .add_type(glib::Type::STRING)
+        .add_mime_type(super::mime_types::SIGNAL_NAMES_MIME_TYPE)
+        .build();
+    let drop_target = gtk::DropTarget::builder()
+        .actions(gdk::DragAction::COPY)
+        .formats(&formats)
+        .build();
+    drop_target.connect_drop(clone!(
+        #[strong]
+        chart_state,
+        move |_target, value, _x, _y| {
+            info!("Drop");
+            let mime_payload: String = value.get::<String>().expect("Must work!!");
             if let Ok(signal_names) = serde_json::from_str::<Vec<String>>(&mime_payload) {
                 info!("DROP {:?}", signal_names);
                 for signal_name in signal_names {
-                    chart_state
-                    .borrow_mut()
-                    .add_curve(&signal_name);
+                    chart_state.borrow_mut().add_curve(&signal_name);
                 }
-                w.grab_focus();
+                true
             } else {
-                error!("Error in drop action, could not plot mime data: {}", mime_payload);
+                error!(
+                    "Error in drop action, could not plot mime data: {}",
+                    mime_payload
+                );
+                false
             }
-        }),
-    );
-
-    draw_area.connect_button_press_event(clone!(@strong chart_state => move |w, e| {
-        let pos = e.position();
-        debug!("Mouse press! {:?}", pos);
-        chart_state.borrow_mut().start_drag(pos.0, pos.1);
-        w.grab_focus();
-        Inhibit(false)
-    }));
-
-    draw_area.connect_leave_notify_event(clone!(@strong chart_state => move |_, _| {
-        debug!("Mouse leave!");
-        chart_state.borrow_mut().set_cursor(None);
-        Inhibit(false)
-    }));
-
-    draw_area.connect_motion_notify_event(clone!(@strong chart_state => move |draw_area, event| {
-        let mut chart = chart_state.borrow_mut();
-
-        let pos = event.position();
-        debug!("Mouse motion! {:?}", pos);
-        chart.set_cursor(Some((pos.0, pos.1)));
-
-        if event.state().contains(gdk::ModifierType::BUTTON1_MASK) {
-            chart.move_drag(pos.0, pos.1);
         }
+    ));
+    draw_area.add_controller(drop_target);
 
-        draw_area.queue_draw();
+    let gesture_pan = gtk::GesturePan::new(gtk::Orientation::Horizontal);
+    gesture_pan.connect_drag_begin(clone!(
+        #[strong]
+        chart_state,
+        move |_controller, x, y| {
+            debug!("Gesture begin press! {},{}", x, y);
+            chart_state.borrow_mut().start_drag(x, y);
+        }
+    ));
+    gesture_pan.connect_drag_update(clone!(
+        #[strong]
+        chart_state,
+        move |_controller, x, y| {
+            debug!("Gesture update press! {},{}", x, y);
+            chart_state.borrow_mut().move_drag(x, y);
+        }
+    ));
+    draw_area.add_controller(gesture_pan);
 
-        Inhibit(false)
-    }));
+    let motion_controller = gtk::EventControllerMotion::new();
+    motion_controller.connect_leave(clone!(
+        #[strong]
+        chart_state,
+        move |_| {
+            debug!("Mouse leave!");
+            chart_state.borrow_mut().set_cursor(None);
+        }
+    ));
 
-    draw_area.connect_scroll_event(clone!(@strong chart_state => move |_, event| {
-        let mut chart = chart_state.borrow_mut();
-        debug!(
-            "Scroll wheel event! {:?}, {:?}, {:?}",
-            event,
-            event.delta(),
-            event.direction()
-        );
-        let pixel_x_pos = event.position().0;
-        let around = Some(pixel_x_pos);
-        match event.direction() {
-            gdk::ScrollDirection::Up => {
+    motion_controller.connect_motion(clone!(
+        #[strong]
+        draw_area,
+        #[strong]
+        chart_state,
+        move |_, x, y| {
+            let mut chart = chart_state.borrow_mut();
+            // debug!("Mouse motion! {},{}", x, y);
+            chart.set_cursor(Some((x, y)));
+        }
+    ));
+    draw_area.add_controller(motion_controller);
+
+    let scroll_controller =
+        gtk::EventControllerScroll::new(gtk::EventControllerScrollFlags::VERTICAL);
+
+    scroll_controller.connect_scroll(clone!(
+        #[strong]
+        chart_state,
+        move |_, dx, dy| {
+            let mut chart = chart_state.borrow_mut();
+            debug!("Scroll wheel event! dx={:?}, dy={:?}", dx, dy);
+            let around = None;
+            if dy < 0.0 {
                 chart.zoom_in_horizontal(around);
-            }
-            gdk::ScrollDirection::Down => {
+            } else if dy > 0.0 {
                 chart.zoom_out_horizontal(around);
             }
-            gdk::ScrollDirection::Left => {
-                chart.pan_left();
-            }
-            gdk::ScrollDirection::Right => {
-                chart.pan_right();
-            }
-            _ => {}
-        }
-        Inhibit(false)
-    }));
 
-    draw_area.connect_size_allocate(clone!(@strong chart_state => move |_, allocation| {
-        let width: f64 = allocation.width() as f64;
-        let height: f64 = allocation.height() as f64;
-        chart_state.borrow_mut().resize(width, height);
-    }));
+            glib::signal::Propagation::Stop
+        }
+    ));
+    draw_area.add_controller(scroll_controller);
+
+    draw_area.connect_resize(clone!(
+        #[strong]
+        chart_state,
+        move |_draw_area, width, height| {
+            chart_state.borrow_mut().resize(width as f64, height as f64);
+        }
+    ));
 
     // Connect key event:
-    draw_area.connect_key_press_event(clone!(@strong chart_state => move |_, key| {
+    let key_controller = gtk::EventControllerKey::new();
+    key_controller.connect_key_pressed(clone!(
+        #[strong]
+        chart_state,
+        move |_, key, _, _| {
             let mut chart = chart_state.borrow_mut();
 
             chart.disable_tailing();
-            match key.keyval() {
-                gdk::keys::constants::Up | gdk::keys::constants::w => {
+            match key {
+                Key::Up | Key::w => {
                     chart.pan_up();
                 }
-                gdk::keys::constants::Down | gdk::keys::constants::s => {
+                Key::Down | Key::s => {
                     chart.pan_down();
                 }
-                gdk::keys::constants::Left | gdk::keys::constants::a => {
+                Key::Left | Key::a => {
                     chart.pan_left();
                 }
-                gdk::keys::constants::Right | gdk::keys::constants::d => {
+                Key::Right | Key::d => {
                     chart.pan_right();
                 }
-                gdk::keys::constants::i => {
+                Key::i => {
                     chart.zoom_in_vertical();
                 }
-                gdk::keys::constants::k => {
+                Key::k => {
                     chart.zoom_out_vertical();
                 }
-                gdk::keys::constants::KP_Add | gdk::keys::constants::l => {
+                Key::KP_Add | Key::l => {
                     chart.zoom_in_horizontal(None);
                 }
-                gdk::keys::constants::KP_Subtract | gdk::keys::constants::j => {
+                Key::KP_Subtract | Key::j => {
                     chart.zoom_out_horizontal(None);
                 }
-                gdk::keys::constants::Home | gdk::keys::constants::Return => {
+                Key::Home | Key::Return => {
                     chart.zoom_fit();
                 }
-                gdk::keys::constants::BackSpace => {
+                Key::BackSpace => {
                     chart.clear_curves();
                 }
-                gdk::keys::constants::_1 => {
+                Key::_1 => {
                     chart.set_cursor1();
                 }
-                gdk::keys::constants::_2 => {
+                Key::_2 => {
                     chart.set_cursor2();
                 }
                 other_key => {
@@ -303,9 +307,10 @@ fn setup_drawing_area(
                 }
             };
 
-            Inhibit(true)
+            glib::signal::Propagation::Stop
         }
     ));
+    draw_area.add_controller(key_controller);
 
     chart_state
 }

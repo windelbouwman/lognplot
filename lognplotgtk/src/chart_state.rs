@@ -165,23 +165,22 @@ impl ChartState {
     pub fn start_drag(&mut self, x: f64, y: f64) {
         debug!("Drag start! {}, {} ", x, y);
         self.disable_tailing();
-        self.drag = Some((x, y));
+        self.drag = Some((0.0, 0.0));
     }
 
     /// Update drag of the mouse
     pub fn move_drag(&mut self, x: f64, y: f64) {
         self.disable_tailing();
-        if let Some((prev_x, prev_y)) = self.drag {
+        if let Some((prev_x, _prev_y)) = self.drag {
             let dx = x - prev_x;
-            let dy = y - prev_y;
-            self.do_drag(dx, dy);
+            self.do_drag(dx);
         }
         self.drag = Some((x, y));
     }
 
     /// Drag the plot by the given amount.
-    fn do_drag(&mut self, dx: f64, dy: f64) {
-        debug!("Drag! {}, {} ", dx, dy);
+    fn do_drag(&mut self, dx: f64) {
+        debug!("Drag! {}", dx);
 
         let amount = x_pixels_to_domain(&self.chart_layout, &self.chart.x_axis, dx);
 
@@ -334,9 +333,7 @@ impl ChartState {
         self.chart_layout.resize(width, height);
     }
 
-    pub fn draw_on_canvas(&mut self, canvas: &cairo::Context) -> Inhibit {
-        let size = get_size(&self.draw_area);
-
+    pub fn draw_on_canvas(&mut self, canvas: &cairo::Context, width: f64, height: f64) {
         // println!("Draw, width = {:?}, height= {:?}", width, height);
         canvas.set_font_size(12.0);
         let mut canvas2 = CairoCanvas::new(&canvas);
@@ -368,17 +365,9 @@ impl ChartState {
                 &canvas,
                 padding,
                 padding,
-                size.width - 2.0 * padding,
-                size.height - 2.0 * padding,
+                width - 2.0 * padding,
+                height - 2.0 * padding,
             );
         }
-
-        Inhibit(false)
     }
-}
-
-fn get_size(drawing_area: &gtk::DrawingArea) -> Size {
-    let width = drawing_area.allocated_width() as f64;
-    let height = drawing_area.allocated_height() as f64;
-    Size::new(width, height)
 }

@@ -101,12 +101,14 @@ impl GuiState {
     }
 
     pub fn zoom_fit(&self) {
+        info!("Zoom fit");
         for chart in &self.charts {
             chart.borrow_mut().zoom_fit();
         }
     }
 
     pub fn clear_curves(&self) {
+        info!("Clear all curves");
         for chart in &self.charts {
             chart.borrow_mut().clear_curves();
         }
@@ -132,6 +134,7 @@ impl GuiState {
     }
 
     pub fn set_linked_x_axis(&mut self, link_axes: bool) {
+        info!("Set linked X-axis: {}", link_axes);
         self.link_x_axis = link_axes;
 
         if link_axes {

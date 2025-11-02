@@ -8,7 +8,7 @@ pub fn show_error(top_level: &gtk::Window, message: &str) {
         gtk::DialogFlags::MODAL,
         gtk::MessageType::Error,
         gtk::ButtonsType::Ok,
-        &message,
+        message,
     );
-    error_dialog.run();
+    error_dialog.present();
 }

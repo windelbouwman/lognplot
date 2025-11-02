@@ -1,3 +1,4 @@
+use gdk::Key;
 use gtk::prelude::*;
 use std::collections::HashMap;
 
@@ -60,7 +61,7 @@ impl SignalBrowser {
         for signal_name in changed_signals {
             if let Some(summary) = self.db.quick_summary(&signal_name) {
                 let row = self.model_map[signal_name];
-                let path: gtk::TreePath = gtk::TreePath::from_indicesv(&[row]);
+                let path: gtk::TreePath = gtk::TreePath::from_indices(&[row]);
                 if let Some(iter2) = self.model.iter(&path) {
                     self.model
                         .set_value(&iter2, 1, &summary.count.to_string().to_value());
@@ -92,16 +93,25 @@ impl SignalBrowser {
 }
 
 /// Prepare a widget with a list of available signals.
-pub fn setup_signal_repository(builder: &gtk::Builder, app_state: GuiStateHandle) {
+pub fn setup_signal_repository(app_state: &GuiStateHandle) -> gtk::Box {
     let model = gtk::TreeStore::new(&[
         String::static_type(),
         String::static_type(),
         String::static_type(),
     ]);
 
-    setup_columns(builder);
-    setup_filter_model(builder, &model);
-    let tree_view: gtk::TreeView = builder.object("signal_tree_view").unwrap();
+    let search_entry = gtk::SearchEntry::new();
+    let scrolled_window = gtk::ScrolledWindow::builder().vexpand(true).build();
+    let vbox = gtk::Box::builder()
+        .orientation(gtk::Orientation::Vertical)
+        .build();
+    let tree_view = gtk::TreeView::new();
+    scrolled_window.set_child(Some(&tree_view));
+    vbox.append(&search_entry);
+    vbox.append(&scrolled_window);
+
+    setup_columns(&tree_view);
+    setup_filter_model(&tree_view, &search_entry, &model);
     setup_drag_drop(&tree_view);
     setup_dropping(&tree_view, app_state.clone());
     setup_activate(&tree_view, app_state.clone());
@@ -116,6 +126,8 @@ pub fn setup_signal_repository(builder: &gtk::Builder, app_state: GuiStateHandle
     };
 
     setup_notify_change(signal_browser);
+
+    vbox
 }
 
 fn setup_notify_change(mut signal_pane: SignalBrowser) {
@@ -143,10 +155,13 @@ fn setup_notify_change(mut signal_pane: SignalBrowser) {
     });
 }
 
-fn setup_columns(builder: &gtk::Builder) {
-    let name_column: gtk::TreeViewColumn = builder.object("column_name").unwrap();
-    let size_column: gtk::TreeViewColumn = builder.object("column_size").unwrap();
-    let last_value_column: gtk::TreeViewColumn = builder.object("column_last_value").unwrap();
+fn setup_columns(tree_view: &gtk::TreeView) {
+    let name_column = gtk::TreeViewColumn::builder().title("Name").build();
+    let size_column = gtk::TreeViewColumn::builder().title("Size").build();
+    let last_value_column = gtk::TreeViewColumn::builder().title("Last value").build();
+    tree_view.append_column(&name_column);
+    tree_view.append_column(&size_column);
+    tree_view.append_column(&last_value_column);
 
     let cell = gtk::CellRendererText::new();
     name_column.pack_start(&cell, true);
@@ -161,20 +176,25 @@ fn setup_columns(builder: &gtk::Builder) {
     last_value_column.add_attribute(&cell, "text", 2);
 }
 
-fn setup_filter_model(builder: &gtk::Builder, model: &gtk::TreeStore) {
-    let tree_view: gtk::TreeView = builder.object("signal_tree_view").unwrap();
-    let filter_edit: gtk::SearchEntry = builder.object("signal_search_entry").unwrap();
-
+fn setup_filter_model(
+    tree_view: &gtk::TreeView,
+    filter_edit: &gtk::SearchEntry,
+    model: &gtk::TreeStore,
+) {
     // Filter model:
     // Sort model:
-    let sort_model = gtk::TreeModelSort::new(model);
+    let sort_model = gtk::TreeModelSort::with_model(model);
     sort_model.set_sort_column_id(gtk::SortColumn::Index(0), gtk::SortType::Ascending);
     let filter_model = gtk::TreeModelFilter::new(&sort_model, None);
 
-    filter_model.set_visible_func(clone!(@strong filter_edit => move |m, i| {
-        let txt = filter_edit.text().to_string();
-        signal_filter_func(m, i, txt)
-    }));
+    filter_model.set_visible_func(clone!(
+        #[strong]
+        filter_edit,
+        move |m, i| {
+            let txt = filter_edit.text().to_string();
+            signal_filter_func(m, i, txt)
+        }
+    ));
 
     tree_view.set_model(Some(&filter_model));
 
@@ -184,7 +204,7 @@ fn setup_filter_model(builder: &gtk::Builder, model: &gtk::TreeStore) {
 }
 
 fn signal_filter_func(model: &gtk::TreeModel, iter: &gtk::TreeIter, filter_txt: String) -> bool {
-    if let Ok(name) = model.value(&iter, 0).get::<String>() {
+    if let Ok(name) = model.get_value(&iter, 0).get::<String>() {
         filter_txt.is_empty() || name.contains(&filter_txt)
     } else {
         true
@@ -196,54 +216,58 @@ fn setup_drag_drop(tree_view: &gtk::TreeView) {
     let selection = tree_view.selection();
     selection.set_mode(gtk::SelectionMode::Multiple);
 
-    let targets = vec![gtk::TargetEntry::new(
-        super::mime_types::SIGNAL_NAMES_MIME_TYPE,
-        gtk::TargetFlags::empty(),
-        0,
-    )];
-    tree_view.drag_source_set(
-        gdk::ModifierType::BUTTON1_MASK,
-        &targets,
-        gdk::DragAction::COPY,
-    );
-    tree_view.connect_drag_data_get(|w, _, data, info, _| {
-        let selected_names = get_selected_signal_names(w);
-        let mime_payload: String = serde_json::to_string(&selected_names).unwrap();
-        let r = data.set_text(&mime_payload);
-        if !r {
-            error!("Drag data get transfer failed");
+    let drag_src = gtk::DragSource::builder().build();
+    drag_src.connect_prepare(clone!(
+        #[strong]
+        tree_view,
+        move |_drag_src, _x, _y| {
+            let selected_names = get_selected_signal_names(&tree_view);
+            let mime_payload: String = serde_json::to_string(&selected_names).unwrap();
+            let byte_data = glib::Bytes::from(mime_payload.as_bytes());
+            let content = gdk::ContentProvider::for_bytes(
+                super::mime_types::SIGNAL_NAMES_MIME_TYPE,
+                &byte_data,
+            );
+            info!("Drag signals");
+            Some(content)
         }
-        debug!("GET DATA {} {}", info, r);
-    });
+    ));
+    tree_view.add_controller(drag_src);
 }
 
 /// Enable files to be dropped on the widget:
 fn setup_dropping(tree_view: &gtk::TreeView, app_state: GuiStateHandle) {
-    let targets = vec![gtk::TargetEntry::new(
-        "text/uri-list",
-        gtk::TargetFlags::empty(),
-        0,
-    )];
-    tree_view.drag_dest_set(gtk::DestDefaults::ALL, &targets, gdk::DragAction::COPY);
+    let formats = gdk::ContentFormats::builder()
+        .add_type(glib::Type::BOXED)
+        .add_mime_type("text/uri-list")
+        .build();
+    let drop_target = gtk::DropTarget::builder().actions(gdk::DragAction::COPY)
+    .formats(&formats)
+    .build();
 
-    tree_view.connect_drag_data_received(move |_w, _dc, _x, _y, data, _info, _time| {
-        _w.stop_signal_emission_by_name("drag_data_received");
-        let uris: Vec<String> = data.uris().iter().map(|u| u.to_string()).collect();
+    drop_target.connect_drop(move |_target, value, _x, _y| {
+        info!("Drop 1");
+        let uris = value.get::<String>().expect("Works");
         info!("DROP {:?}", uris);
+        /*
         for uri in uris {
             if let Err(err) = handle_drop_uri(uri, &app_state) {
                 error!("Loading failed: {}", err);
-            // TODO: show dialog box:
-            // let toplevel = w.get_toplevel();
-            // show_error(top_level, &err);
+                // TODO: show dialog box:
+                // let toplevel = w.get_toplevel();
+                // show_error(top_level, &err);
             } else {
                 info!("Loaded!");
             }
         }
+        */
+        true
     });
+
+    tree_view.add_controller(drop_target);
 }
 
-fn handle_drop_uri(uri: String, app_state: &GuiStateHandle) -> Result<(), String> {
+fn _handle_drop_uri(uri: String, app_state: &GuiStateHandle) -> Result<(), String> {
     info!("Loading uri {}", uri);
     let u = url::Url::parse(&uri).map_err(|e| e.to_string())?;
 
@@ -257,9 +281,9 @@ fn handle_drop_uri(uri: String, app_state: &GuiStateHandle) -> Result<(), String
         Err(format!("Wrong scheme for uri: {}", u.scheme()))
     }
 }
-
-fn get_selected_signal_names(w: &gtk::TreeView) -> Vec<String> {
-    let selector = w.selection();
+ 
+fn get_selected_signal_names(tree_view: &gtk::TreeView) -> Vec<String> {
+    let selector = tree_view.selection();
     let (selected_rows, tree_model) = selector.selected_rows();
     let mut selected_names: Vec<String> = vec![];
     for selected_row in selected_rows {
@@ -284,41 +308,49 @@ fn setup_activate(tree_view: &gtk::TreeView, app_state: GuiStateHandle) {
 }
 
 fn setup_key_press_handler(tree_view: &gtk::TreeView, app_state: GuiStateHandle) {
-    tree_view.connect_key_press_event(move |tv, key| {
-        let selected_signals = get_selected_signal_names(&tv);
-        let chart_target = match key.keyval() {
-            gdk::keys::constants::_1 => Some(1),
-            gdk::keys::constants::_2 => Some(2),
-            gdk::keys::constants::_3 => Some(3),
-            gdk::keys::constants::_4 => Some(4),
-            gdk::keys::constants::_5 => Some(5),
-            gdk::keys::constants::_6 => Some(6),
-            gdk::keys::constants::_7 => Some(7),
-            gdk::keys::constants::_8 => Some(8),
-            gdk::keys::constants::_9 => Some(9),
-            gdk::keys::constants::A => Some(10),
-            gdk::keys::constants::B => Some(11),
-            gdk::keys::constants::C => Some(12),
-            gdk::keys::constants::D => Some(13),
-            gdk::keys::constants::E => Some(14),
-            gdk::keys::constants::F => Some(15),
-            _ => None,
-        };
-        if chart_target.is_some() {
-            for signal_name in selected_signals {
-                debug!(
-                    "Signal activated: {}, adding to chart {}.",
-                    signal_name,
-                    chart_target.expect("some value")
-                );
-                app_state.borrow().add_curve(&signal_name, chart_target);
+    let key_controller = gtk::EventControllerKey::new();
+    key_controller.connect_key_pressed(clone!(
+        #[strong]
+        tree_view,
+        move |_eck, key, _code, _state| {
+            let selected_signals = get_selected_signal_names(&tree_view);
+            let chart_target = match key {
+                Key::_1 => Some(1),
+                Key::_2 => Some(2),
+                Key::_3 => Some(3),
+                Key::_4 => Some(4),
+                Key::_5 => Some(5),
+                Key::_6 => Some(6),
+                Key::_7 => Some(7),
+                Key::_8 => Some(8),
+                Key::_9 => Some(9),
+                Key::A => Some(10),
+                Key::B => Some(11),
+                Key::C => Some(12),
+                Key::D => Some(13),
+                Key::E => Some(14),
+                Key::F => Some(15),
+                _ => None,
+            };
+            if chart_target.is_some() {
+                for signal_name in selected_signals {
+                    debug!(
+                        "Signal activated: {}, adding to chart {}.",
+                        signal_name,
+                        chart_target.expect("some value")
+                    );
+                    app_state.borrow().add_curve(&signal_name, chart_target);
+                }
+                glib::Propagation::Stop
+            } else {
+                glib::Propagation::Proceed
             }
         }
-        Inhibit(false)
-    });
+    ));
+    tree_view.add_controller(key_controller);
 }
 
 /// Given a model and an iterator get the signal name.
 fn get_signal_name(model: &gtk::TreeModel, iter: &gtk::TreeIter) -> String {
-    model.value(iter, 0).get::<String>().unwrap()
+    model.get_value(iter, 0).get::<String>().unwrap()
 }
