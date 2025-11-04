@@ -241,9 +241,10 @@ fn setup_dropping(tree_view: &gtk::TreeView, app_state: GuiStateHandle) {
         .add_type(glib::Type::BOXED)
         .add_mime_type("text/uri-list")
         .build();
-    let drop_target = gtk::DropTarget::builder().actions(gdk::DragAction::COPY)
-    .formats(&formats)
-    .build();
+    let drop_target = gtk::DropTarget::builder()
+        .actions(gdk::DragAction::COPY)
+        .formats(&formats)
+        .build();
 
     drop_target.connect_drop(move |_target, value, _x, _y| {
         info!("Drop 1");
@@ -281,7 +282,7 @@ fn _handle_drop_uri(uri: String, app_state: &GuiStateHandle) -> Result<(), Strin
         Err(format!("Wrong scheme for uri: {}", u.scheme()))
     }
 }
- 
+
 fn get_selected_signal_names(tree_view: &gtk::TreeView) -> Vec<String> {
     let selector = tree_view.selection();
     let (selected_rows, tree_model) = selector.selected_rows();

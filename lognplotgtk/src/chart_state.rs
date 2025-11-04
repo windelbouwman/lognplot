@@ -20,14 +20,6 @@ use lognplot::tsdb::DataChangeEvent;
 use lognplot::tsdb::TsDbHandle;
 use std::sync::Arc;
 
-/// category10 color wheel
-///
-/// See also: https://matplotlib.org/users/dflt_style_changes.html#colors-in-default-property-cycle
-const CATEGORY10_COLORS: &[&str] = &[
-    "#1F77B4", "#FF7F0E", "#2CA02C", "#D62728", "#9467BD", "#8C564B", "#E377C2", "#7F7F7F",
-    "#BCBD22", "#17BECF",
-];
-
 pub type ChartStateHandle = Rc<RefCell<ChartState>>;
 
 pub struct ChartState {
@@ -36,8 +28,6 @@ pub struct ChartState {
     chart_layout: ChartLayout,
     db: TsDbHandle,
     app_state: GuiStateHandle,
-    color_wheel: Vec<String>,
-    color_index: usize,
     tailing: Option<f64>,
     perf_tracer: Arc<AnyTracer>,
     drag: Option<(f64, f64)>,
@@ -56,7 +46,6 @@ impl ChartState {
     ) -> Self {
         let mut chart = Chart::default();
         chart.set_title(id);
-        let color_wheel: Vec<String> = CATEGORY10_COLORS.iter().map(|s| (*s).to_string()).collect();
 
         info!("Chart id: {}", id);
 
@@ -66,8 +55,6 @@ impl ChartState {
             chart_layout: ChartLayout::new(Size::new(250.0, 250.0)),
             db: db.clone(),
             app_state,
-            color_wheel,
-            color_index: 0,
             tailing: None,
             perf_tracer: perf_tracer.clone(),
             drag: None,
@@ -85,28 +72,21 @@ impl ChartState {
         &self.id
     }
 
+    /// Toggle curve in plot
     pub fn add_curve(&mut self, name: &str) {
-        // self.chart.add_curve(Curve::new());
-        if !self.chart.has_signal(name) {
+        if self.chart.has_signal(name) {
+            info!("Remove curve {name}");
+            self.chart.remove_curve(name);
+        } else {
+            info!("Add curve {name}");
             let tsdb_data = CurveData::trace(name, self.db.clone());
-            let color = self.next_color();
+            let color = self.app_state.borrow().get_color_for_signal(name);
             let curve2 = Curve::new(tsdb_data, &color);
 
             self.chart.add_curve(curve2);
             self.chart.autoscale();
-            self.repaint();
-        } else {
-            info!("Signal {} is already shown", name);
         }
-    }
-
-    fn next_color(&mut self) -> String {
-        let color = self.color_wheel[self.color_index].clone();
-        self.color_index += 1;
-        if self.color_index >= self.color_wheel.len() {
-            self.color_index = 0;
-        }
-        color
+        self.repaint();
     }
 
     pub fn clear_curves(&mut self) {
@@ -211,19 +191,18 @@ impl ChartState {
         self.repaint();
     }
 
-    pub fn zoom_in_horizontal(&mut self, around: Option<f64>) {
+    pub fn zoom_in_horizontal(&mut self) {
         debug!("Zoom in horizontal");
-        self.zoom_horizontal(-0.1, around);
+        self.zoom_horizontal(-0.1);
     }
 
-    pub fn zoom_out_horizontal(&mut self, around: Option<f64>) {
+    pub fn zoom_out_horizontal(&mut self) {
         debug!("Zoom out horizontal");
-        self.zoom_horizontal(0.1, around);
+        self.zoom_horizontal(0.1);
     }
 
-    fn zoom_horizontal(&mut self, amount: f64, around: Option<f64>) {
-        let around =
-            around.map(|pixel| x_pixel_to_domain(pixel, &self.chart.x_axis, &self.chart_layout));
+    fn zoom_horizontal(&mut self, amount: f64) {
+        let around = self.chart.cursor.as_ref().map(|c| c.0.amount);
         self.disable_tailing();
         self.chart.zoom_horizontal(amount, around);
         self.handle_x_axis_change();
@@ -357,7 +336,7 @@ impl ChartState {
             .log_metric(&format!("META.{}.render_time", self.id), t1, draw_seconds);
 
         // Focus indicator!
-        let is_focus = self.draw_area.is_focus();
+        let is_focus = self.draw_area.has_focus();
         if is_focus {
             let padding = 1.0;
             gtk::render_focus(

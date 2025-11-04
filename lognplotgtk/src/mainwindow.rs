@@ -13,12 +13,9 @@ use std::sync::Arc;
 pub fn open_gui(db_handle: TsDbHandle, perf_tracer: Arc<AnyTracer>) {
     info!("Opening GUI");
     let app_state = GuiState::new(db_handle, perf_tracer).into_handle();
-
     let app_id = "com.github.windelbouwman.quartz";
     let application = Application::builder().application_id(app_id).build();
-
     application.connect_activate(move |app| build_ui(app, app_state.clone()));
-
     let args: Vec<String> = vec![];
     application.run_with_args(&args);
 }
@@ -35,50 +32,171 @@ fn build_ui(app: &gtk::Application, app_state: GuiStateHandle) {
     let main_pane = gtk::Paned::builder()
         .orientation(gtk::Orientation::Horizontal)
         .build();
-    let root_splitter = gtk::Box::builder()
-        .orientation(gtk::Orientation::Vertical)
-        .build();
     let signal_vbox = setup_signal_repository(&app_state);
+    let chart_grid = create_chart_grid(&app_state);
     main_pane.set_start_child(Some(&signal_vbox));
-    main_pane.set_end_child(Some(&root_splitter));
+    main_pane.set_end_child(Some(&chart_grid));
     let top_vbox = gtk::Box::builder()
         .orientation(gtk::Orientation::Vertical)
         .build();
+    let menu_bar = create_menu_bar(&window, app_state.clone());
+    top_vbox.append(&menu_bar);
     top_vbox.append(&main_pane);
     window.set_child(Some(&top_vbox));
-
-    create_new_chart_area(&app_state, &root_splitter);
-
-    let menu_bar = create_menu_bar(&window, app_state.clone());
-    top_vbox.prepend(&menu_bar);
     setup_tailing_timer(app_state.clone());
     setup_notify_change(app_state);
-
-    if let Ok(Some(icon)) = crate::resources::load_icon() {
-        // window.set_icon_name(Some(&icon));
-    }
     window.present();
 }
 
-fn setup_about_dialog() -> gtk::AboutDialog {
+#[derive(Clone)]
+enum LayoutVariation {
+    _1x1,
+    _1x2,
+    _2x1,
+    _2x2,
+    _3x2,
+}
+
+#[derive(Clone)]
+struct PlotSet {
+    c1: gtk::Box,
+    c2: gtk::Box,
+    c3: gtk::Box,
+    c4: gtk::Box,
+    c5: gtk::Box,
+    c6: gtk::Box,
+}
+
+impl PlotSet {
+    fn show_variation(&self, var: &LayoutVariation) {
+        match var {
+            LayoutVariation::_1x1 => {
+                self.c1.set_visible(true);
+                self.c2.set_visible(false);
+                self.c3.set_visible(false);
+                self.c4.set_visible(false);
+                self.c5.set_visible(false);
+                self.c6.set_visible(false);
+            }
+            LayoutVariation::_1x2 => {
+                self.c1.set_visible(true);
+                self.c2.set_visible(true);
+                self.c3.set_visible(false);
+                self.c4.set_visible(false);
+                self.c5.set_visible(false);
+                self.c6.set_visible(false);
+            }
+            LayoutVariation::_2x1 => {
+                self.c1.set_visible(true);
+                self.c2.set_visible(false);
+                self.c3.set_visible(true);
+                self.c4.set_visible(false);
+                self.c5.set_visible(false);
+                self.c6.set_visible(false);
+            }
+            LayoutVariation::_2x2 => {
+                self.c1.set_visible(true);
+                self.c2.set_visible(true);
+                self.c3.set_visible(true);
+                self.c4.set_visible(true);
+                self.c5.set_visible(false);
+                self.c6.set_visible(false);
+            }
+            LayoutVariation::_3x2 => {
+                self.c1.set_visible(true);
+                self.c2.set_visible(true);
+                self.c3.set_visible(true);
+                self.c4.set_visible(true);
+                self.c5.set_visible(true);
+                self.c6.set_visible(true);
+            }
+        }
+    }
+}
+
+fn create_chart_grid(app_state: &GuiStateHandle) -> gtk::Grid {
+    let chart_grid = gtk::Grid::new();
+    let c1 = create_new_chart_area(app_state);
+    let c2 = create_new_chart_area(app_state);
+    let c3 = create_new_chart_area(app_state);
+    let c4 = create_new_chart_area(app_state);
+    let c5 = create_new_chart_area(app_state);
+    let c6 = create_new_chart_area(app_state);
+    chart_grid.attach(&c1, 0, 0, 1, 1);
+    chart_grid.attach(&c2, 1, 0, 1, 1);
+    chart_grid.attach(&c3, 0, 1, 1, 1);
+    chart_grid.attach(&c4, 1, 1, 1, 1);
+    chart_grid.attach(&c5, 2, 0, 1, 1);
+    chart_grid.attach(&c6, 2, 1, 1, 1);
+
+    let plot_set = PlotSet {
+        c1,
+        c2,
+        c3,
+        c4,
+        c5,
+        c6,
+    };
+    plot_set.show_variation(&LayoutVariation::_1x1);
+
+    let hbox = gtk::Box::builder()
+        .orientation(gtk::Orientation::Horizontal)
+        .build();
+    let grid_options_menu = gtk::MenuButton::builder().label("Plot layout").build();
+    let pop_over = gtk::Popover::builder().build();
+    grid_options_menu.set_popover(Some(&pop_over));
+    hbox.append(&grid_options_menu);
+    chart_grid.attach(&hbox, 0, 2, 2, 1);
+
+    let vbox = gtk::Box::builder()
+        .orientation(gtk::Orientation::Vertical)
+        .build();
+    pop_over.set_child(Some(&vbox));
+    let variations = vec![
+        LayoutVariation::_1x1,
+        LayoutVariation::_1x2,
+        LayoutVariation::_2x1,
+        LayoutVariation::_2x2,
+        LayoutVariation::_3x2,
+    ];
+
+    for var in &variations {
+        let name = match var {
+            LayoutVariation::_1x1 => "1x1",
+            LayoutVariation::_1x2 => "1x2",
+            LayoutVariation::_2x1 => "2x1",
+            LayoutVariation::_2x2 => "2x2",
+            LayoutVariation::_3x2 => "3x2",
+        };
+        let grid_option_button = gtk::Button::builder().label(name).build();
+        vbox.append(&grid_option_button);
+        grid_option_button.connect_clicked(clone!(
+            #[strong]
+            var,
+            #[strong]
+            pop_over,
+            #[strong]
+            plot_set,
+            move |_button| {
+                pop_over.hide();
+                plot_set.show_variation(&var);
+            }
+        ));
+    }
+
+    chart_grid
+}
+
+fn setup_about_dialog(_top_level: &gtk::Window) -> gtk::AboutDialog {
     let about_dialog = gtk::AboutDialog::builder()
         .hide_on_close(true)
         .modal(true)
         .build();
-
-    if let Ok(Some(icon)) = crate::resources::load_icon() {
-        // about_dialog.set_icon(Some(&icon));
-    }
-    if let Ok(Some(logo)) = crate::resources::load_logo() {
-        // about_dialog.set_logo(Some(&logo));
-    }
-
     about_dialog.set_comments(Some("Lognplot GTK gui. This tool can be used to visualize incoming data from a real-time system."));
     about_dialog.set_website(Some("https://github.com/windelbouwman/lognplot"));
     about_dialog.set_website_label("Github website");
     about_dialog.set_license(Some("GPL 3.0"));
     about_dialog.set_authors(&["Windel Bouwman"]);
-
     about_dialog
 }
 
@@ -90,21 +208,8 @@ fn new_plot_window(app_state: GuiStateHandle) {
         // .type_(gtk::WindowType::Toplevel)
         .title(&format!("Lognplot {}", chart_id))
         .build();
-    if let Ok(Some(icon)) = crate::resources::load_icon() {
-        // new_window.set_icon(Some(&icon));
-    }
-
-    let root_box = gtk::Box::new(gtk::Orientation::Vertical, 0);
-    new_window.set_child(Some(&root_box));
-
-    create_new_chart_area(&app_state, &root_box);
-
-    // new_window.connect_delete_event(clone!(#[strong] app_state, move |_, _| {
-    // Remove all chart structs from the app state:
-    // TODO: remove charts of this window!
-    // TODO: by not doing this, we suffer from some memory leakage?
-    // Inhibit(false)
-    // }));
+    let chart_grid = create_chart_grid(&app_state);
+    new_window.set_child(Some(&chart_grid));
     new_window.present();
 }
 
@@ -114,7 +219,7 @@ fn create_menu_bar(top_level: &gtk::Window, app_state: GuiStateHandle) -> gtk::B
         .build();
 
     let about_button = gtk::Button::builder().label("About").build();
-    let about_dialog = setup_about_dialog();
+    let about_dialog = setup_about_dialog(top_level);
     menu_bar.append(&about_button);
 
     about_button.connect_clicked(move |_| {
@@ -226,16 +331,6 @@ fn setup_toolbar_buttons(menu_bar: &gtk::Box, app_state: GuiStateHandle) {
 
     let zoom_to = setup_zoom_to_options(app_state.clone());
     menu_bar.append(&zoom_to);
-
-    let tb_link_x_axis = gtk::ToggleButton::builder().label("Linked X axis").build();
-    menu_bar.append(&tb_link_x_axis);
-    tb_link_x_axis.connect_toggled(clone!(
-        #[strong]
-        app_state,
-        move |tb| {
-            app_state.borrow_mut().set_linked_x_axis(tb.is_active());
-        }
-    ));
 }
 
 /// Setup zoom-to button and popover menu

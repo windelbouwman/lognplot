@@ -3,6 +3,7 @@ use crate::session;
 use lognplot::tracer::AnyTracer;
 use lognplot::tsdb::{DataChangeEvent, TsDbHandle};
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::path::Path;
 use std::rc::Rc;
 use std::sync::Arc;
@@ -13,16 +14,63 @@ pub struct GuiState {
     perf_tracer: Arc<AnyTracer>,
     charts: Vec<ChartStateHandle>,
     link_x_axis: bool,
+    colors: RefCell<ColorWheel>,
+}
+
+/// category10 color wheel
+///
+/// See also: https://matplotlib.org/users/dflt_style_changes.html#colors-in-default-property-cycle
+const CATEGORY10_COLORS: &[&str] = &[
+    "#1F77B4", "#FF7F0E", "#2CA02C", "#D62728", "#9467BD", "#8C564B", "#E377C2", "#7F7F7F",
+    "#BCBD22", "#17BECF",
+];
+
+struct ColorWheel {
+    color_wheel: Vec<String>,
+    color_index: usize,
+    curve_colors: HashMap<String, String>,
+}
+
+impl ColorWheel {
+    fn new() -> Self {
+        let color_wheel: Vec<String> = CATEGORY10_COLORS.iter().map(|s| (*s).to_string()).collect();
+        ColorWheel {
+            color_wheel,
+            color_index: 0,
+            curve_colors: HashMap::new(),
+        }
+    }
+
+    pub fn get_color_for_signal(&mut self, name: &str) -> String {
+        if self.curve_colors.contains_key(name) {
+            self.curve_colors.get(name).unwrap().to_string()
+        } else {
+            let color = self.next_color();
+            self.curve_colors.insert(name.to_string(), color.clone());
+            color
+        }
+    }
+
+    fn next_color(&mut self) -> String {
+        let color = self.color_wheel[self.color_index].clone();
+        self.color_index += 1;
+        if self.color_index >= self.color_wheel.len() {
+            self.color_index = 0;
+        }
+        color
+    }
 }
 
 impl GuiState {
     pub fn new(db: TsDbHandle, perf_tracer: Arc<AnyTracer>) -> Self {
         // let perf_tracer = Arc::new(DbTracer::new(db.clone()));
+
         GuiState {
             db,
             perf_tracer,
             charts: vec![],
-            link_x_axis: false,
+            link_x_axis: true,
+            colors: RefCell::new(ColorWheel::new()),
         }
     }
 
@@ -85,6 +133,10 @@ impl GuiState {
 
     pub fn num_charts(&self) -> usize {
         self.charts.len()
+    }
+
+    pub fn get_color_for_signal(&self, name: &str) -> String {
+        self.colors.borrow_mut().get_color_for_signal(name)
     }
 
     /// Add a curve with the given name to the first chart.
