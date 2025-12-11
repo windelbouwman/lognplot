@@ -44,7 +44,7 @@ fn build_ui(app: &gtk::Application, app_state: GuiStateHandle) {
     let top_vbox = gtk::Box::builder()
         .orientation(gtk::Orientation::Vertical)
         .build();
-    let menu_bar = create_menu_bar(&window, app_state.clone());
+    let menu_bar = create_menu_bar(&window, &app_state);
     top_vbox.append(&menu_bar);
     top_vbox.append(&main_pane);
     window.set_child(Some(&top_vbox));
@@ -219,11 +219,14 @@ fn new_plot_window(app_state: GuiStateHandle) {
     new_window.present();
 }
 
-fn create_menu_bar(top_level: &gtk::Window, app_state: GuiStateHandle) -> gtk::Box {
+fn create_menu_bar(top_level: &gtk::Window, app_state: &GuiStateHandle) -> gtk::Box {
     let menu_bar = gtk::Box::builder()
         .orientation(gtk::Orientation::Horizontal)
         .build();
 
+    menu_bar.append(&setup_file_menu(top_level, &app_state));
+    menu_bar.append(&create_view_menu(app_state));
+    menu_bar.append(&setup_zoom_to_options(app_state));
     let about_button = gtk::Button::builder().label("About").build();
     let about_dialog = setup_about_dialog(top_level);
     menu_bar.append(&about_button);
@@ -232,27 +235,31 @@ fn create_menu_bar(top_level: &gtk::Window, app_state: GuiStateHandle) -> gtk::B
         info!("Showing about dialog");
         about_dialog.present();
     });
+    menu_bar
+}
 
-    let menu_new_plot_window = gtk::Button::builder().label("new plot window").build();
-    menu_bar.append(&menu_new_plot_window);
-    menu_new_plot_window.connect_clicked(clone!(
-        #[strong]
-        app_state,
-        move |_| {
-            info!("Creating new plot window");
-            new_plot_window(app_state.clone());
-        }
-    ));
+fn setup_file_menu(top_level: &gtk::Window, app_state: &GuiStateHandle) -> gtk::MenuButton {
+    let menu_button_file = gtk::MenuButton::builder().label("File").build();
+    let pop_over = gtk::Popover::builder().build();
+    menu_button_file.set_popover(Some(&pop_over));
+
+    let vbox = gtk::Box::builder()
+        .orientation(gtk::Orientation::Vertical)
+        .build();
+    pop_over.set_child(Some(&vbox));
 
     if cfg!(feature = "hdf5") {
         let menu_open = gtk::Button::builder().label("Open HDF5").build();
-        menu_bar.append(&menu_open);
+        vbox.append(&menu_open);
         menu_open.connect_clicked(clone!(
+            #[strong]
+            pop_over,
             #[strong]
             top_level,
             #[strong]
             app_state,
             move |_button| {
+                pop_over.hide();
                 load_data_from_hdf5(&top_level, &app_state);
             }
         ));
@@ -260,111 +267,152 @@ fn create_menu_bar(top_level: &gtk::Window, app_state: GuiStateHandle) -> gtk::B
 
     if cfg!(feature = "hdf5") {
         let menu_save = gtk::Button::builder().label("Save HDF5").build();
-        menu_bar.append(&menu_save);
+        vbox.append(&menu_save);
         menu_save.connect_clicked(clone!(
+            #[strong]
+            pop_over,
             #[strong]
             top_level,
             #[strong]
             app_state,
             move |_button| {
+                pop_over.hide();
                 save_data_as_hdf5(&top_level, &app_state);
             }
         ));
     }
 
     let menu_open_binzip = gtk::Button::builder().label("Open BINZIP").build();
-    menu_bar.append(&menu_open_binzip);
+    vbox.append(&menu_open_binzip);
     menu_open_binzip.connect_clicked(clone!(
+        #[strong]
+        pop_over,
         #[strong]
         top_level,
         #[strong]
         app_state,
         move |_button| {
+            pop_over.hide();
             load_data_from_binzip(&top_level, &app_state);
         }
     ));
 
     let menu_save_binzip = gtk::Button::builder().label("Save BINZIP").build();
-    menu_bar.append(&menu_save_binzip);
+    vbox.append(&menu_save_binzip);
     menu_save_binzip.connect_clicked(clone!(
+        #[strong]
+        pop_over,
         #[strong]
         top_level,
         #[strong]
         app_state,
         move |_button| {
+            pop_over.hide();
             save_data_to_binzip(&top_level, &app_state);
         }
     ));
 
     let menu_save_session = gtk::Button::builder().label("Save session").build();
-    menu_bar.append(&menu_save_session);
+    vbox.append(&menu_save_session);
     menu_save_session.connect_clicked(clone!(
+        #[strong]
+        pop_over,
         #[strong]
         top_level,
         #[strong]
         app_state,
         move |_| {
+            pop_over.hide();
             save_session(&top_level, &app_state);
         }
     ));
 
     let menu_load_session = gtk::Button::builder().label("Load session").build();
-    menu_bar.append(&menu_load_session);
+    vbox.append(&menu_load_session);
     menu_load_session.connect_clicked(clone!(
         #[strong]
         top_level,
         #[strong]
         app_state,
         move |_| {
+            pop_over.hide();
             load_session(&top_level, &app_state);
         }
     ));
-
-    setup_toolbar_buttons(&menu_bar, app_state);
-
-    menu_bar
+    menu_button_file
 }
 
-fn setup_toolbar_buttons(menu_bar: &gtk::Box, app_state: GuiStateHandle) {
+fn create_view_menu(app_state: &GuiStateHandle) -> gtk::MenuButton {
+    let menu_button_view = gtk::MenuButton::builder().label("View").build();
+    let pop_over = gtk::Popover::builder().build();
+    menu_button_view.set_popover(Some(&pop_over));
+
+    let vbox = gtk::Box::builder()
+        .orientation(gtk::Orientation::Vertical)
+        .build();
+    pop_over.set_child(Some(&vbox));
+
     // Drop database:
-    let tb_delete_db = gtk::Button::builder().label("Clear history").build();
-    menu_bar.append(&tb_delete_db);
+    let tb_delete_db = gtk::Button::builder().label("Clear History").build();
+    vbox.append(&tb_delete_db);
     tb_delete_db.connect_clicked(clone!(
+        #[strong]
+        pop_over,
         #[strong]
         app_state,
         move |_button| {
+            pop_over.hide();
             app_state.borrow().delete_all_data();
         }
     ));
 
     // clear button:
-    let tb_clear_plot = gtk::Button::builder().label("Clear plot").build();
-    menu_bar.append(&tb_clear_plot);
+    let tb_clear_plot = gtk::Button::builder().label("Clear Plot").build();
+    vbox.append(&tb_clear_plot);
     tb_clear_plot.connect_clicked(clone!(
+        #[strong]
+        pop_over,
         #[strong]
         app_state,
         move |_button| {
+            pop_over.hide();
             app_state.borrow_mut().clear_curves();
         }
     ));
 
     // zoom fit:
-    let tb_zoom_fit = gtk::Button::builder().label("Zoom fit").build();
-    menu_bar.append(&tb_zoom_fit);
+    let tb_zoom_fit = gtk::Button::builder().label("Zoom Fit").build();
+    vbox.append(&tb_zoom_fit);
     tb_zoom_fit.connect_clicked(clone!(
+        #[strong]
+        pop_over,
         #[strong]
         app_state,
         move |_button| {
+            pop_over.hide();
             app_state.borrow_mut().zoom_fit();
         }
     ));
 
-    let zoom_to = setup_zoom_to_options(app_state.clone());
-    menu_bar.append(&zoom_to);
+    let menu_new_plot_window = gtk::Button::builder().label("New Plot Window").build();
+    vbox.append(&menu_new_plot_window);
+    menu_new_plot_window.connect_clicked(clone!(
+        #[strong]
+        pop_over,
+        #[strong]
+        app_state,
+        move |_| {
+            pop_over.hide();
+            info!("Creating new plot window");
+            new_plot_window(app_state.clone());
+        }
+    ));
+
+    menu_button_view
 }
 
 /// Setup zoom-to button and popover menu
-fn setup_zoom_to_options(app_state: GuiStateHandle) -> gtk::MenuButton {
+fn setup_zoom_to_options(app_state: &GuiStateHandle) -> gtk::MenuButton {
     let tb_zoom_to = gtk::MenuButton::builder().label("Follow last..").build();
     let pop_over = gtk::Popover::builder().build();
     tb_zoom_to.set_popover(Some(&pop_over));

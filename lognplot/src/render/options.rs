@@ -7,7 +7,7 @@ impl Default for ChartOptions {
     fn default() -> Self {
         ChartOptions {
             tick_size: 7.0,
-            padding: 10.0,
+            padding: 3.0,
         }
     }
 }
