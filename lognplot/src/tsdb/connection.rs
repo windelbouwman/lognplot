@@ -12,6 +12,7 @@ impl Connection for TsDb {
     }
 }
 
+#[allow(dead_code)]
 pub trait Connection {
     fn open(&self);
     fn close(&self);

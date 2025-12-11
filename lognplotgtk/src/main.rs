@@ -8,6 +8,7 @@ mod chart_state;
 mod chart_widget;
 mod error_dialog;
 
+mod binzip;
 #[cfg(feature = "hdf5")]
 mod io;
 

@@ -113,7 +113,7 @@ pub fn setup_signal_repository(app_state: &GuiStateHandle) -> gtk::Box {
     setup_columns(&tree_view);
     setup_filter_model(&tree_view, &search_entry, &model);
     setup_drag_drop(&tree_view);
-    setup_dropping(&tree_view, app_state.clone());
+    setup_dropping(&tree_view);
     setup_activate(&tree_view, app_state.clone());
     setup_key_press_handler(&tree_view, app_state.clone());
 
@@ -236,7 +236,7 @@ fn setup_drag_drop(tree_view: &gtk::TreeView) {
 }
 
 /// Enable files to be dropped on the widget:
-fn setup_dropping(tree_view: &gtk::TreeView, app_state: GuiStateHandle) {
+fn setup_dropping(tree_view: &gtk::TreeView) {
     let formats = gdk::ContentFormats::builder()
         .add_type(glib::Type::BOXED)
         .add_mime_type("text/uri-list")

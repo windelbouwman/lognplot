@@ -1,3 +1,4 @@
+use super::binzip::{load_data_from_binzip, save_data_to_binzip};
 use super::chart_widget::create_new_chart_area;
 use super::io::{load_data_from_hdf5, save_data_as_hdf5};
 use super::session::{load_session, save_session};
@@ -21,6 +22,10 @@ pub fn open_gui(db_handle: TsDbHandle, perf_tracer: Arc<AnyTracer>) {
 }
 
 fn build_ui(app: &gtk::Application, app_state: GuiStateHandle) {
+    let display = gdk::Display::default().expect("We have a display");
+    let backend = display.backend();
+
+    info!("Using display: {:?}", backend);
     info!("Setting up GUI elements");
     let window = gtk::Window::builder()
         .application(app)
@@ -143,6 +148,7 @@ fn create_chart_grid(app_state: &GuiStateHandle) -> gtk::Grid {
         .orientation(gtk::Orientation::Horizontal)
         .build();
     let grid_options_menu = gtk::MenuButton::builder().label("Plot layout").build();
+    grid_options_menu.set_direction(gtk::ArrowType::Up);
     let pop_over = gtk::Popover::builder().build();
     grid_options_menu.set_popover(Some(&pop_over));
     hbox.append(&grid_options_menu);
@@ -239,7 +245,7 @@ fn create_menu_bar(top_level: &gtk::Window, app_state: GuiStateHandle) -> gtk::B
     ));
 
     if cfg!(feature = "hdf5") {
-        let menu_open = gtk::Button::builder().label("Open").build();
+        let menu_open = gtk::Button::builder().label("Open HDF5").build();
         menu_bar.append(&menu_open);
         menu_open.connect_clicked(clone!(
             #[strong]
@@ -253,7 +259,7 @@ fn create_menu_bar(top_level: &gtk::Window, app_state: GuiStateHandle) -> gtk::B
     }
 
     if cfg!(feature = "hdf5") {
-        let menu_save = gtk::Button::builder().label("Save").build();
+        let menu_save = gtk::Button::builder().label("Save HDF5").build();
         menu_bar.append(&menu_save);
         menu_save.connect_clicked(clone!(
             #[strong]
@@ -265,6 +271,30 @@ fn create_menu_bar(top_level: &gtk::Window, app_state: GuiStateHandle) -> gtk::B
             }
         ));
     }
+
+    let menu_open_binzip = gtk::Button::builder().label("Open BINZIP").build();
+    menu_bar.append(&menu_open_binzip);
+    menu_open_binzip.connect_clicked(clone!(
+        #[strong]
+        top_level,
+        #[strong]
+        app_state,
+        move |_button| {
+            load_data_from_binzip(&top_level, &app_state);
+        }
+    ));
+
+    let menu_save_binzip = gtk::Button::builder().label("Save BINZIP").build();
+    menu_bar.append(&menu_save_binzip);
+    menu_save_binzip.connect_clicked(clone!(
+        #[strong]
+        top_level,
+        #[strong]
+        app_state,
+        move |_button| {
+            save_data_to_binzip(&top_level, &app_state);
+        }
+    ));
 
     let menu_save_session = gtk::Button::builder().label("Save session").build();
     menu_bar.append(&menu_save_session);

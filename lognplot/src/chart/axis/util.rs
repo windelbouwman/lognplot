@@ -15,7 +15,7 @@ pub fn calc_tick_spacing(domain: f64, n_ticks: usize) -> (i32, f64) {
     let options = vec![0.1, 0.2, 0.5, 1.0, 2.0, 5.0];
     let best = options
         .iter()
-        .min_by_key(|x| (((*x - approx).abs() * 1_000_000.0) as i64))
+        .min_by_key(|x| ((*x - approx).abs() * 1_000_000.0) as i64)
         .unwrap();
 
     trace!(
