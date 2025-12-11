@@ -166,14 +166,17 @@ fn setup_columns(tree_view: &gtk::TreeView) {
     let cell = gtk::CellRendererText::new();
     name_column.pack_start(&cell, true);
     name_column.add_attribute(&cell, "text", 0);
+    name_column.set_resizable(true);
 
     let cell = gtk::CellRendererText::new();
     size_column.pack_start(&cell, true);
     size_column.add_attribute(&cell, "text", 1);
+    size_column.set_resizable(true);
 
     let cell = gtk::CellRendererText::new();
     last_value_column.pack_start(&cell, true);
     last_value_column.add_attribute(&cell, "text", 2);
+    last_value_column.set_resizable(true);
 }
 
 fn setup_filter_model(

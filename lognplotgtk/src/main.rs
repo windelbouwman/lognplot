@@ -110,6 +110,15 @@ fn main() {
         Arc::new(AnyTracer::new_void())
     };
 
+    if std::env::var("WSL_DISTRO_NAME").is_ok() {
+        if std::env::var("GDK_BACKEND").is_err() {
+            info!("WSL detected, forcing GDK X11 backend");
+            unsafe {
+                std::env::set_var("GDK_BACKEND", "x11");
+            }
+        }
+    }
+
     let stop_token = run_server(db_handle.clone(), port, perf_tracer.clone());
     mainwindow::open_gui(db_handle, perf_tracer);
     stop_token.stop();
