@@ -65,6 +65,11 @@ impl Chart {
         self.curves.push(curve);
     }
 
+    /// Remove single curve
+    pub fn remove_curve(&mut self, name: &str) {
+        self.curves.retain(|c| c.name() != name);
+    }
+
     /// Remove all curves from this plot.
     pub fn clear_curves(&mut self) {
         self.curves.clear();

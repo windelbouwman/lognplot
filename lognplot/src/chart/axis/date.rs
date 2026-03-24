@@ -31,7 +31,7 @@ pub fn calc_date_ticks(begin: f64, end: f64, n_ticks: usize) -> (String, TickLab
 fn f64_to_datetime(timestamp: f64) -> chrono::DateTime<chrono::Local> {
     let seconds = timestamp.trunc() as i64;
     let nanos = (timestamp.fract() * 1e9) as u32;
-    chrono::Local.timestamp(seconds, nanos)
+    chrono::Local.timestamp_opt(seconds, nanos).unwrap()
 }
 
 #[cfg(test)]

@@ -20,5 +20,12 @@ spare the bandwidth.
 List of adapters:
 
 - ADS
+- CSV
+- libstored
 - MQTT
 - ROS2
+
+libstored adapter quick start:
+
+    $ pip install libstored pyzmq
+    $ python libstored_adapter.py --libstored-host localhost --libstored-port 19026

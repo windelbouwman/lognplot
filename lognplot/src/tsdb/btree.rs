@@ -235,7 +235,7 @@ where
     }
 
     /// Select all child elements
-    fn select_all(&self) -> RangeSelectionResult<V, M> {
+    fn select_all<'t>(&'t self) -> RangeSelectionResult<'t, V, M> {
         match self {
             Node::Intermediate(internal) => RangeSelectionResult::Nodes(internal.select_all()),
             Node::Leaf(leaf) => RangeSelectionResult::Observations(leaf.select_all()),
@@ -243,7 +243,7 @@ where
     }
 
     /// Select a timespan of elements
-    fn select_range(&self, timespan: &TimeSpan) -> RangeSelectionResult<V, M> {
+    fn select_range<'t>(&'t self, timespan: &TimeSpan) -> RangeSelectionResult<'t, V, M> {
         match self {
             Node::Intermediate(internal) => {
                 RangeSelectionResult::Nodes(internal.select_range(timespan))

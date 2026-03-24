@@ -14,7 +14,7 @@ use std::path::Path;
 
 /// Popup a dialog and export data as HDF5 format.
 pub fn save_data_as_hdf5(top_level: &gtk::Window, app_state: &GuiStateHandle) {
-    let dialog = gtk::FileChooserDialog::with_buttons(
+    let dialog = gtk::FileChooserDialog::new(
         Some("Export data as HDF5"),
         Some(top_level),
         gtk::FileChooserAction::Save,
@@ -23,26 +23,36 @@ pub fn save_data_as_hdf5(top_level: &gtk::Window, app_state: &GuiStateHandle) {
             ("Save", gtk::ResponseType::Accept),
         ],
     );
-    let res = dialog.run();
-    let filename = dialog.filename();
-    dialog.close();
+    dialog.set_modal(true);
+    dialog.present();
 
-    if let gtk::ResponseType::Accept = res {
-        if let Some(filename) = filename {
-            info!("Saving data to filename: {:?}", filename);
-            let res = { app_state.borrow().save(&filename) };
-            if let Err(err) = res {
-                let error_message = format!("Error saving data: {}", err);
-                show_error(top_level, &error_message);
-            } else {
-                info!("Data saved success");
+    dialog.connect_response(clone!(
+        #[strong]
+        top_level,
+        #[strong]
+        app_state,
+        move |dialog, res| {
+            let file = dialog.file();
+            dialog.close();
+
+            if let (gtk::ResponseType::Accept, Some(file)) = (res, file) {
+                let filename = file.path().unwrap();
+                info!("Saving data to filename: {:?}", filename);
+                let res = { app_state.borrow().save(&filename) };
+                if let Err(err) = res {
+                    let error_message = format!("Error saving data: {}", err);
+                    show_error(&top_level, &error_message);
+                } else {
+                    info!("Data saved success");
+                }
             }
         }
-    }
+    ));
 }
 
 pub fn load_data_from_hdf5(top_level: &gtk::Window, app_state: &GuiStateHandle) {
-    let dialog = gtk::FileChooserDialog::with_buttons(
+    info!("Loading file");
+    let dialog = gtk::FileChooserDialog::new(
         Some("Import data from HDF5 file"),
         Some(top_level),
         gtk::FileChooserAction::Open,
@@ -52,20 +62,31 @@ pub fn load_data_from_hdf5(top_level: &gtk::Window, app_state: &GuiStateHandle) 
         ],
     );
 
-    let res = dialog.run();
-    let filename = dialog.filename();
-    dialog.close();
+    dialog.set_modal(true);
+    dialog.present();
 
-    if let (gtk::ResponseType::Accept, Some(filename)) = (res, filename) {
-        info!("Loading data from filename: {:?}", filename);
-        let res = { app_state.borrow().load(&filename) };
-        if let Err(err) = res {
-            let error_message = format!("Error loading data from {:?}: {}", filename, err);
-            show_error(top_level, &error_message);
-        } else {
-            info!("Data loaded!");
+    dialog.connect_response(clone!(
+        #[strong]
+        top_level,
+        #[strong]
+        app_state,
+        move |dialog, res| {
+            let file = dialog.file();
+            dialog.close();
+
+            if let (gtk::ResponseType::Accept, Some(file)) = (res, file) {
+                let filename = file.path().unwrap();
+                info!("Loading data from filename: {:?}", filename);
+                let res = { app_state.borrow().load(&filename) };
+                if let Err(err) = res {
+                    let error_message = format!("Error loading data from {:?}: {}", filename, err);
+                    show_error(&top_level, &error_message);
+                } else {
+                    info!("Data loaded!");
+                }
+            }
         }
-    }
+    ));
 }
 
 pub fn export_data(db: TsDbHandle, filename: &Path) -> hdf5::Result<()> {

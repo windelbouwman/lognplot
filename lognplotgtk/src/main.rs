@@ -8,12 +8,12 @@ mod chart_state;
 mod chart_widget;
 mod error_dialog;
 
+mod binzip;
 #[cfg(feature = "hdf5")]
 mod io;
 
 mod mainwindow;
 mod mime_types;
-mod resources;
 mod session;
 mod signal_repository;
 mod state;
@@ -41,34 +41,34 @@ mod io {
 
 /// Create database, start server, and open a GUI.
 fn main() {
-    let matches = clap::App::new("lognplot GTK gui")
+    let matches = clap::Command::new("lognplot GTK gui")
         .arg(
-            clap::Arg::with_name("v")
-                .short("v")
-                .multiple(true)
+            clap::Arg::new("v")
+                .short('v')
+                .action(clap::ArgAction::Count)
                 .help("Sets the level of verbosity."),
         )
         .arg(
-            clap::Arg::with_name("port")
-                .short("p")
+            clap::Arg::new("port")
+                .short('p')
                 .long("port")
                 .help("Port to listen on")
                 .default_value("12345"),
         )
         .arg(
-            clap::Arg::with_name("meta-trace")
+            clap::Arg::new("meta-trace")
                 .long("meta-trace")
+                .action(clap::ArgAction::SetTrue)
                 .help("Trace internal performance metrics in the plot tool itself."),
         )
         .arg(
-            clap::Arg::with_name("meta-trace-remote")
-                .long("--meta-trace-remote")
-                .takes_value(true)
+            clap::Arg::new("meta-trace-remote")
+                .long("meta-trace-remote")
                 .help("Trace internal performance metrics to the given address (host:port)."),
         )
         .get_matches();
 
-    let verbosity = matches.occurrences_of("v");
+    let verbosity = matches.get_count("v");
 
     let log_level = match verbosity {
         0 => log::Level::Info,
@@ -79,7 +79,7 @@ fn main() {
     use std::str::FromStr;
     let port = u16::from_str(
         matches
-            .value_of("port")
+            .get_one::<String>("port")
             .expect("port value must be present"),
     )
     .unwrap_or(12345);
@@ -92,8 +92,8 @@ fn main() {
     // let db = lognplot::tsdb::VoidDb::default();
     let db_handle = TsDb::default().into_handle();
 
-    let perf_tracer = if matches.is_present("meta-trace-remote") {
-        let addr = matches.value_of("meta-trace-remote").unwrap();
+    let perf_tracer = if matches.contains_id("meta-trace-remote") {
+        let addr = matches.get_one::<String>("meta-trace-remote").unwrap();
         info!("Setting up meta tracing to remote: {:?}", addr);
         // let address = std::net::SocketAddr::from_str(addr);
         match lognplot::net::TcpClient::new(addr) {
@@ -103,12 +103,21 @@ fn main() {
                 Arc::new(AnyTracer::new_void())
             }
         }
-    } else if matches.is_present("meta-trace") {
+    } else if matches.get_flag("meta-trace") {
         info!("Setting up meta tracing");
         Arc::new(AnyTracer::new_db(db_handle.clone()))
     } else {
         Arc::new(AnyTracer::new_void())
     };
+
+    if std::env::var("WSL_DISTRO_NAME").is_ok() {
+        if std::env::var("GDK_BACKEND").is_err() {
+            info!("WSL detected, forcing GDK X11 backend");
+            unsafe {
+                std::env::set_var("GDK_BACKEND", "x11");
+            }
+        }
+    }
 
     let stop_token = run_server(db_handle.clone(), port, perf_tracer.clone());
     mainwindow::open_gui(db_handle, perf_tracer);

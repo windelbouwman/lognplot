@@ -24,7 +24,7 @@ superslice = "1"
 ciborium = "0.2.0"
 
 # Dependencies for cairo:
-cairo-rs = { version = "0.15", optional = true }
+cairo-rs = { version = "0.21", optional = true }
 
 # Dependencies when we require server feature:
 tokio = { version = "0.2", optional = true, features = ["tcp", "rt-core", "stream"] }

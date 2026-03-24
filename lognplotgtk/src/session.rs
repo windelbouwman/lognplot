@@ -45,7 +45,8 @@ impl From<&Chart> for DashBoardItem {
 
 /// Popup a dialog to save session for later usage.
 pub fn save_session(top_level: &gtk::Window, app_state: &GuiStateHandle) {
-    let dialog = gtk::FileChooserDialog::with_buttons(
+    info!("Save session");
+    let dialog = gtk::FileChooserDialog::new(
         Some("Export session as JSON"),
         Some(top_level),
         gtk::FileChooserAction::Save,
@@ -54,28 +55,41 @@ pub fn save_session(top_level: &gtk::Window, app_state: &GuiStateHandle) {
             ("Save", gtk::ResponseType::Accept),
         ],
     );
-    let res = dialog.run();
-    let filename = dialog.filename();
-    dialog.close();
+    dialog.set_modal(true);
+    dialog.present();
 
-    if let gtk::ResponseType::Accept = res {
-        if let Some(filename) = filename {
-            info!("Saving session to filename: {:?}", filename);
-            let res = { app_state.borrow().save_session(&filename) };
-            if let Err(err) = res {
-                let error_message = format!("Error saving session to {:?}: {}", filename, err);
-                error!("{}", error_message);
-                show_error(top_level, &error_message);
-            } else {
-                info!("Session saved!");
+    dialog.connect_response(clone!(
+        #[strong]
+        top_level,
+        #[strong]
+        app_state,
+        move |dialog, res| {
+            let file = dialog.file();
+            dialog.close();
+
+            if let gtk::ResponseType::Accept = res {
+                if let Some(file) = file {
+                    let filename = file.path().unwrap();
+                    info!("Saving session to filename: {:?}", filename);
+                    let res = { app_state.borrow().save_session(&filename) };
+                    if let Err(err) = res {
+                        let error_message =
+                            format!("Error saving session to {:?}: {}", filename, err);
+                        error!("{}", error_message);
+                        show_error(&top_level, &error_message);
+                    } else {
+                        info!("Session saved!");
+                    }
+                }
             }
         }
-    }
+    ));
 }
 
 /// Popup a dialog to restore a session from before.
 pub fn load_session(top_level: &gtk::Window, app_state: &GuiStateHandle) {
-    let dialog = gtk::FileChooserDialog::with_buttons(
+    info!("Load session");
+    let dialog = gtk::FileChooserDialog::new(
         Some("Import session from JSON file"),
         Some(top_level),
         gtk::FileChooserAction::Open,
@@ -84,24 +98,35 @@ pub fn load_session(top_level: &gtk::Window, app_state: &GuiStateHandle) {
             ("Open", gtk::ResponseType::Accept),
         ],
     );
+    dialog.set_modal(true);
+    dialog.present();
 
-    let res = dialog.run();
-    let filename = dialog.filename();
-    dialog.close();
+    dialog.connect_response(clone!(
+        #[strong]
+        top_level,
+        #[strong]
+        app_state,
+        move |dialog, res| {
+            let file = dialog.file();
+            dialog.close();
 
-    if let gtk::ResponseType::Accept = res {
-        if let Some(filename) = filename {
-            info!("Loading session to filename: {:?}", filename);
-            let res = { app_state.borrow_mut().load_session(&filename) };
-            if let Err(err) = res {
-                let error_message = format!("Error loading session from {:?}: {}", filename, err);
-                error!("{}", error_message);
-                show_error(top_level, &error_message);
-            } else {
-                info!("Session loaded!");
+            if let gtk::ResponseType::Accept = res {
+                if let Some(file) = file {
+                    let filename = file.path().unwrap();
+                    info!("Loading session to filename: {:?}", filename);
+                    let res = { app_state.borrow_mut().load_session(&filename) };
+                    if let Err(err) = res {
+                        let error_message =
+                            format!("Error loading session from {:?}: {}", filename, err);
+                        error!("{}", error_message);
+                        show_error(&top_level, &error_message);
+                    } else {
+                        info!("Session loaded!");
+                    }
+                }
             }
         }
-    }
+    ));
 }
 
 #[cfg(test)]
